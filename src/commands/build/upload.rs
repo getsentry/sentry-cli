@@ -22,6 +22,7 @@ use crate::utils::build::{
     is_aab_file, is_apk_file, is_zip_file, normalize_directory, write_version_metadata,
 };
 use crate::utils::chunks::{upload_chunks, Chunk};
+use crate::utils::ci::is_ci;
 use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempDir;
 use crate::utils::fs::TempFile;
@@ -106,6 +107,22 @@ pub fn make_command(command: Command) -> Command {
                 .long("release-notes")
                 .help("The release notes to use for the upload.")
         )
+        .arg(
+            Arg::new("force_git_metadata")
+                .long("force-git-metadata")
+                .action(ArgAction::SetTrue)
+                .conflicts_with("no_git_metadata")
+                .help("Force collection and sending of git metadata (branch, commit, etc.). \
+                    If neither this nor --no-git-metadata is specified, git metadata is \
+                    automatically collected when running in most CI environments.")
+        )
+        .arg(
+            Arg::new("no_git_metadata")
+                .long("no-git-metadata")
+                .action(ArgAction::SetTrue)
+                .conflicts_with("force_git_metadata")
+                .help("Disable collection and sending of git metadata.")
+        )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -114,169 +131,21 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .get_many::<String>("paths")
         .expect("paths argument is required");
 
-    let head_sha = matches
-        .get_one::<Option<Digest>>("head_sha")
-        .map(|d| d.as_ref().cloned())
-        .or_else(|| Some(vcs::find_head_sha().ok()))
-        .flatten();
+    // Collect git metadata if running in CI, unless explicitly enabled or disabled.
+    let should_collect_git_metadata =
+        matches.get_flag("force_git_metadata") || (!matches.get_flag("no_git_metadata") && is_ci());
 
-    let cached_remote = config.get_cached_vcs_remote();
-    // Try to open the git repository and find the remote, but handle errors gracefully.
-    let (vcs_provider, head_repo_name, head_ref, base_ref, base_repo_name) = {
-        // Try to open the repo and get the remote URL, but don't fail if not in a repo.
-        let repo = git2::Repository::open_from_env().ok();
-        let repo_ref = repo.as_ref();
-        let remote_url = repo_ref.and_then(|repo| git_repo_remote_url(repo, &cached_remote).ok());
+    debug!(
+        "Git metadata collection: {}",
+        if should_collect_git_metadata {
+            "enabled"
+        } else {
+            "disabled"
+        }
+    );
 
-        let vcs_provider = matches
-            .get_one("vcs_provider")
-            .map(String::as_str)
-            .map(Cow::Borrowed)
-            .or_else(|| {
-                remote_url
-                    .as_ref()
-                    .map(|url| get_provider_from_remote(url))
-                    .map(Cow::Owned)
-            })
-            .unwrap_or_default();
-
-        let head_repo_name = matches
-            .get_one("head_repo_name")
-            .map(String::as_str)
-            .map(Cow::Borrowed)
-            .or_else(|| {
-                remote_url
-                    .as_ref()
-                    .map(|url| get_repo_from_remote_preserve_case(url))
-                    .map(Cow::Owned)
-            })
-            .unwrap_or_default();
-
-        let head_ref = matches
-            .get_one("head_ref")
-            .map(String::as_str)
-            .map(Cow::Borrowed)
-            .or_else(|| {
-                // First try GitHub Actions environment variables
-                get_github_head_ref().map(Cow::Owned)
-            })
-            .or_else(|| {
-                // Fallback to git repository introspection
-                // Note: git_repo_head_ref will return an error for detached HEAD states,
-                // which the error handling converts to None - this prevents sending "HEAD" as a branch name
-                // In that case, the user will need to provide a valid branch name.
-                repo_ref
-                    .and_then(|r| match git_repo_head_ref(r) {
-                        Ok(ref_name) => {
-                            debug!("Found current branch reference: {ref_name}");
-                            Some(ref_name)
-                        }
-                        Err(e) => {
-                            debug!("No valid branch reference found (likely detached HEAD): {e}");
-                            None
-                        }
-                    })
-                    .map(Cow::Owned)
-            })
-            .unwrap_or_default();
-
-        let base_ref = matches
-            .get_one("base_ref")
-            .map(String::as_str)
-            .map(Cow::Borrowed)
-            .or_else(|| {
-                // First try GitHub Actions environment variables
-                get_github_base_ref().map(Cow::Owned)
-            })
-            .or_else(|| {
-                // Fallback to git repository introspection
-                repo_ref
-                    .and_then(|r| match git_repo_base_ref(r, &cached_remote) {
-                        Ok(base_ref_name) => {
-                            debug!("Found base reference: {base_ref_name}");
-                            Some(base_ref_name)
-                        }
-                        Err(e) => {
-                            info!("Could not detect base branch reference: {e}");
-                            None
-                        }
-                    })
-                    .map(Cow::Owned)
-            })
-            .unwrap_or_default();
-
-        let base_repo_name = matches
-            .get_one("base_repo_name")
-            .map(String::as_str)
-            .map(Cow::Borrowed)
-            .or_else(|| {
-                // Try to get the base repo name from the VCS if not provided
-                repo_ref
-                    .and_then(|r| match git_repo_base_repo_name_preserve_case(r) {
-                        Ok(Some(base_repo_name)) => {
-                            debug!("Found base repository name: {base_repo_name}");
-                            Some(base_repo_name)
-                        }
-                        Ok(None) => {
-                            debug!("No base repository found - not a fork");
-                            None
-                        }
-                        Err(e) => {
-                            warn!("Could not detect base repository name: {e}");
-                            None
-                        }
-                    })
-                    .map(Cow::Owned)
-            })
-            .unwrap_or_default();
-
-        (
-            vcs_provider,
-            head_repo_name,
-            head_ref,
-            base_ref,
-            base_repo_name,
-        )
-    };
-
-    // Track whether base_sha and base_ref were explicitly provided by the user
-    let base_sha_from_user = matches.get_one::<Option<Digest>>("base_sha").is_some();
-    let base_ref_from_user = matches.get_one::<String>("base_ref").is_some();
-
-    let mut base_sha = matches
-        .get_one::<Option<Digest>>("base_sha")
-        .map(|d| d.as_ref().cloned())
-        .or_else(|| {
-            Some(
-                vcs::find_base_sha(&cached_remote)
-                    .inspect_err(|e| debug!("Error finding base SHA: {e}"))
-                    .ok()
-                    .flatten(),
-            )
-        })
-        .flatten();
-
-    let mut base_ref = base_ref;
-
-    // If base_sha equals head_sha and both were auto-inferred, skip setting base_sha and base_ref
-    // but keep head_sha (since comparing a commit to itself provides no meaningful baseline)
-    if !base_sha_from_user
-        && !base_ref_from_user
-        && base_sha.is_some()
-        && head_sha.is_some()
-        && base_sha == head_sha
-    {
-        debug!(
-            "Base SHA equals head SHA ({}), and both were auto-inferred. Skipping base_sha and base_ref, but keeping head_sha.",
-            base_sha.expect("base_sha is Some at this point")
-        );
-        base_sha = None;
-        base_ref = "".into();
-    }
-    let pr_number = matches
-        .get_one("pr_number")
-        .copied()
-        .or_else(get_github_pr_number);
+    // Always collect git metadata, but only perform automatic inference when enabled
+    let vcs_info = collect_git_metadata(matches, &config, should_collect_git_metadata);
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
     let release_notes = matches.get_one("release_notes").map(String::as_str);
@@ -333,16 +202,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     for (path, zip) in normalized_zips {
         info!("Uploading file: {}", path.display());
         let bytes = ByteView::open(zip.path())?;
-        let vcs_info = VcsInfo {
-            head_sha,
-            base_sha,
-            vcs_provider: &vcs_provider,
-            head_repo_name: &head_repo_name,
-            base_repo_name: &base_repo_name,
-            head_ref: &head_ref,
-            base_ref: &base_ref,
-            pr_number,
-        };
         match upload_file(
             &authenticated_api,
             &bytes,
@@ -398,6 +257,181 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
     Ok(())
+}
+
+/// Collects git metadata from arguments and VCS introspection.
+///
+/// When `auto_collect` is false, only explicitly provided values are collected;
+/// automatic inference from git repository and CI environment is skipped.
+fn collect_git_metadata(
+    matches: &ArgMatches,
+    config: &Config,
+    auto_collect: bool,
+) -> VcsInfo<'static> {
+    let head_sha = matches
+        .get_one::<Option<Digest>>("head_sha")
+        .map(|d| d.as_ref().cloned())
+        .or_else(|| auto_collect.then(|| vcs::find_head_sha().ok()))
+        .flatten();
+
+    let cached_remote = config.get_cached_vcs_remote();
+    let (vcs_provider, head_repo_name, head_ref, base_ref, base_repo_name) = {
+        let repo = if auto_collect {
+            git2::Repository::open_from_env().ok()
+        } else {
+            None
+        };
+        let repo_ref = repo.as_ref();
+        let remote_url = repo_ref.and_then(|repo| git_repo_remote_url(repo, &cached_remote).ok());
+
+        let vcs_provider = matches
+            .get_one("vcs_provider")
+            .cloned()
+            .or_else(|| {
+                auto_collect
+                    .then(|| remote_url.as_ref().map(|url| get_provider_from_remote(url)))?
+            })
+            .unwrap_or_default();
+
+        let head_repo_name = matches
+            .get_one("head_repo_name")
+            .cloned()
+            .or_else(|| {
+                auto_collect.then(|| {
+                    remote_url
+                        .as_ref()
+                        .map(|url| get_repo_from_remote_preserve_case(url))
+                })?
+            })
+            .unwrap_or_default();
+
+        let head_ref = matches
+            .get_one("head_ref")
+            .cloned()
+            .or_else(|| auto_collect.then(get_github_head_ref)?)
+            .or_else(|| {
+                auto_collect.then(|| {
+                    repo_ref.and_then(|r| match git_repo_head_ref(r) {
+                        Ok(ref_name) => {
+                            debug!("Found current branch reference: {ref_name}");
+                            Some(ref_name)
+                        }
+                        Err(e) => {
+                            debug!("No valid branch reference found (likely detached HEAD): {e}");
+                            None
+                        }
+                    })
+                })?
+            })
+            .unwrap_or_default();
+
+        let base_ref = matches
+            .get_one("base_ref")
+            .cloned()
+            .or_else(|| auto_collect.then(get_github_base_ref)?)
+            .or_else(|| {
+                auto_collect.then(|| {
+                    repo_ref.and_then(|r| match git_repo_base_ref(r, &cached_remote) {
+                        Ok(base_ref_name) => {
+                            debug!("Found base reference: {base_ref_name}");
+                            Some(base_ref_name)
+                        }
+                        Err(e) => {
+                            info!("Could not detect base branch reference: {e}");
+                            None
+                        }
+                    })
+                })?
+            })
+            .unwrap_or_default();
+
+        let base_repo_name = matches
+            .get_one("base_repo_name")
+            .cloned()
+            .or_else(|| {
+                auto_collect.then(|| {
+                    repo_ref.and_then(|r| match git_repo_base_repo_name_preserve_case(r) {
+                        Ok(Some(base_repo_name)) => {
+                            debug!("Found base repository name: {base_repo_name}");
+                            Some(base_repo_name)
+                        }
+                        Ok(None) => {
+                            debug!("No base repository found - not a fork");
+                            None
+                        }
+                        Err(e) => {
+                            warn!("Could not detect base repository name: {e}");
+                            None
+                        }
+                    })
+                })?
+            })
+            .unwrap_or_default();
+
+        (
+            vcs_provider,
+            head_repo_name,
+            head_ref,
+            base_ref,
+            base_repo_name,
+        )
+    };
+
+    let base_sha_from_user = matches.get_one::<Option<Digest>>("base_sha").is_some();
+    let base_ref_from_user = matches.get_one::<String>("base_ref").is_some();
+
+    let mut base_sha = matches
+        .get_one::<Option<Digest>>("base_sha")
+        .map(|d| d.as_ref().cloned())
+        .or_else(|| {
+            if auto_collect {
+                Some(
+                    vcs::find_base_sha(&cached_remote)
+                        .inspect_err(|e| debug!("Error finding base SHA: {e}"))
+                        .ok()
+                        .flatten(),
+                )
+            } else {
+                None
+            }
+        })
+        .flatten();
+
+    let mut base_ref = base_ref;
+
+    // If base_sha equals head_sha and both were auto-inferred, skip setting base_sha and base_ref
+    if !base_sha_from_user
+        && !base_ref_from_user
+        && base_sha.is_some()
+        && head_sha.is_some()
+        && base_sha == head_sha
+    {
+        debug!(
+            "Base SHA equals head SHA ({}), and both were auto-inferred. Skipping base_sha and base_ref, but keeping head_sha.",
+            base_sha.expect("base_sha is Some at this point")
+        );
+        base_sha = None;
+        base_ref = "".into();
+    }
+
+    let pr_number = matches.get_one("pr_number").copied().or_else(|| {
+        if auto_collect {
+            get_github_pr_number()
+        } else {
+            None
+        }
+    });
+
+    VcsInfo {
+        head_sha,
+        base_sha,
+        vcs_provider: Cow::Owned(vcs_provider),
+        head_repo_name: Cow::Owned(head_repo_name),
+        base_repo_name: Cow::Owned(base_repo_name),
+        head_ref: Cow::Owned(head_ref),
+        base_ref: Cow::Owned(base_ref),
+        pr_number,
+    }
 }
 
 fn handle_file(path: &Path, byteview: &ByteView) -> Result<TempFile> {
@@ -627,8 +661,10 @@ fn parse_sha_allow_empty(sha: &str) -> Result<Option<Digest>> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use ini::Ini;
     use std::fs;
     use std::os::unix::fs::symlink;
+    use std::path::PathBuf;
     use zip::ZipArchive;
 
     #[test]
@@ -756,5 +792,89 @@ mod tests {
         assert!(has_regular_file, "Regular file should be in zip");
         assert!(has_symlink, "Symlink should be preserved in zip");
         Ok(())
+    }
+
+    #[test]
+    fn test_collect_git_metadata_respects_explicit_values_when_auto_collect_disabled() {
+        // Create a mock ArgMatches with explicit --head-sha and --vcs-provider values
+        let app = make_command(Command::new("test"));
+        let matches = app
+            .try_get_matches_from(vec![
+                "test",
+                "--org",
+                "test-org",
+                "--project",
+                "test-project",
+                "--head-sha",
+                "1234567890123456789012345678901234567890",
+                "--vcs-provider",
+                "custom-vcs",
+                "dummy.apk",
+            ])
+            .unwrap();
+
+        // Create a minimal config without binding it globally
+        let config = Config::from_file(PathBuf::from("dummy.ini"), Ini::new());
+
+        // When auto_collect is false, explicit values should still be collected
+        let metadata = collect_git_metadata(&matches, &config, false);
+
+        // Explicit values should be present
+        assert!(
+            metadata.head_sha.is_some(),
+            "Explicit --head-sha should be collected even with auto_collect=false"
+        );
+        assert_eq!(
+            metadata.vcs_provider.as_ref(),
+            "custom-vcs",
+            "Explicit --vcs-provider should be used with auto_collect=false"
+        );
+
+        // But automatic inference should not happen for fields without explicit values
+        assert_eq!(
+            metadata.head_repo_name.as_ref(),
+            "",
+            "head_repo_name should be empty with auto_collect=false and no explicit value"
+        );
+    }
+
+    #[test]
+    fn test_collect_git_metadata_skips_auto_inference_when_disabled() {
+        // Create a mock ArgMatches without any explicit git metadata values
+        let app = make_command(Command::new("test"));
+        let matches = app
+            .try_get_matches_from(vec![
+                "test",
+                "--org",
+                "test-org",
+                "--project",
+                "test-project",
+                "dummy.apk",
+            ])
+            .unwrap();
+
+        // Create a minimal config without binding it globally
+        let config = Config::from_file(PathBuf::from("dummy.ini"), Ini::new());
+
+        // When auto_collect is false and no explicit values provided,
+        // we should get empty metadata
+        let metadata = collect_git_metadata(&matches, &config, false);
+
+        // With auto_collect=false, we should get empty values
+        assert_eq!(
+            metadata.vcs_provider.as_ref(),
+            "",
+            "vcs_provider should be empty with auto_collect=false and no explicit value"
+        );
+        assert_eq!(
+            metadata.head_repo_name.as_ref(),
+            "",
+            "head_repo_name should be empty with auto_collect=false and no explicit value"
+        );
+        assert_eq!(
+            metadata.head_ref.as_ref(),
+            "",
+            "head_ref should be empty with auto_collect=false and no explicit value"
+        );
     }
 }
