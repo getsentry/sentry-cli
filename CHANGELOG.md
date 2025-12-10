@@ -2,10 +2,6 @@
 
 ## 2.58.3
 
-- build(npm): 🤖 Bump optional dependencies to 2.58.3-alpha0 in [393a96bd](https://github.com/getsentry/sentry-cli/commit/393a96bd8a587163ebcce2ef326238f86aea0801)
-
-## 2.58.3-alpha0
-
 ### Improvements
 - For the `sentry-cli build upload` command, we now only auto-detect Git metadata when we detect we are running in a CI environment, unless the user manually overrides this behavior ([#2974](https://github.com/getsentry/sentry-cli/pull/2974)). This change prevents local development builds from triggiering GitHub status checks for size analysis.
   - We can detect most common CI environments based on the environment variables these set.
