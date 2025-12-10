@@ -58,9 +58,6 @@ Options:
           most CI environments.
       --no-git-metadata
           Disable collection and sending of git metadata.
-      --metadata <KEY=VALUE>
-          Custom metadata to include in the build upload (e.g., --metadata gradle-plugin=4.12.0).
-          Can be specified multiple times.
   -h, --help
           Print help
 

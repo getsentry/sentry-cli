@@ -1,5 +1,4 @@
 use std::borrow::Cow;
-use std::collections::HashMap;
 #[cfg(not(windows))]
 use std::fs;
 use std::fs::File;
@@ -95,19 +94,16 @@ fn metadata_file_options() -> SimpleFileOptions {
 
 pub fn write_version_metadata<W: std::io::Write + std::io::Seek>(
     zip: &mut ZipWriter<W>,
-    metadata: &HashMap<String, String>,
+    plugin_name: Option<&str>,
+    plugin_version: Option<&str>,
 ) -> Result<()> {
     let version = get_version();
     zip.start_file(".sentry-cli-metadata.txt", metadata_file_options())?;
     writeln!(zip, "sentry-cli-version: {version}")?;
 
-    // Write metadata in sorted order for deterministic output
-    let mut keys: Vec<_> = metadata.keys().collect();
-    keys.sort();
-    for key in keys {
-        if let Some(value) = metadata.get(key) {
-            writeln!(zip, "{key}: {value}")?;
-        }
+    // Write plugin info if available
+    if let (Some(name), Some(version)) = (plugin_name, plugin_version) {
+        writeln!(zip, "{name}: {version}")?;
     }
     Ok(())
 }
@@ -118,7 +114,8 @@ pub fn write_version_metadata<W: std::io::Write + std::io::Seek>(
 pub fn normalize_directory(
     path: &Path,
     parsed_assets_path: &Path,
-    metadata: &HashMap<String, String>,
+    plugin_name: Option<&str>,
+    plugin_version: Option<&str>,
 ) -> Result<TempFile> {
     debug!("Creating normalized zip for directory: {}", path.display());
 
@@ -148,7 +145,7 @@ pub fn normalize_directory(
         )?;
     }
 
-    write_version_metadata(&mut zip, metadata)?;
+    write_version_metadata(&mut zip, plugin_name, plugin_version)?;
 
     zip.finish()?;
     debug!("Successfully created normalized zip for directory with {file_count} files");
