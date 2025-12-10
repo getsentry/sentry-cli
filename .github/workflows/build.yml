@@ -224,7 +224,7 @@ jobs:
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
 
-      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # 6.0.0
+      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # 6.1.0
         with:
           node-version: '20.10.0'
 
@@ -300,7 +300,7 @@ jobs:
     needs: [linux, sign-macos-binaries, windows]
     steps:
       - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
-      - uses: actions/setup-node@2028fbc5c25fe9cf00d9f06a71cc4710d4507903 # 6.0.0
+      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # 6.1.0
         with:
           node-version: '20.10.0'
       - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
