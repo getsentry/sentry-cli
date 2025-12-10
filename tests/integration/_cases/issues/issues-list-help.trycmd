@@ -13,8 +13,9 @@ Options:
   -p, --project <PROJECT>        The project ID or slug.
       --pages <PAGES>            Maximum number of pages to fetch (100 issues/page). [default: 5]
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
-      --query <QUERY>            Query to pass at the request. An example is "is:unresolved"
-                                 [default: ]
+      --query <QUERY>            Query to filter issues. Example: "is:unresolved". If omitted, no
+                                 filtering is applied. See https://docs.sentry.io/concepts/search/
+                                 for syntax.
   -s, --status <STATUS>          Select all issues matching a given status. [possible values:
                                  resolved, muted, unresolved]
   -a, --all                      Select all issues (this might be limited).
