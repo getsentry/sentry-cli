@@ -28,7 +28,12 @@ pub fn make_command(command: Command) -> Command {
                 .long("query")
                 .value_name("QUERY")
                 .default_value("")
-                .help("Query to filter issues. Example: \"is:unresolved\". See https://docs.sentry.io/concepts/search/ for syntax."),
+                .hide_default_value(true)
+                .help(
+                    "Query to filter issues. Example: \"is:unresolved\". \
+                    If omitted, no filtering is applied. \
+                    See https://docs.sentry.io/concepts/search/ for syntax.",
+                ),
         )
 }
 
