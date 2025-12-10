@@ -1,5 +1,9 @@
 # Changelog
 
+## 2.58.3
+
+- build(npm): 🤖 Bump optional dependencies to 2.58.3-alpha0 in [393a96bd](https://github.com/getsentry/sentry-cli/commit/393a96bd8a587163ebcce2ef326238f86aea0801)
+
 ## 2.58.3-alpha0
 
 ### Improvements
