@@ -48,8 +48,16 @@ jobs:
         with:
           node-version-file: package.json
 
-      - name: Install dependencies
+      - name: Install dependencies via npm ci
+        if: ${{ !inputs.triggered-by-release }}
         run: npm ci --ignore-scripts
+
+      # For pushes to the release branch, we need to install the dependencies via `npm install`
+      # because the `package-lock.json` is not updated with the new versions of the optional
+      # dependencies yet. We also must skip the fallback download via --ignore-scripts.
+      - name: Install dependencies via npm install (for pushes to release branch)
+        if: ${{ inputs.triggered-by-release }}
+        run: npm install --omit=optional --ignore-scripts
 
       - name: Build
         run: npm run build
