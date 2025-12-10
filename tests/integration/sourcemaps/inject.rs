@@ -238,9 +238,9 @@ fn command_sourcemaps_inject_malformed_map() {
             .run_and_assert(AssertCommand::Success);
     });
 
-    let map_contents = fs::read_to_string(
-        std::path::Path::new(testcase_cwd_path).join("app.js.map")
-    ).expect("Failed to read app.js.map after injection");
+    let map_contents =
+        fs::read_to_string(std::path::Path::new(testcase_cwd_path).join("app.js.map"))
+            .expect("Failed to read app.js.map after injection");
 
     // The key assertion: .map files should NEVER have JavaScript injected into them,
     // even if they're malformed and misclassified as MinifiedSource
@@ -257,9 +257,8 @@ fn command_sourcemaps_inject_malformed_map() {
 
     // Verify that the debug ID was still injected into the JS file, and the reference in the map file
     // exists in JSON
-    let js_contents = fs::read_to_string(
-        std::path::Path::new(testcase_cwd_path).join("app.js")
-    ).expect("Failed to read app.js after injection");
+    let js_contents = fs::read_to_string(std::path::Path::new(testcase_cwd_path).join("app.js"))
+        .expect("Failed to read app.js after injection");
     assert!(
         js_contents.contains("//# debugId="),
         "Expected debugId comment to be injected into app.js. Contents: {js_contents}"
