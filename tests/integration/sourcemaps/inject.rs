@@ -229,43 +229,15 @@ fn command_sourcemaps_inject_malformed_map() {
     )
     .unwrap();
 
-    // Run the inject command - it will likely fail due to the malformed map causing validation errors,
-    // but the key question is: did it corrupt the .map file by injecting JavaScript into it first?
-    // We use std::panic::catch_unwind to allow the command to fail without failing the test
-    let _ = std::panic::catch_unwind(|| {
-        TestManager::new()
-            .assert_cmd(vec!["sourcemaps", "inject", testcase_cwd_path])
-            .run_and_assert(AssertCommand::Success);
-    });
+    // Run the injection command. This should succeed; failure may indicate that we
+    // rewrote the .map file, even though we should not have.
+    TestManager::new()
+        .assert_cmd(vec!["sourcemaps", "inject", testcase_cwd_path])
+        .run_and_assert(AssertCommand::Success);
 
-    let map_contents =
-        fs::read_to_string(std::path::Path::new(testcase_cwd_path).join("app.js.map"))
-            .expect("Failed to read app.js.map after injection");
-
-    // The key assertion: .map files should NEVER have JavaScript injected into them,
-    // even if they're malformed and misclassified as MinifiedSource
-    assert!(
-        !map_contents.contains("!function()"),
-        "BUG: .map file had JavaScript runtime snippet injected into it! This corrupts the sourcemap. Contents: {map_contents}"
-    );
-
-    // Also verify no debug ID comment was added (that's only for JS files)
-    assert!(
-        !map_contents.contains("//# debugId="),
-        "BUG: .map file had a debugId comment injected into it! This is JavaScript syntax, not JSON. Contents: {map_contents}" 
-    );
-
-    // Verify that the debug ID was still injected into the JS file, and the reference in the map file
-    // exists in JSON
-    let js_contents = fs::read_to_string(std::path::Path::new(testcase_cwd_path).join("app.js"))
-        .expect("Failed to read app.js after injection");
-    assert!(
-        js_contents.contains("//# debugId="),
-        "Expected debugId comment to be injected into app.js. Contents: {js_contents}"
-    );
-    assert!(
-        map_contents.contains(r#""debug_id":"#),
-        "Expected debug_id field to be present in app.js.map. Contents: {map_contents}"
+    assert_directories_equal(
+        testcase_cwd_path,
+        "tests/integration/_expected_outputs/sourcemaps/sourcemaps-inject-malformed-map",
     );
 }
 
