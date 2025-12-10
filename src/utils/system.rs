@@ -143,7 +143,7 @@ pub fn load_dotenv() -> Result<()> {
 /// environment variable is set.
 fn panic_hook(info: &PanicHookInfo) {
     const PANIC_MESSAGE: &str = "Uh-oh! 😬 Sentry CLI has just crashed due to an internal error. \
-        Please open a bug report issue at https://github.com/getsentry/sentry-cli/issues/new?template=BUG_REPORT.yml. 🐞";
+        Please open a bug report issue at https://github.com/getsentry/sentry-cli/issues/new?template=02-bug.yml. 🐞";
 
     eprintln!(
         "{}\n\n{PANIC_MESSAGE}\n\n{}",

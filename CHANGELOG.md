@@ -10,6 +10,9 @@
 - The `sentry-cli build upload` command now automatically detects the correct branch or tag reference in non-PR GitHub Actions workflows ([#2976](https://github.com/getsentry/sentry-cli/pull/2976)). Previously, `--head-ref` was only auto-detected for pull request workflows. Now it works for push, release, and other workflow types by using the `GITHUB_REF_NAME` environment variable.
 - Link to docs for query syntax in help text ([#3007](https://github.com/getsentry/sentry-cli/pull/3007))
 
+### Fixes
+- Fixed a bug where the `sentry-cli sourcemaps inject` command could inject JavaScript code into certain incorrectly formatted source map files, corrupting their JSON structure ([#3003](https://github.com/getsentry/sentry-cli/pull/3003)).
+
 ## 2.58.2
 
 ### Improvements
@@ -517,7 +520,7 @@ We made several refactors and added several tests in this release. These changes
 
 <details>
 <summary><h3>Changes to tests</h3></summary>
-  
+
 - ref(test): Broaden `with_header_matcher` types (#2261) by @szokeasaurusrex
 - ref(test): Accept `impl Into<Matcher>` for `with_matcher` (#2260) by @szokeasaurusrex
 - ref(test): Align `with_reponse_body` parameter to `mockito` (#2259) by @szokeasaurusrex
