@@ -2,6 +2,7 @@
 
 # Files co-owned by JavaScript SDK team
 /.cursor/rules/javascript-development.mdc @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
+/.github/workflows/test_node.yml @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
 /.npmignore @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
 /bin/ @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli  # these are the JS "binaries"
 /lib @getsentry/team-javascript-sdks @getsentry/owners-sentry-cli
