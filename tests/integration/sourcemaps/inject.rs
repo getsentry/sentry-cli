@@ -216,6 +216,31 @@ fn command_sourcemaps_inject_double_association() {
     );
 }
 
+#[test]
+fn command_sourcemaps_inject_malformed_map() {
+    let testcase_cwd_path =
+        "tests/integration/_cases/sourcemaps/sourcemaps-inject-malformed-map.in/";
+    if std::path::Path::new(testcase_cwd_path).exists() {
+        remove_dir_all(testcase_cwd_path).unwrap();
+    }
+    copy_recursively(
+        "tests/integration/_fixtures/inject_malformed_map/",
+        testcase_cwd_path,
+    )
+    .unwrap();
+
+    // Run the injection command. This should succeed; failure may indicate that we
+    // rewrote the .map file, even though we should not have.
+    TestManager::new()
+        .assert_cmd(vec!["sourcemaps", "inject", testcase_cwd_path])
+        .run_and_assert(AssertCommand::Success);
+
+    assert_directories_equal(
+        testcase_cwd_path,
+        "tests/integration/_expected_outputs/sourcemaps/sourcemaps-inject-malformed-map",
+    );
+}
+
 /// Recursively assert that the contents of two directories are equal.
 ///
 /// We only support directories that contain exclusively text files.
