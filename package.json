@@ -44,7 +44,6 @@
   "scripts": {
     "postinstall": "npm run install-cli",
     "build": "tsc",
-    "postbuild": "npm run install-cli",
     "install-cli": "node ./scripts/install.js",
     "prepack": "npm run build",
     "fix": "npm-run-all fix:eslint fix:prettier",
