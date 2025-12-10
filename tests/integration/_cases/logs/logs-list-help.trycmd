@@ -29,10 +29,8 @@ Options:
           [default: 100]
 
       --query <QUERY>
-          Query to filter logs. Example: "level:error". See
+          Query to filter logs. Example: "level:error". If omitted, no filtering is applied. See
           https://docs.sentry.io/concepts/search/ for syntax.
-          
-          [default: ]
 
       --live
           Live stream logs.
