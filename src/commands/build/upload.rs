@@ -165,10 +165,16 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             values
                 .filter_map(|s| {
                     let parts: Vec<&str> = s.splitn(2, '=').collect();
-                    if parts.len() == 2 {
-                        Some((parts[0].to_owned(), parts[1].to_owned()))
+                    if parts.len() == 2 && !parts[0].is_empty() {
+                        let key = parts[0];
+                        // Reject reserved key that's automatically set
+                        if key == "sentry-cli-version" {
+                            warn!("Ignoring reserved metadata key 'sentry-cli-version'. This is set automatically.");
+                            return None;
+                        }
+                        Some((key.to_owned(), parts[1].to_owned()))
                     } else {
-                        warn!("Ignoring invalid metadata format: {s}. Expected format: KEY=VALUE");
+                        warn!("Ignoring invalid metadata format: {s}. Expected format: KEY=VALUE with non-empty key");
                         None
                     }
                 })
@@ -943,6 +949,35 @@ mod tests {
             metadata_content.contains("fastlane-plugin: 1.2.3"),
             "Metadata should contain fastlane-plugin"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn test_metadata_with_empty_map() -> Result<()> {
+        let temp_dir = crate::utils::fs::TempDir::create()?;
+        let test_dir = temp_dir.path().join("TestApp.xcarchive");
+        fs::create_dir_all(test_dir.join("Products"))?;
+        fs::write(test_dir.join("Products").join("app.txt"), "test content")?;
+
+        // Empty metadata should work fine
+        let metadata = HashMap::new();
+
+        let result_zip = normalize_directory(&test_dir, temp_dir.path(), &metadata)?;
+        let zip_file = fs::File::open(result_zip.path())?;
+        let mut archive = ZipArchive::new(zip_file)?;
+
+        let metadata_file = archive.by_name(".sentry-cli-metadata.txt")?;
+        let metadata_content = std::io::read_to_string(metadata_file)?;
+
+        // Should only contain sentry-cli-version
+        assert!(
+            metadata_content.contains("sentry-cli-version:"),
+            "Metadata should contain sentry-cli-version"
+        );
+
+        // Should not have any other lines besides the version
+        let line_count = metadata_content.lines().count();
+        assert_eq!(line_count, 1, "Should only have one line for empty metadata");
         Ok(())
     }
 }
