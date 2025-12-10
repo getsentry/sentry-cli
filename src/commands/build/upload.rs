@@ -196,15 +196,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         let normalized_zip = if path.is_file() {
             debug!("Normalizing file: {}", path.display());
-            handle_file(path, &byteview, plugin_name.as_deref(), plugin_version.as_deref())?
+            handle_file(
+                path,
+                &byteview,
+                plugin_name.as_deref(),
+                plugin_version.as_deref(),
+            )?
         } else if path.is_dir() {
             debug!("Normalizing directory: {}", path.display());
-            handle_directory(path, plugin_name.as_deref(), plugin_version.as_deref()).with_context(|| {
-                format!(
-                    "Failed to generate uploadable bundle for directory {}",
-                    path.display()
-                )
-            })?
+            handle_directory(path, plugin_name.as_deref(), plugin_version.as_deref()).with_context(
+                || {
+                    format!(
+                        "Failed to generate uploadable bundle for directory {}",
+                        path.display()
+                    )
+                },
+            )?
         } else {
             Err(anyhow!(
                 "Path {} is neither a file nor a directory, cannot upload",
@@ -1002,7 +1009,10 @@ mod tests {
 
         // Should not have any other lines besides the version
         let line_count = metadata_content.lines().count();
-        assert_eq!(line_count, 1, "Should only have one line when no plugin info");
+        assert_eq!(
+            line_count, 1,
+            "Should only have one line when no plugin info"
+        );
         Ok(())
     }
 }
