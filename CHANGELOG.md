@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.58.3-alpha0
 
 ### Improvements
 - For the `sentry-cli build upload` command, we now only auto-detect Git metadata when we detect we are running in a CI environment, unless the user manually overrides this behavior ([#2974](https://github.com/getsentry/sentry-cli/pull/2974)). This change prevents local development builds from triggiering GitHub status checks for size analysis.
