@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### New Sentry Support Policy
+
+`sentry-cli` 3.0.0 and above only officially supports Sentry SaaS and Sentry self-hosted versions [25.11.1](https://github.com/getsentry/sentry/releases/tag/25.11.1) and higher. While many Sentry CLI features may, in practice, continue working with some older Sentry versions, continued support for Sentry versions older than 25.11.1 is not guaranteed. Changes which break support for Sentry versions below 25.11.1 may occur in minor or patch releases.
+
 ## 2.58.3
 
 ### Improvements
