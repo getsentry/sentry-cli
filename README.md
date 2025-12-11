@@ -35,6 +35,10 @@ For users who cannot upgrade their self-hosted installation, we recommend using 
 
 Note that we can only provide support for officially-supported Sentry Self-Hosted versions. We will not backport fixes for older Sentry CLI versions, even if they should be compatible with your self-hosted version.
 
+## Versioning
+
+Sentry CLI follows semantic versioning, according to [this versioning policy](VERSIONING.md).
+
 ## Compiling
 
 In case you want to compile this yourself, you need to install at minimum the
