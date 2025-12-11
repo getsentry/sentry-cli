@@ -6,6 +6,13 @@
 
 `sentry-cli` 3.0.0 and above only officially supports Sentry SaaS and Sentry self-hosted versions [25.11.1](https://github.com/getsentry/sentry/releases/tag/25.11.1) and higher. While many Sentry CLI features may, in practice, continue working with some older Sentry versions, continued support for Sentry versions older than 25.11.1 is not guaranteed. Changes which break support for Sentry versions below 25.11.1 may occur in minor or patch releases.
 
+### New Versioning Policy
+
+Sentry CLI now defines a [semantic versioning policy](VERSIONING.md). We did not explicitly define a versioning policy before, but the new versioning policy contains some notable changes versus the previous implicit policy we had been following. The main change is that dropping support for self-hosted Sentry versions now only requires a minor version bump, although such changes will be clearly communicated in the changelog.
+
+> [!IMPORTANT]
+> **Self-hosted users**: We strongly recommend pinning your Sentry CLI version, since Sentry CLI may drop support for your self-hosted Sentry version in any future minor release. Always check the changelog before upgrading Sentry CLI.
+
 ### Breaking Changes
 
 - Removed all `sentry-cli files ...` and `sentry-cli releases files ...` subcommands ([#2956](https://github.com/getsentry/sentry-cli/pull/2956)). These commands provided functionality for managing release files, a feature that has been deprecated in Sentry. Users still using `sentry-cli files upload` to upload source maps should migrate to `sentry-cli sourcemaps upload`.
