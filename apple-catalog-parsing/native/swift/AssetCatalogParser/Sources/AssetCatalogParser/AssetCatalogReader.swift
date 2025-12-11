@@ -228,7 +228,8 @@ enum AssetUtil {
                 
                 // Compute content hash for PDFs/SVGs without saving to disk
                 if fileExtension == "pdf" || fileExtension == "svg" {
-                    contentHash = data.sha256Hash()
+                  // Hash PDFs/SVGs in-memory (Python can't access _srcData without parsing binary .car format)
+                  contentHash = data.sha256Hash()
                 }
                 // Save images that can be converted to CGImage (excluding PDFs/SVGs)
                 else if let unslicedImage = unslicedImage {
