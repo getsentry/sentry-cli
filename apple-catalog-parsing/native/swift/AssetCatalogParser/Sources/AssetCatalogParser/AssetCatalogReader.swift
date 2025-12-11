@@ -1,4 +1,5 @@
 import CoreGraphics
+import CryptoKit
 import Foundation
 import ImageIO
 import UniformTypeIdentifiers
@@ -40,6 +41,7 @@ struct AssetCatalogEntry: Encodable {
     let type: AssetType?
     let idiom: String?
     let colorspace: String?
+    let contentHash: String?
 }
 
 enum Error: Swift.Error {
@@ -112,7 +114,7 @@ enum AssetUtil {
 
         let (structuredThemeStore, assetKeys) = initializeCatalog(from: file)
 
-        var images: [String: (cgImage: CGImage, format: String)] = [:]
+        var cgImages: [String: (cgImage: CGImage, format: String)] = [:]
         
         // First pass: Build map of multisize sets and cache renditions for performance
         var multisizeSets: [MultisizeSetInfo] = []
@@ -216,6 +218,7 @@ enum AssetUtil {
             var width: Int?
             var height: Int?
             var unslicedImage: CGImage?
+            var contentHash: String? = nil
             
             if isMultisizeImageSet {
                 continue
@@ -223,10 +226,15 @@ enum AssetUtil {
                 // Get image dimensions from regular rendition
                 (width, height, unslicedImage) = resolveImageDimensions(rendition, isVector)
                 
-                // Skip SVGs, but save images even if they don't have an extension (default to png)
-                if fileExtension != "svg", let unslicedImage = unslicedImage {
+                // Compute content hash for PDFs/SVGs without saving to disk
+                if fileExtension == "pdf" || fileExtension == "svg" {
+                  // Hash PDFs/SVGs in-memory (Python can't access _srcData without parsing binary .car format)
+                  contentHash = data.sha256Hash()
+                }
+                // Save images that can be converted to CGImage (excluding PDFs/SVGs)
+                else if let unslicedImage = unslicedImage {
                     let format = fileExtension.isEmpty ? "png" : fileExtension
-                    images[imageId] = (cgImage: unslicedImage, format: format)
+                    cgImages[imageId] = (cgImage: unslicedImage, format: format)
                 }
             }
             
@@ -251,7 +259,8 @@ enum AssetUtil {
                 filename: renditionTypeName,
                 type: assetType,
                 idiom: idiomToString(idiomValue),
-                colorspace: colorSpaceIDToString(colorSpaceID)
+                colorspace: colorSpaceIDToString(colorSpaceID),
+                contentHash: contentHash
             )
             assets.append(asset)
         }
@@ -266,7 +275,8 @@ enum AssetUtil {
             filename: nil,
             type: nil,
             idiom: nil,
-            colorspace: nil
+            colorspace: nil,
+            contentHash: nil
         ))
 
         let data = try! JSONEncoder().encode(assets)
@@ -275,7 +285,7 @@ enum AssetUtil {
             .appendingPathComponent("Assets")
             .appendingPathExtension("json")
         try! data.write(to: url, options: [])
-        for (id, imageInfo) in images {
+        for (id, imageInfo) in cgImages {
             let format = imageInfo.format
             let cgImage = imageInfo.cgImage
             let fileURL = folder.appendingPathComponent(id).appendingPathExtension(format)
@@ -457,6 +467,17 @@ enum AssetUtil {
         default:
             return nil
         }
+    }
+}
+
+private extension Data {
+    func sha256Hash() -> String {
+        if #available(macOS 10.15, *) {
+            let digest = SHA256.hash(data: self)
+            return digest.map { String(format: "%02x", $0) }.joined()
+        }
+        // Fallback for older macOS (shouldn't happen with version 13+ requirement)
+        return ""
     }
 }
 
