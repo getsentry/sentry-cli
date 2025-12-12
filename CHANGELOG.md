@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Use node directly in the postinstall script, instead of using `npm run` ([#3030](https://github.com/getsentry/sentry-cli/pull/3030)). This change ensures the postinstall script remains compatible with package managers other than `npm`.
+
 ## 2.58.3
 
 ### Improvements

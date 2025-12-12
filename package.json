@@ -42,7 +42,7 @@
     "@sentry/cli-win32-arm64": "2.58.3"
   },
   "scripts": {
-    "postinstall": "npm run install-cli",
+    "postinstall": "node ./scripts/install.js",
     "build": "tsc",
     "install-cli": "node ./scripts/install.js",
     "prepack": "npm run build",
