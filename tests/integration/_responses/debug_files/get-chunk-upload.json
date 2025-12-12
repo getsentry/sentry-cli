@@ -7,5 +7,5 @@
   "concurrency": 8,
   "hashAlgorithm": "sha1",
   "compression": ["gzip"],
-  "accept": ["debug_files", "release_files", "pdbs", "portablepdbs", "sources", "bcsymbolmaps"]
+  "accept": ["debug_files", "release_files", "pdbs", "portablepdbs", "sources", "bcsymbolmaps", "proguard"]
 }
