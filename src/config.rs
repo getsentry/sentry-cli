@@ -19,7 +19,6 @@ use sentry::types::Dsn;
 
 use crate::constants::CONFIG_INI_FILE_PATH;
 use crate::constants::DEFAULT_MAX_DIF_ITEM_SIZE;
-use crate::constants::DEFAULT_MAX_DIF_UPLOAD_SIZE;
 use crate::constants::{CONFIG_RC_FILE_NAME, DEFAULT_RETRIES, DEFAULT_URL};
 use crate::utils::args;
 use crate::utils::auth_token::AuthToken;
@@ -455,17 +454,6 @@ impl Config {
                     .map(str::to_owned)
             }),
         )
-    }
-
-    /// Returns the maximum DIF upload size
-    pub fn get_max_dif_archive_size(&self) -> u64 {
-        let key = "max_upload_size";
-
-        self.ini
-            .get_from(Some("dif"), key)
-            .or_else(|| self.ini.get_from(Some("dsym"), key))
-            .and_then(|x| x.parse().ok())
-            .unwrap_or(DEFAULT_MAX_DIF_UPLOAD_SIZE)
     }
 
     /// Returns the maximum file size of a single file inside DIF bundle
