@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Use node directly in the postinstall script ([#3030](https://github.com/getsentry/sentry-cli/pull/3030))
+
 ## 2.58.3
 
 ### Improvements
