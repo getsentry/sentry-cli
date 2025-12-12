@@ -43,10 +43,9 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let api = Api::current();
-    let project = config.get_project(matches).ok();
     let releases = api
         .authenticated()?
-        .list_releases(&config.get_org(matches)?, project.as_deref())?;
+        .list_releases(&config.get_org(matches)?)?;
 
     if matches.get_flag("raw") {
         let versions = releases

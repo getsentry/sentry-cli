@@ -6,11 +6,8 @@ use serde_json::json;
 fn successfully_creates_a_release() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new(
-                "PUT",
-                "/api/0/projects/wat-org/wat-project/releases/wat-release/",
-            )
-            .with_response_file("releases/get-release.json"),
+            MockEndpointBuilder::new("PUT", "/api/0/organizations/wat-org/releases/wat-release/")
+                .with_response_file("releases/get-release.json"),
         )
         .register_trycmd_test("releases/releases-finalize.trycmd")
         .with_default_token();
@@ -22,7 +19,7 @@ fn allows_for_release_to_start_with_hyphen() {
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "PUT",
-                "/api/0/projects/wat-org/wat-project/releases/-hyphenated-release/",
+                "/api/0/organizations/wat-org/releases/-hyphenated-release/",
             )
             .with_response_file("releases/get-release.json"),
         )
@@ -34,15 +31,12 @@ fn allows_for_release_to_start_with_hyphen() {
 fn release_with_custom_dates() {
     TestManager::new()
         .mock_endpoint(
-            MockEndpointBuilder::new(
-                "PUT",
-                "/api/0/projects/wat-org/wat-project/releases/wat-release/",
-            )
-            .with_response_file("releases/get-release.json")
-            .with_matcher(Matcher::PartialJson(json!({
-                "projects": ["wat-project"],
-                "dateReleased": "2015-05-15T00:00:00Z"
-            }))),
+            MockEndpointBuilder::new("PUT", "/api/0/organizations/wat-org/releases/wat-release/")
+                .with_response_file("releases/get-release.json")
+                .with_matcher(Matcher::PartialJson(json!({
+                    "projects": ["wat-project"],
+                    "dateReleased": "2015-05-15T00:00:00Z"
+                }))),
         )
         .register_trycmd_test("releases/releases-finalize-dates.trycmd")
         .with_default_token();
