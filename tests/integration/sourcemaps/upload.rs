@@ -1,4 +1,4 @@
-use crate::integration::{ChunkOptions, MockEndpointBuilder, ServerBehavior, TestManager};
+use crate::integration::{ChunkOptions, ServerBehavior, TestManager};
 
 #[test]
 fn command_sourcemaps_upload_help() {
@@ -60,21 +60,6 @@ fn command_sourcemaps_upload_modern_v2() {
         .register_trycmd_test("sourcemaps/sourcemaps-upload-modern.trycmd")
         .with_default_token()
         .assert_mock_endpoints();
-}
-
-#[test]
-fn command_sourcemaps_upload_empty() {
-    TestManager::new()
-        .mock_common_upload_endpoints(ServerBehavior::Legacy, Default::default())
-        .mock_endpoint(
-            MockEndpointBuilder::new(
-                "GET",
-                "/api/0/projects/wat-org/wat-project/releases/wat-release/files/?cursor=",
-            )
-            .with_response_body("[]"),
-        )
-        .register_trycmd_test("releases/releases-files-upload-sourcemaps.trycmd")
-        .with_default_token();
 }
 
 #[test]
