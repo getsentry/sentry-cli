@@ -10,7 +10,7 @@ use glob::{glob_with, MatchOptions};
 use itertools::Itertools as _;
 use log::{debug, warn};
 
-use crate::api::{Api, ChunkUploadCapability};
+use crate::api::Api;
 use crate::config::Config;
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::validate_distribution;
@@ -429,19 +429,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let projects = config.get_projects(matches)?;
     let api = Api::current();
     let mut processor = SourceMapProcessor::new();
-    let mut chunk_upload_options = api.authenticated()?.get_chunk_upload_options(&org)?;
+    let chunk_upload_options = api.authenticated()?.get_chunk_upload_options(&org)?;
 
     if matches.get_flag("use_artifact_bundle")
         || env::var("SENTRY_FORCE_ARTIFACT_BUNDLES").ok().as_deref() == Some("1")
     {
         log::warn!("The --use-artifact-bundle option and the SENTRY_FORCE_ARTIFACT_BUNDLES environment variable \
                     are both deprecated, and both will be removed in the next major version.");
-
-        if !chunk_upload_options.supports(ChunkUploadCapability::ArtifactBundles) {
-            chunk_upload_options
-                .accept
-                .push(ChunkUploadCapability::ArtifactBundles);
-        }
     }
 
     if matches.contains_id("bundle") && matches.contains_id("bundle_sourcemap") {
