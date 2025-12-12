@@ -8,7 +8,7 @@
     "access": "public"
   },
   "engines": {
-    "node": ">=10"
+    "node": ">=18"
   },
   "os": [
     "darwin"
