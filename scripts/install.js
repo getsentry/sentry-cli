@@ -18,7 +18,7 @@ const which = require('which');
 
 const helper = require('../js/helper');
 const pkgInfo = require('../package.json');
-const Logger = require('../js/logger');
+const { Logger } = require('../js/logger');
 
 const logger = new Logger(getLogStream('stderr'));
 

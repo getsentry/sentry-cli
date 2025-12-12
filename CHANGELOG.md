@@ -29,6 +29,25 @@ The following changes only apply when using `sentry-cli` via the npm package [`@
 - Removed the `apiKey` option from `SentryCliOptions` ([#2935](https://github.com/getsentry/sentry-cli/pull/2935)). If you are using `apiKey`, you need to generate and use an [Auth Token](https://docs.sentry.io/account/auth-tokens/) via the `authToken` option, instead.
 - Removed the `useArtifactBundle` option from `SentryCliUploadSourceMapsOptions` ([#3002](https://github.com/getsentry/sentry-cli/pull/3002)). This deprecated option was a no-op that users should simply stop passing.
 - Drop support for Node.js <18. The minimum required Node.js version is now 18.0.0 ([#2985](https://github.com/getsentry/sentry-cli/issues/2985)).
+- The type export `SentryCliReleases` has been removed.
+- The JavaScript wrapper now uses named exports instead of default exports ([#2989](https://github.com/getsentry/sentry-cli/pull/2989)). You need to update your imports:
+  ```js
+  // Old (default import)
+  const SentryCli = require('@sentry/cli');
+
+  // New (named import)
+  const { SentryCli } = require('@sentry/cli');
+  ```
+
+  For ESM imports:
+  ```js
+  // Old
+  import SentryCli from '@sentry/cli';
+
+  // New
+  import { SentryCli } from '@sentry/cli';
+  ```
+
 
 ### Improvements
 
