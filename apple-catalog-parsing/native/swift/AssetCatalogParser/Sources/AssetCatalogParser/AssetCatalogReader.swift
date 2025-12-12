@@ -42,6 +42,7 @@ struct AssetCatalogEntry: Encodable {
     let idiom: String?
     let colorspace: String?
     let contentHash: String?
+    let scale: UInt?
 }
 
 enum Error: Swift.Error {
@@ -240,6 +241,7 @@ enum AssetUtil {
             
             let idiomValue = key.getUInt(forKey: "themeIdiom")
             let colorSpaceID = rendition.getUInt(forKey: "colorSpaceID")
+            let scaleValue = key.getUInt(forKey: "themeScale")
             
             // Include multisize set name in the name field if it exists
             let finalName: String
@@ -260,7 +262,8 @@ enum AssetUtil {
                 type: assetType,
                 idiom: idiomToString(idiomValue),
                 colorspace: colorSpaceIDToString(colorSpaceID),
-                contentHash: contentHash
+                contentHash: contentHash,
+                scale: scaleValue
             )
             assets.append(asset)
         }
@@ -276,7 +279,8 @@ enum AssetUtil {
             type: nil,
             idiom: nil,
             colorspace: nil,
-            contentHash: nil
+            contentHash: nil,
+            scale: nil
         ))
 
         let data = try! JSONEncoder().encode(assets)
