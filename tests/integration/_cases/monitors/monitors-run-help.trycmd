@@ -21,20 +21,20 @@ Options:
       --check-in-margin <checkin_margin>
           The allowed margin of minutes after the expected check-in time that the monitor will not
           be considered missed for. Requires --schedule.
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
       --max-runtime <max_runtime>
           The allowed duration in minutes that the monitor may be in progress for before being
           considered failed due to timeout. Requires --schedule.
-      --log-level <LOG_LEVEL>
-          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands. [aliases: --silent]
       --timezone <timezone>
           A tz database string (e.g. "Europe/Vienna") representing the monitor's execution
           schedule's timezone. Requires --schedule.
       --failure-issue-threshold <failure_issue_threshold>
           The number of consecutive missed or error check-ins that trigger an issue. Requires
           --schedule.
-      --quiet
-          Do not print any output while preserving correct exit code. This flag is currently
-          implemented only for selected subcommands. [aliases: --silent]
       --recovery-threshold <recovery_threshold>
           The number of consecutive successful check-ins that resolve an issue. Requires --schedule.
   -h, --help

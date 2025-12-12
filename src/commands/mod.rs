@@ -137,18 +137,6 @@ fn preexecute_hooks() -> Result<bool> {
 }
 
 fn configure_args(config: &mut Config, matches: &ArgMatches) {
-    if let Some(api_key) = matches.get_one::<String>("api_key") {
-        log::warn!(
-            "[DEPRECTATION NOTICE] API key authentication and the --api-key argument are \
-            deprecated. \
-            Please generate an auth token, and use the --auth-token argument instead."
-        );
-
-        #[expect(deprecated, reason = "Auth key is deprecated.")]
-        let auth = Auth::Key(api_key.to_owned());
-        config.set_auth(auth);
-    }
-
     if let Some(auth_token) = matches.get_one::<AuthToken>("auth_token") {
         config.set_auth(Auth::Token(auth_token.to_owned()));
     }
@@ -191,13 +179,6 @@ fn app() -> Command {
                 .global(true)
                 .value_parser(auth_token_parser)
                 .help("Use the given Sentry auth token."),
-        )
-        .arg(
-            Arg::new("api_key")
-                .value_name("API_KEY")
-                .long("api-key")
-                .hide(true)
-                .help("[DEPRECATED] Use the given Sentry API key."),
         )
         .arg(
             Arg::new("log_level")

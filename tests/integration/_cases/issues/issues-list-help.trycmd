@@ -19,9 +19,9 @@ Options:
   -s, --status <STATUS>          Select all issues matching a given status. [possible values:
                                  resolved, muted, unresolved]
   -a, --all                      Select all issues (this might be limited).
-  -i, --id <ID>                  Select the issue with the given ID.
       --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
                                  warn, error]
+  -i, --id <ID>                  Select the issue with the given ID.
       --quiet                    Do not print any output while preserving correct exit code. This
                                  flag is currently implemented only for selected subcommands.
                                  [aliases: --silent]
