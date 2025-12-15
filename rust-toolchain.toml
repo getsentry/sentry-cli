@@ -1,4 +1,4 @@
 [toolchain]
 # We pin the minor version to prevent new Clippy lints from breaking CI.
 # But, we still want to pick up new patch versions.
-channel = "1.91"
+channel = "1.92"
