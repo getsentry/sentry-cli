@@ -1,6 +1,5 @@
 use crate::utils::value_parsers;
 use anyhow::{anyhow, Result};
-use clap::command;
 use clap::Args;
 use sentry::metrics::MetricStr;
 use std::str::FromStr;
