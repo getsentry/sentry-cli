@@ -125,6 +125,33 @@ pub fn make_command(command: Command) -> Command {
         )
 }
 
+/// Parse plugin info from SENTRY_PIPELINE environment variable.
+/// Format: "sentry-gradle-plugin/4.12.0" or "sentry-fastlane-plugin/1.2.3"
+/// Returns (plugin_name, plugin_version) if a recognized plugin is found, (None, None) otherwise.
+fn parse_plugin_from_pipeline(pipeline: Option<String>) -> (Option<String>, Option<String>) {
+    pipeline
+        .and_then(|pipeline| {
+            let parts: Vec<&str> = pipeline.splitn(2, '/').collect();
+            if parts.len() == 2 {
+                let name = parts[0];
+                let version = parts[1];
+
+                // Only extract known Sentry plugins
+                if name == "sentry-gradle-plugin" || name == "sentry-fastlane-plugin" {
+                    debug!("Detected {name} version {version} from SENTRY_PIPELINE");
+                    Some((name.to_owned(), version.to_owned()))
+                } else {
+                    debug!("SENTRY_PIPELINE contains unrecognized plugin: {name}");
+                    None
+                }
+            } else {
+                debug!("SENTRY_PIPELINE format not recognized: {pipeline}");
+                None
+            }
+        })
+        .unzip()
+}
+
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let path_strings = matches
@@ -150,30 +177,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
     let release_notes = matches.get_one("release_notes").map(String::as_str);
 
-    // Parse plugin info from SENTRY_PIPELINE environment variable
-    // Format: "sentry-gradle-plugin/4.12.0" or "sentry-fastlane-plugin/1.2.3"
-    let (plugin_name, plugin_version) = config
-        .get_pipeline_env()
-        .and_then(|pipeline| {
-            let parts: Vec<&str> = pipeline.splitn(2, '/').collect();
-            if parts.len() == 2 {
-                let name = parts[0];
-                let version = parts[1];
-
-                // Only extract known Sentry plugins
-                if name == "sentry-gradle-plugin" || name == "sentry-fastlane-plugin" {
-                    debug!("Detected {name} version {version} from SENTRY_PIPELINE");
-                    Some((name.to_owned(), version.to_owned()))
-                } else {
-                    debug!("SENTRY_PIPELINE contains unrecognized plugin: {name}");
-                    None
-                }
-            } else {
-                debug!("SENTRY_PIPELINE format not recognized: {pipeline}");
-                None
-            }
-        })
-        .unzip();
+    let (plugin_name, plugin_version) = parse_plugin_from_pipeline(config.get_pipeline_env());
 
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
@@ -1014,5 +1018,59 @@ mod tests {
             "Should only have one line when no plugin info"
         );
         Ok(())
+    }
+
+    #[test]
+    fn test_parse_gradle_plugin_from_pipeline() {
+        let (name, version) =
+            parse_plugin_from_pipeline(Some("sentry-gradle-plugin/4.12.0".to_owned()));
+        assert_eq!(name, Some("sentry-gradle-plugin".to_owned()));
+        assert_eq!(version, Some("4.12.0".to_owned()));
+    }
+
+    #[test]
+    fn test_parse_fastlane_plugin_from_pipeline() {
+        let (name, version) =
+            parse_plugin_from_pipeline(Some("sentry-fastlane-plugin/1.2.3".to_owned()));
+        assert_eq!(name, Some("sentry-fastlane-plugin".to_owned()));
+        assert_eq!(version, Some("1.2.3".to_owned()));
+    }
+
+    #[test]
+    fn test_parse_unrecognized_plugin_from_pipeline() {
+        let (name, version) =
+            parse_plugin_from_pipeline(Some("some-other-plugin/1.0.0".to_owned()));
+        assert_eq!(name, None, "Unrecognized plugin should return None");
+        assert_eq!(version, None, "Unrecognized plugin should return None");
+    }
+
+    #[test]
+    fn test_parse_invalid_pipeline_format() {
+        let (name, version) = parse_plugin_from_pipeline(Some("no-slash-in-value".to_owned()));
+        assert_eq!(name, None, "Invalid format should return None");
+        assert_eq!(version, None, "Invalid format should return None");
+    }
+
+    #[test]
+    fn test_parse_empty_pipeline() {
+        let (name, version) = parse_plugin_from_pipeline(None);
+        assert_eq!(name, None, "Empty pipeline should return None");
+        assert_eq!(version, None, "Empty pipeline should return None");
+    }
+
+    #[test]
+    fn test_parse_pipeline_with_extra_slashes() {
+        let (name, version) =
+            parse_plugin_from_pipeline(Some("sentry-gradle-plugin/4.12.0/extra".to_owned()));
+        assert_eq!(
+            name,
+            Some("sentry-gradle-plugin".to_owned()),
+            "Should parse correctly even with extra slashes"
+        );
+        assert_eq!(
+            version,
+            Some("4.12.0/extra".to_owned()),
+            "Version should include everything after first slash"
+        );
     }
 }
