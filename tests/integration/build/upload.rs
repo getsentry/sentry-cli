@@ -224,7 +224,7 @@ fn command_build_upload_ipa_chunked() {
                 if is_first_assemble_call.swap(false, Ordering::Relaxed) {
                     r#"{
                         "state": "created",
-                        "missingChunks": ["ed9da71e3688261875db21b266da84ffe004a8a4"]
+                        "missingChunks": ["1f168f404b360494fd1adbafaf920a303d1b3691"]
                     }"#
                 } else {
                     r#"{
