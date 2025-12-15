@@ -10,7 +10,7 @@ use self::increment::IncrementMetricArgs;
 use self::set::SetMetricArgs;
 use super::derive_parser::{SentryCLI, SentryCLICommand};
 use anyhow::Result;
-use clap::{command, Args, Subcommand};
+use clap::{Args, Subcommand};
 use clap::{ArgMatches, Command, Parser as _};
 
 const DEPRECATION_MESSAGE: &str = "DEPRECATION NOTICE: \
