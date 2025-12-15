@@ -60,6 +60,7 @@ The following changes only apply when using `sentry-cli` via the npm package [`@
 
 - The `sentry-cli upload-proguard` command now uses chunked uploading by default ([#2918](https://github.com/getsentry/sentry-cli/pull/2918)). Users who previously set the `SENTRY_EXPERIMENTAL_PROGUARD_CHUNK_UPLOAD` environment variable to opt into this behavior no longer need to set the variable.
 - We now place source map debug IDs under the source map's `debugId` field, per the [TC39 Debug ID proposal](https://github.com/tc39/ecma426/blob/main/proposals/debug-id.md#debug-ids-in-source-maps) ([#3005](https://github.com/getsentry/sentry-cli/pull/3005)). This change affects the `sentry-cli sourcemaps inject` command and, unless `--no-rewrite` is passed, the `sentry-cli sourcemaps upload` command. Sentry CLI can still read the `debug_id` field, but whenever the CLI writes or rewrites a source map, we always use `debugId`.
+- The `sentry-cli build upload` command now automatically tracks Sentry plugin versions from the `SENTRY_PIPELINE` environment variable ([#2994](https://github.com/getsentry/sentry-cli/pull/2994)). When `SENTRY_PIPELINE` contains a recognized Sentry plugin (e.g., `sentry-gradle-plugin/4.12.0` or `sentry-fastlane-plugin/1.2.3`), the plugin version is written to the `.sentry-cli-metadata.txt` file in uploaded build archives, enabling the backend to store metadata for size analysis and build distribution tracking.
 
 ### Fixes
 
@@ -78,7 +79,6 @@ The following changes only apply when using `sentry-cli` via the npm package [`@
 - For the `sentry-cli build upload` command, we now only auto-detect Git metadata when we detect we are running in a CI environment, unless the user manually overrides this behavior ([#2974](https://github.com/getsentry/sentry-cli/pull/2974)). This change prevents local development builds from triggiering GitHub status checks for size analysis.
   - We can detect most common CI environments based on the environment variables these set.
   - We introduced two new arguments, `--force-git-metadata` and `--no-git-metadata`, which force-enable and force-disable automatic Git data collection, respectively, overriding the default behavior.
-- The `sentry-cli build upload` command now automatically tracks Sentry plugin versions from the `SENTRY_PIPELINE` environment variable ([#2994](https://github.com/getsentry/sentry-cli/pull/2994)). When `SENTRY_PIPELINE` contains a recognized Sentry plugin (e.g., `sentry-gradle-plugin/4.12.0` or `sentry-fastlane-plugin/1.2.3`), the plugin version is written to the `.sentry-cli-metadata.txt` file in uploaded build archives, enabling the backend to store metadata for size analysis and build distribution tracking.
 - The `sentry-cli build upload` command now automatically detects the correct branch or tag reference in non-PR GitHub Actions workflows ([#2976](https://github.com/getsentry/sentry-cli/pull/2976)). Previously, `--head-ref` was only auto-detected for pull request workflows. Now it works for push, release, and other workflow types by using the `GITHUB_REF_NAME` environment variable.
 
 ### Fixes
