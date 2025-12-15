@@ -563,7 +563,7 @@ fn normalize_file(
     // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
     // but the last modified time being different will cause checksums to be different.
     let options = SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Stored)
+        .compression_method(zip::CompressionMethod::Zstd)
         .last_modified_time(DateTime::default());
 
     zip.start_file(file_name, options)?;
