@@ -61,8 +61,6 @@ impl ApiError {
         }
     }
 
-    // This method is currently only used in the macOS binary, there is no reason
-    // why not to expose it on other platforms, if we ever need it.
     #[cfg(target_os = "macos")]
     pub(in crate::api) fn kind(&self) -> ApiErrorKind {
         self.inner
