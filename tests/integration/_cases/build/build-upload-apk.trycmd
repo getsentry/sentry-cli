@@ -2,8 +2,7 @@
 $ sentry-cli build upload tests/integration/_fixtures/build/apk.apk --head-sha 12345678deadbeef78900987feebdaed87654321
 ? success
 > Preparing for upload completed in [..]
-> Uploading completed in [..]
 Successfully uploaded 1 file to Sentry
-  - tests/integration/_fixtures/build/apk.apk (http[..]/wat-org/preprod/wat-project/42)
+  - tests/integration/_fixtures/build/apk.apk (http://sentry.io/wat-org/preprod/wat-project/42)
 
 ```

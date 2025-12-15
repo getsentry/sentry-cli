@@ -167,7 +167,7 @@ fn command_build_upload_apk_chunked() {
                 if is_first_assemble_call.swap(false, Ordering::Relaxed) {
                     r#"{
                         "state": "created",
-                        "missingChunks": ["60863d91bb673a1b1b92dbbe91b1de5cc0dde146"]
+                        "missingChunks": ["1d1c9567a6453d0d8029b699bb588ebb946af50d"]
                     }"#
                 } else {
                     r#"{
