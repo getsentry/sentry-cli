@@ -97,7 +97,7 @@ jobs:
         run: npm install --omit=optional --ignore-scripts
 
       - name: Download build artifact
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # 7.0.0
         with:
           name: artifact-build
           path: js
