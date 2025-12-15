@@ -125,6 +125,33 @@ pub fn make_command(command: Command) -> Command {
         )
 }
 
+/// Parse plugin info from SENTRY_PIPELINE environment variable.
+/// Format: "sentry-gradle-plugin/4.12.0" or "sentry-fastlane-plugin/1.2.3"
+/// Returns (plugin_name, plugin_version) if a recognized plugin is found, (None, None) otherwise.
+fn parse_plugin_from_pipeline(pipeline: Option<String>) -> (Option<String>, Option<String>) {
+    pipeline
+        .and_then(|pipeline| {
+            let parts: Vec<&str> = pipeline.splitn(2, '/').collect();
+            if parts.len() == 2 {
+                let name = parts[0];
+                let version = parts[1];
+
+                // Only extract known Sentry plugins
+                if name == "sentry-gradle-plugin" || name == "sentry-fastlane-plugin" {
+                    debug!("Detected {name} version {version} from SENTRY_PIPELINE");
+                    Some((name.to_owned(), version.to_owned()))
+                } else {
+                    debug!("SENTRY_PIPELINE contains unrecognized plugin: {name}");
+                    None
+                }
+            } else {
+                debug!("SENTRY_PIPELINE format not recognized: {pipeline}");
+                None
+            }
+        })
+        .unzip()
+}
+
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let path_strings = matches
@@ -150,6 +177,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
     let release_notes = matches.get_one("release_notes").map(String::as_str);
 
+    let (plugin_name, plugin_version) = parse_plugin_from_pipeline(config.get_pipeline_env());
+
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
 
@@ -171,15 +200,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
         let normalized_zip = if path.is_file() {
             debug!("Normalizing file: {}", path.display());
-            handle_file(path, &byteview)?
+            handle_file(
+                path,
+                &byteview,
+                plugin_name.as_deref(),
+                plugin_version.as_deref(),
+            )?
         } else if path.is_dir() {
             debug!("Normalizing directory: {}", path.display());
-            handle_directory(path).with_context(|| {
-                format!(
-                    "Failed to generate uploadable bundle for directory {}",
-                    path.display()
-                )
-            })?
+            handle_directory(path, plugin_name.as_deref(), plugin_version.as_deref()).with_context(
+                || {
+                    format!(
+                        "Failed to generate uploadable bundle for directory {}",
+                        path.display()
+                    )
+                },
+            )?
         } else {
             Err(anyhow!(
                 "Path {} is neither a file nor a directory, cannot upload",
@@ -434,18 +470,23 @@ fn collect_git_metadata(
     }
 }
 
-fn handle_file(path: &Path, byteview: &ByteView) -> Result<TempFile> {
+fn handle_file(
+    path: &Path,
+    byteview: &ByteView,
+    plugin_name: Option<&str>,
+    plugin_version: Option<&str>,
+) -> Result<TempFile> {
     // Handle IPA files by converting them to XCArchive
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     if is_zip_file(byteview) && is_ipa_file(byteview)? {
         debug!("Converting IPA file to XCArchive structure");
         let archive_temp_dir = TempDir::create()?;
         return ipa_to_xcarchive(path, byteview, &archive_temp_dir)
-            .and_then(|path| handle_directory(&path))
+            .and_then(|path| handle_directory(&path, plugin_name, plugin_version))
             .with_context(|| format!("Failed to process IPA file {}", path.display()));
     }
 
-    normalize_file(path, byteview).with_context(|| {
+    normalize_file(path, byteview, plugin_name, plugin_version).with_context(|| {
         format!(
             "Failed to generate uploadable bundle for file {}",
             path.display()
@@ -499,7 +540,12 @@ fn validate_is_supported_build(path: &Path, bytes: &[u8]) -> Result<()> {
 }
 
 // For APK and AAB files, we'll copy them directly into the zip
-fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
+fn normalize_file(
+    path: &Path,
+    bytes: &[u8],
+    plugin_name: Option<&str>,
+    plugin_version: Option<&str>,
+) -> Result<TempFile> {
     debug!("Creating normalized zip for file: {}", path.display());
 
     let temp_file = TempFile::create()?;
@@ -523,20 +569,24 @@ fn normalize_file(path: &Path, bytes: &[u8]) -> Result<TempFile> {
     zip.start_file(file_name, options)?;
     zip.write_all(bytes)?;
 
-    write_version_metadata(&mut zip)?;
+    write_version_metadata(&mut zip, plugin_name, plugin_version)?;
 
     zip.finish()?;
     debug!("Successfully created normalized zip for file");
     Ok(temp_file)
 }
 
-fn handle_directory(path: &Path) -> Result<TempFile> {
+fn handle_directory(
+    path: &Path,
+    plugin_name: Option<&str>,
+    plugin_version: Option<&str>,
+) -> Result<TempFile> {
     let temp_dir = TempDir::create()?;
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     if is_apple_app(path)? {
         handle_asset_catalogs(path, temp_dir.path());
     }
-    normalize_directory(path, temp_dir.path())
+    normalize_directory(path, temp_dir.path(), plugin_name, plugin_version)
 }
 
 /// Returns artifact url if upload was successful.
@@ -674,7 +724,7 @@ mod tests {
         fs::create_dir_all(test_dir.join("Products"))?;
         fs::write(test_dir.join("Products").join("app.txt"), "test content")?;
 
-        let result_zip = normalize_directory(&test_dir, temp_dir.path())?;
+        let result_zip = normalize_directory(&test_dir, temp_dir.path(), None, None)?;
         let zip_file = fs::File::open(result_zip.path())?;
         let mut archive = ZipArchive::new(zip_file)?;
         let file = archive.by_index(0)?;
@@ -690,7 +740,7 @@ mod tests {
         let xcarchive_path = Path::new("tests/integration/_fixtures/build/archive.xcarchive");
 
         // Process the XCArchive directory
-        let result = handle_directory(xcarchive_path)?;
+        let result = handle_directory(xcarchive_path, None, None)?;
 
         // Verify the resulting zip contains parsed assets
         let zip_file = fs::File::open(result.path())?;
@@ -723,7 +773,7 @@ mod tests {
         let byteview = ByteView::open(ipa_path)?;
 
         // Process the IPA file - this should work even without asset catalogs
-        let result = handle_file(ipa_path, &byteview)?;
+        let result = handle_file(ipa_path, &byteview, None, None)?;
 
         let zip_file = fs::File::open(result.path())?;
         let mut archive = ZipArchive::new(zip_file)?;
@@ -760,7 +810,7 @@ mod tests {
         let symlink_path = test_dir.join("Products").join("app_link.txt");
         symlink("app.txt", &symlink_path)?;
 
-        let result_zip = normalize_directory(&test_dir, temp_dir.path())?;
+        let result_zip = normalize_directory(&test_dir, temp_dir.path(), None, None)?;
         let zip_file = fs::File::open(result_zip.path())?;
         let mut archive = ZipArchive::new(zip_file)?;
 
@@ -875,6 +925,152 @@ mod tests {
             metadata.head_ref.as_ref(),
             "",
             "head_ref should be empty with auto_collect=false and no explicit value"
+        );
+    }
+
+    #[test]
+    fn test_metadata_includes_gradle_plugin_version() -> Result<()> {
+        let temp_dir = crate::utils::fs::TempDir::create()?;
+        let test_dir = temp_dir.path().join("TestApp.xcarchive");
+        fs::create_dir_all(test_dir.join("Products"))?;
+        fs::write(test_dir.join("Products").join("app.txt"), "test content")?;
+
+        let result_zip = normalize_directory(
+            &test_dir,
+            temp_dir.path(),
+            Some("sentry-gradle-plugin"),
+            Some("4.12.0"),
+        )?;
+        let zip_file = fs::File::open(result_zip.path())?;
+        let mut archive = ZipArchive::new(zip_file)?;
+
+        // Find and read the metadata file
+        let metadata_file = archive.by_name(".sentry-cli-metadata.txt")?;
+        let metadata_content = std::io::read_to_string(metadata_file)?;
+
+        assert!(
+            metadata_content.contains("sentry-cli-version:"),
+            "Metadata should contain sentry-cli-version"
+        );
+        assert!(
+            metadata_content.contains("sentry-gradle-plugin: 4.12.0"),
+            "Metadata should contain sentry-gradle-plugin"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_metadata_includes_fastlane_plugin_version() -> Result<()> {
+        let temp_dir = crate::utils::fs::TempDir::create()?;
+        let test_dir = temp_dir.path().join("TestApp.xcarchive");
+        fs::create_dir_all(test_dir.join("Products"))?;
+        fs::write(test_dir.join("Products").join("app.txt"), "test content")?;
+
+        let result_zip = normalize_directory(
+            &test_dir,
+            temp_dir.path(),
+            Some("sentry-fastlane-plugin"),
+            Some("1.2.3"),
+        )?;
+        let zip_file = fs::File::open(result_zip.path())?;
+        let mut archive = ZipArchive::new(zip_file)?;
+
+        // Find and read the metadata file
+        let metadata_file = archive.by_name(".sentry-cli-metadata.txt")?;
+        let metadata_content = std::io::read_to_string(metadata_file)?;
+
+        assert!(
+            metadata_content.contains("sentry-cli-version:"),
+            "Metadata should contain sentry-cli-version"
+        );
+        assert!(
+            metadata_content.contains("sentry-fastlane-plugin: 1.2.3"),
+            "Metadata should contain sentry-fastlane-plugin"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_metadata_without_plugin() -> Result<()> {
+        let temp_dir = crate::utils::fs::TempDir::create()?;
+        let test_dir = temp_dir.path().join("TestApp.xcarchive");
+        fs::create_dir_all(test_dir.join("Products"))?;
+        fs::write(test_dir.join("Products").join("app.txt"), "test content")?;
+
+        // No plugin info provided
+        let result_zip = normalize_directory(&test_dir, temp_dir.path(), None, None)?;
+        let zip_file = fs::File::open(result_zip.path())?;
+        let mut archive = ZipArchive::new(zip_file)?;
+
+        let metadata_file = archive.by_name(".sentry-cli-metadata.txt")?;
+        let metadata_content = std::io::read_to_string(metadata_file)?;
+
+        // Should only contain sentry-cli-version
+        assert!(
+            metadata_content.contains("sentry-cli-version:"),
+            "Metadata should contain sentry-cli-version"
+        );
+
+        // Should not have any other lines besides the version
+        let line_count = metadata_content.lines().count();
+        assert_eq!(
+            line_count, 1,
+            "Should only have one line when no plugin info"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn test_parse_gradle_plugin_from_pipeline() {
+        let (name, version) =
+            parse_plugin_from_pipeline(Some("sentry-gradle-plugin/4.12.0".to_owned()));
+        assert_eq!(name, Some("sentry-gradle-plugin".to_owned()));
+        assert_eq!(version, Some("4.12.0".to_owned()));
+    }
+
+    #[test]
+    fn test_parse_fastlane_plugin_from_pipeline() {
+        let (name, version) =
+            parse_plugin_from_pipeline(Some("sentry-fastlane-plugin/1.2.3".to_owned()));
+        assert_eq!(name, Some("sentry-fastlane-plugin".to_owned()));
+        assert_eq!(version, Some("1.2.3".to_owned()));
+    }
+
+    #[test]
+    fn test_parse_unrecognized_plugin_from_pipeline() {
+        let (name, version) =
+            parse_plugin_from_pipeline(Some("some-other-plugin/1.0.0".to_owned()));
+        assert_eq!(name, None, "Unrecognized plugin should return None");
+        assert_eq!(version, None, "Unrecognized plugin should return None");
+    }
+
+    #[test]
+    fn test_parse_invalid_pipeline_format() {
+        let (name, version) = parse_plugin_from_pipeline(Some("no-slash-in-value".to_owned()));
+        assert_eq!(name, None, "Invalid format should return None");
+        assert_eq!(version, None, "Invalid format should return None");
+    }
+
+    #[test]
+    fn test_parse_empty_pipeline() {
+        let (name, version) = parse_plugin_from_pipeline(None);
+        assert_eq!(name, None, "Empty pipeline should return None");
+        assert_eq!(version, None, "Empty pipeline should return None");
+    }
+
+    #[test]
+    fn test_parse_pipeline_with_extra_slashes() {
+        let (name, version) =
+            parse_plugin_from_pipeline(Some("sentry-gradle-plugin/4.12.0/extra".to_owned()));
+        assert_eq!(
+            name,
+            Some("sentry-gradle-plugin".to_owned()),
+            "Should parse correctly even with extra slashes"
+        );
+        assert_eq!(
+            version,
+            Some("4.12.0/extra".to_owned()),
+            "Version should include everything after first slash"
         );
     }
 }

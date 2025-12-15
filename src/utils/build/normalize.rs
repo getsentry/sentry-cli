@@ -94,17 +94,29 @@ fn metadata_file_options() -> SimpleFileOptions {
 
 pub fn write_version_metadata<W: std::io::Write + std::io::Seek>(
     zip: &mut ZipWriter<W>,
+    plugin_name: Option<&str>,
+    plugin_version: Option<&str>,
 ) -> Result<()> {
     let version = get_version();
     zip.start_file(".sentry-cli-metadata.txt", metadata_file_options())?;
     writeln!(zip, "sentry-cli-version: {version}")?;
+
+    // Write plugin info if available
+    if let (Some(name), Some(version)) = (plugin_name, plugin_version) {
+        writeln!(zip, "{name}: {version}")?;
+    }
     Ok(())
 }
 
 // For XCArchive directories, we'll zip the entire directory
 // It's important to not change the contents of the directory or the size
 // analysis will be wrong and the code signature will break.
-pub fn normalize_directory(path: &Path, parsed_assets_path: &Path) -> Result<TempFile> {
+pub fn normalize_directory(
+    path: &Path,
+    parsed_assets_path: &Path,
+    plugin_name: Option<&str>,
+    plugin_version: Option<&str>,
+) -> Result<TempFile> {
     debug!("Creating normalized zip for directory: {}", path.display());
 
     let temp_file = TempFile::create()?;
@@ -133,7 +145,7 @@ pub fn normalize_directory(path: &Path, parsed_assets_path: &Path) -> Result<Tem
         )?;
     }
 
-    write_version_metadata(&mut zip)?;
+    write_version_metadata(&mut zip, plugin_name, plugin_version)?;
 
     zip.finish()?;
     debug!("Successfully created normalized zip for directory with {file_count} files");
