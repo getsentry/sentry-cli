@@ -7,6 +7,7 @@ Sentry CLI follows [Semantic Versioning 2.0.0](https://semver.org/spec/v2.0.0.ht
 For the purposes of Semantic Versioning, Sentry CLI's public API is defined as the following:
   - All subcommands and command line arguments.
   - All publicly exposed functions/methods of the JavaScript API (only available via the [NPM package](https://www.npmjs.com/package/@sentry/cli)).
+  - The minimum self-hosted Sentry version that we support.
   - This versioning policy document.
 
 Any of the above items, which are explicitly marked as "experimental," "beta," or similar, are not part of the public API, and are subject to change at any time.
@@ -14,11 +15,7 @@ Any of the above items, which are explicitly marked as "experimental," "beta," o
 **Anything, which is not explicitly defined as part of the public API, is not part of the public API.** In particular, for semantic versioning purposes, the following items are not part of the public API:
   - Compile-time feature flags, dependencies, MSRV, etc., as we expect most users to use the prebuilt binaries we supply.
   - Any changes to output wording/formatting/etc.
-  - The minimum self-hosted Sentry version that we support.
   - Any public items exported from the `sentry-cli` Rust crate, as we do not publish `sentry-cli` to crates.io, and thus do not expect anyone to use it as a library.
-
-> [!NOTE]
-> Although this document intentionally defines the public API narrowly, we aim to avoid unnecessary breakage of features users rely on. We will call out notable behavioral changes in the changelog regardless of version bump.
 
 ## Examples
 
@@ -30,6 +27,7 @@ The following changes would require a major version bump, unless the affected it
   - Removal of a subcommand or an argument to a subcommand.
   - A reduction in the accepted values that can be passed to a command line argument, unless this reduction is necessary to fix a bug, for example, because the argument never handled certain values correctly.
   - Removal of a publicly exposed function/method of the JavaScript API, or any other backwards-incompatible change to these.
+  - The minimum self-hosted Sentry version supported by Sentry CLI is increased.
   - Any change to this versioning policy, which narrows the public API definition.
 
 ### Minor Version
@@ -38,7 +36,7 @@ The following changes would only require a minor version bump:
   - A new subcommand or command line argument is added, unless this new item is "experimental," "beta," or similar.
   - A new public item is added to the JavaScript API, unless this new item is "experimental," "beta," or similar.
   - An item which was previously marked "experimental," "beta," or similar has this designation removed, thus being added to the public API.
-  - The minimum self-hosted Sentry version supported by Sentry CLI is increased. Such changes will always be clearly mentioned in the changelog.
+  - The minimum self-hosted Sentry version supported by Sentry CLI is decreased, i.e., we expand support to additional self-hosted versions.
 
 ### Patch Version
 
