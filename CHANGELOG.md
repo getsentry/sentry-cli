@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Performance Improvements
+
+- We switch to a faster compression algorithm (zstd) for uploading size analysis builds (`sentry build upload`) in preparation for this week's beta release! ([#3038](https://github.com/getsentry/sentry-cli/pull/3038))
+
 ## 3.0.0
 
 ### New Sentry Support Policy

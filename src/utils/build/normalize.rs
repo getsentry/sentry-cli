@@ -55,7 +55,7 @@ fn add_entries_to_zip(
     // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
     // but the last modified time being different will cause checksums to be different.
     let options = SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated)
+        .compression_method(zip::CompressionMethod::Zstd)
         .last_modified_time(DateTime::default());
 
     for (entry_path, relative_path) in entries {
@@ -88,7 +88,7 @@ fn add_entries_to_zip(
 
 fn metadata_file_options() -> SimpleFileOptions {
     SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Deflated)
+        .compression_method(zip::CompressionMethod::Zstd)
         .last_modified_time(DateTime::default())
 }
 

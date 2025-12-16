@@ -167,7 +167,7 @@ fn command_build_upload_apk_chunked() {
                 if is_first_assemble_call.swap(false, Ordering::Relaxed) {
                     r#"{
                         "state": "created",
-                        "missingChunks": ["60863d91bb673a1b1b92dbbe91b1de5cc0dde146"]
+                        "missingChunks": ["7138c09b474a5c84ac60e1b145855bf6dcc88913"]
                     }"#
                 } else {
                     r#"{
@@ -224,7 +224,7 @@ fn command_build_upload_ipa_chunked() {
                 if is_first_assemble_call.swap(false, Ordering::Relaxed) {
                     r#"{
                         "state": "created",
-                        "missingChunks": ["ed9da71e3688261875db21b266da84ffe004a8a4"]
+                        "missingChunks": ["1f168f404b360494fd1adbafaf920a303d1b3691"]
                     }"#
                 } else {
                     r#"{
