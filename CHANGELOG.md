@@ -13,6 +13,7 @@
 ### Fixes
 
 - Fixed a bug that prevented project IDs from being used with the `sentry-cli releases new` command for users with self-hosted Sentry instances on versions older than 25.12.1 ([#3068](https://github.com/getsentry/sentry-cli/issues/3068)).
+- Fixed a bug, introduced in version 3.0.0, where the `sentry-cli releases list` command ignored the `--project` option ([#3048](https://github.com/getsentry/sentry-cli/pull/3048)). The command now correctly can filter releases by a single project when supplied via `--project`. This change does not enable filtering by multiple projects, which has never been supported.
 
 ## 3.0.3
 
