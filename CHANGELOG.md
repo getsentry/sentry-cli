@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Fixed a bug, introduced in version 3.0.0, where the `sentry-cli releases list` command ignored the `--project` option ([#3048](https://github.com/getsentry/sentry-cli/pull/3048)). The command now correctly can filter releases by a single project when supplied via `--project`. This change does not enable filtering by multiple projects, which has never been supported.
+
 ## 3.0.1
 
 ### Performance Improvements
