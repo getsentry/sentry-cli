@@ -163,7 +163,7 @@ fn command_build_upload_apk_chunked() {
                 "/api/0/projects/wat-org/wat-project/files/preprodartifacts/assemble/",
             )
             .with_header_matcher("content-type", "application/json")
-            .with_response_fn(move |_| {
+            .with_response_fn(move |req| {
                 if is_first_assemble_call.swap(false, Ordering::Relaxed) {
                     r#"{
                         "state": "created",
@@ -224,7 +224,7 @@ fn command_build_upload_ipa_chunked() {
                 if is_first_assemble_call.swap(false, Ordering::Relaxed) {
                     r#"{
                         "state": "created",
-                        "missingChunks": ["1f168f404b360494fd1adbafaf920a303d1b3691"]
+                        "missingChunks": ["ecf0e7cb306f29b21189f49d0879bd85aa4be146"]
                     }"#
                 } else {
                     r#"{
