@@ -163,7 +163,7 @@ fn command_build_upload_apk_chunked() {
                 "/api/0/projects/wat-org/wat-project/files/preprodartifacts/assemble/",
             )
             .with_header_matcher("content-type", "application/json")
-            .with_response_fn(move |req| {
+            .with_response_fn(move |_| {
                 if is_first_assemble_call.swap(false, Ordering::Relaxed) {
                     r#"{
                         "state": "created",
