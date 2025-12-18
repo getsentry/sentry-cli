@@ -6,6 +6,10 @@
 
 - We switch to a faster compression algorithm (zstd) for uploading size analysis builds (`sentry build upload`) in preparation for this week's beta release! ([#3038](https://github.com/getsentry/sentry-cli/pull/3038))
 
+### Versioning Policy Update
+
+Our [versioning policy](VERSIONING.md) has reclassified the minimum supported self-hosted Sentry version as being part of the public API. Therefore, we will only increase this minimum supported self-hosted Sentry version in a major release of Sentry CLI.
+
 ## 3.0.0
 
 ### New Sentry Support Policy
@@ -14,10 +18,7 @@
 
 ### New Versioning Policy
 
-Sentry CLI now defines a [semantic versioning policy](VERSIONING.md). We did not explicitly define a versioning policy before, but the new versioning policy contains some notable changes versus the previous implicit policy we had been following. The main change is that dropping support for self-hosted Sentry versions now only requires a minor version bump, although such changes will be clearly communicated in the changelog.
-
-> [!IMPORTANT]
-> **Self-hosted users**: We strongly recommend pinning your Sentry CLI version, since Sentry CLI may drop support for your self-hosted Sentry version in any future minor release. Always check the changelog before upgrading Sentry CLI.
+Sentry CLI now defines a [semantic versioning policy](VERSIONING.md). We did not explicitly define a versioning policy previously, and this new policy should give more clarity about what can change in minor or patch releases versus what requires a major version bump.
 
 ### Breaking Changes
 
