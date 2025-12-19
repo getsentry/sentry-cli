@@ -167,6 +167,10 @@ export type SentryCliNewDeployOptions = {
    * URL that points to the deployment.
    */
   url?: string;
+  /**
+   * The projects to deploy the release to. If not provided, the deployment will be created for the default project.
+   */
+  projects?: string[];
 }
 
 /**
