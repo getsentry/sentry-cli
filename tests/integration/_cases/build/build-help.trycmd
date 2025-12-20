@@ -6,8 +6,9 @@ Manage builds.
 Usage: sentry-cli[EXE] build [OPTIONS] <COMMAND>
 
 Commands:
-  upload  Upload builds to a project.
-  help    Print this message or the help of the given subcommand(s)
+  snapshots  [EXPERIMENTAL] Upload build snapshots to a project.
+  upload     Upload builds to a project.
+  help       Print this message or the help of the given subcommand(s)
 
 Options:
   -o, --org <ORG>                The organization ID or slug.
