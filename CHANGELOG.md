@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- In the JavaScript API, added multi-project support to `releases.newDeploy()` method. This method now accept a `projects` option (array of project slugs), aligning them with the Rust CLI's multi-project capabilities and matching the existing behavior of `releases.new()` and `releases.uploadSourceMaps()` ([#3001](https://github.com/getsentry/sentry-cli/pull/3001)).
+
 ## 3.0.1
 
 ### Performance Improvements
