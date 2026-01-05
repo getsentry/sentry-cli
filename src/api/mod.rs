@@ -239,9 +239,6 @@ impl Api {
         handle.ssl_verify_host(self.config.should_verify_ssl())?;
         handle.ssl_verify_peer(self.config.should_verify_ssl())?;
 
-        // This toggles gzipping, useful for uploading large files
-        handle.transfer_encoding(self.config.allow_transfer_encoding())?;
-
         let env = self.config.get_pipeline_env();
         let headers = self.config.get_headers();
 
