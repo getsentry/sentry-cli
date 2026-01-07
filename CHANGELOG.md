@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Fixed a bug on ARM-based macOS systems that prevented Sentry CLI from respecting self-signed certificates trusted in the macOS keychain ([#3057](https://github.com/getsentry/sentry-cli/issues/3057)).
+
 ## 3.0.1
 
 ### Performance Improvements

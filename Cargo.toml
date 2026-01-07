@@ -24,7 +24,7 @@ clap = { version = "4.1.6", default-features = false, features = [
 ] }
 clap_complete = "4.4.3"
 console = "0.15.5"
-curl = { version = "0.4.46", features = ["static-curl", "static-ssl"] }
+curl = { version = "0.4.46" }
 dirs = "4.0.0"
 dotenvy = "0.15.7"
 elementtree = "1.2.3"
@@ -126,6 +126,12 @@ openssl-probe = "0.1.5"
 
 [target."cfg(windows)".dependencies]
 windows-sys = { version = "0.59.0", features = ["Win32_Storage_FileSystem"] }
+
+# Use static curl/SSL on all platforms except ARM-based macOS.
+# We link dynamically on ARM macOS; that way we can support self-signed certificates
+# trusted in the macOS keychain.
+[target."cfg(not(all(target_os = \"macos\", target_arch = \"aarch64\")))".dependencies]
+curl = { version = "0.4.46", features = ["static-curl", "static-ssl"] }
 
 # We optimize the release build for size.
 [profile.release]
