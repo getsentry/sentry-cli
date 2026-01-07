@@ -113,26 +113,22 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
 
             // Prepare chunked upload
             let api = Api::current();
-            // Resolve org and project like logs: prefer args, fallback to defaults
+            // Resolve org and project, with org also checking auth token payload
             let config = Config::current();
-            let (default_org, default_project) = config.get_org_and_project_defaults();
-            let org = args
-                .org
-                .as_ref()
-                .or(default_org.as_ref())
-                .ok_or_else(|| anyhow::anyhow!(
-                    "No organization specified. Please specify an organization using the --org argument."
-                ))?;
+            let org = config.get_org_with_cli_input(args.org.as_deref())?;
             let project = args
                 .project
-                .as_ref()
-                .or(default_project.as_ref())
-                .ok_or_else(|| anyhow::anyhow!(
-                    "No project specified. Use --project or set a default in config."
-                ))?;
+                .clone()
+                .or_else(|| std::env::var("SENTRY_PROJECT").ok())
+                .or_else(|| config.get_project_default().ok())
+                .ok_or_else(|| {
+                    anyhow::anyhow!(
+                        "No project specified. Use --project or set a default in config."
+                    )
+                })?;
             let chunk_upload_options = api
                 .authenticated()?
-                .get_chunk_upload_options(org)?;
+                .get_chunk_upload_options(&org)?;
 
 
             // Early file size check against server or default limits (same as debug files)
@@ -148,7 +144,7 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
                 );
             }
 
-            let options = ChunkOptions::new(chunk_upload_options, org, project)
+            let options = ChunkOptions::new(chunk_upload_options, &org, &project)
                 .with_max_wait(DEFAULT_MAX_WAIT);
 
             let chunked = Chunked::from(object, options.server_options().chunk_size);

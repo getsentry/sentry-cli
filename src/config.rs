@@ -320,13 +320,17 @@ impl Config {
         }
     }
 
-    /// Given a match object from clap, this returns the org from it.
-    pub fn get_org(&self, matches: &ArgMatches) -> Result<String> {
+    /// Resolves the org from CLI input, environment variables, config, and auth token.
+    ///
+    /// The resolution order is:
+    /// 1. Org embedded in auth token (takes precedence, with warning if different from CLI)
+    /// 2. CLI argument or SENTRY_ORG environment variable
+    /// 3. Config file defaults
+    pub fn get_org_with_cli_input(&self, cli_org: Option<&str>) -> Result<String> {
         let org_from_token = self.cached_token_data.as_ref().map(|t| &t.org);
 
-        let org_from_cli = matches
-            .get_one::<String>("org")
-            .cloned()
+        let org_from_cli = cli_org
+            .map(str::to_owned)
             .or_else(|| env::var("SENTRY_ORG").ok());
 
         match (org_from_token, org_from_cli) {
@@ -350,6 +354,12 @@ impl Config {
                 Ok(token_org.into())
             }
         }
+    }
+
+    /// Given a match object from clap, this returns the org from it.
+    pub fn get_org(&self, matches: &ArgMatches) -> Result<String> {
+        let cli_org = matches.get_one::<String>("org").map(String::as_str);
+        self.get_org_with_cli_input(cli_org)
     }
 
     /// Given a match object from clap, this returns the release from it.
