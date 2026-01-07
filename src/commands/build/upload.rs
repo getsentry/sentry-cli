@@ -11,9 +11,7 @@ use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
-use crate::api::{
-    Api, AuthenticatedApi, ChunkUploadCapability, ChunkedBuildRequest, ChunkedFileState, VcsInfo,
-};
+use crate::api::{Api, AuthenticatedApi, ChunkedBuildRequest, ChunkedFileState, VcsInfo};
 use crate::config::Config;
 use crate::utils::args::ArgExt as _;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
@@ -42,6 +40,7 @@ pub fn make_command(command: Command) -> Command {
         "The path to the build to upload. Supported files include Apk, and Aab.";
     command
         .about("Upload builds to a project.")
+        .long_about("Upload builds to a project.\n\nThis feature only works with Sentry SaaS.")
         .org_arg()
         .project_arg(false)
         .arg(
@@ -599,22 +598,12 @@ fn upload_file(
     release_notes: Option<&str>,
     vcs_info: &VcsInfo<'_>,
 ) -> Result<String> {
-    const SELF_HOSTED_ERROR_HINT: &str = "If you are using a self-hosted Sentry server, \
-        update to the latest version of Sentry to use the build upload command.";
-
     debug!(
         "Uploading file to organization: {org}, project: {project}, build_configuration: {}, vcs_info: {vcs_info:?}",
         build_configuration.unwrap_or("unknown"),
     );
 
     let chunk_upload_options = api.get_chunk_upload_options(org)?;
-
-    if !chunk_upload_options.supports(ChunkUploadCapability::PreprodArtifacts) {
-        bail!(
-            "The Sentry server lacks support for receiving files uploaded \
-            with this command. {SELF_HOSTED_ERROR_HINT}"
-        );
-    }
 
     let progress_style =
         ProgressStyle::default_spinner().template("{spinner} Preparing for upload...");
