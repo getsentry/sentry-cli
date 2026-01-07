@@ -6,15 +6,15 @@
 
 - Fixed a bug on ARM-based macOS systems that prevented Sentry CLI from respecting self-signed certificates trusted in the macOS keychain ([#3057](https://github.com/getsentry/sentry-cli/issues/3057)).
 
+### Versioning Policy Update
+
+Our [versioning policy](VERSIONING.md) has reclassified the minimum supported self-hosted Sentry version as being part of the public API. Therefore, we will only increase this minimum supported self-hosted Sentry version in a major release of Sentry CLI.
+
 ## 3.0.1
 
 ### Performance Improvements
 
 - We switch to a faster compression algorithm (zstd) for uploading size analysis builds (`sentry build upload`) in preparation for this week's beta release! ([#3038](https://github.com/getsentry/sentry-cli/pull/3038))
-
-### Versioning Policy Update
-
-Our [versioning policy](VERSIONING.md) has reclassified the minimum supported self-hosted Sentry version as being part of the public API. Therefore, we will only increase this minimum supported self-hosted Sentry version in a major release of Sentry CLI.
 
 ## 3.0.0
 
