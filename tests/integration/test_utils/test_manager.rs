@@ -205,6 +205,16 @@ impl AssertCmdTestManager {
         self
     }
 
+    /// Set a custom environment variable for the test.
+    pub fn env(
+        mut self,
+        key: impl AsRef<std::ffi::OsStr>,
+        value: impl AsRef<std::ffi::OsStr>,
+    ) -> Self {
+        self.command.env(key, value);
+        self
+    }
+
     /// Run the command and perform assertions.
     ///
     /// This function asserts both the mocks and the command result.
