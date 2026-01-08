@@ -75,7 +75,7 @@ data-encoding = "2.3.3"
 magic_string = "0.3.4"
 chrono-tz = "0.8.4"
 secrecy = "0.8.0"
-lru = "0.16.0"
+lru = "0.16.3"
 backon = { version = "1.5.2", features = ["std", "std-blocking-sleep"] }
 
 [dev-dependencies]
