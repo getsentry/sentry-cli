@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Fixed a bug on Intel-based macOS systems that prevented Sentry CLI from respecting self-signed certificates trusted in the macOS keychain ([#3059](https://github.com/getsentry/sentry-cli/issues/#3059)).
+
 ## 3.0.2
 
 ### Fixes
