@@ -1,0 +1,6 @@
+```
+$ sentry-cli releases new -p 123 -p my-project -p 456 test-release
+? success
+Created release test-release
+
+```

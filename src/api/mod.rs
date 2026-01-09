@@ -10,6 +10,7 @@ mod data_types;
 mod encoding;
 mod errors;
 mod pagination;
+mod serialization;
 
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -1530,6 +1531,7 @@ pub struct AuthInfo {
 #[derive(Debug, Serialize, Default)]
 pub struct NewRelease {
     pub version: String,
+    #[serde(serialize_with = "serialization::serialize_id_slug_list")]
     pub projects: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,

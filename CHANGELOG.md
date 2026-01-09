@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- Fixed a bug that prevented project IDs from being used with the `sentry-cli releases new` command for users with self-hosted Sentry instances on versions older than 25.12.1 ([#3068](https://github.com/getsentry/sentry-cli/issues/3068)).
+
 ## 3.0.3
 
 ### Fixes
