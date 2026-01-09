@@ -3,63 +3,86 @@ $ sentry-cli build upload --help
 ? success
 Upload builds to a project.
 
-Usage: sentry-cli[EXE] build upload [OPTIONS] <PATH>...
+This feature only works with Sentry SaaS.
+
+Usage: sentry-cli build upload [OPTIONS] <PATH>...
 
 Arguments:
-  <PATH>...  The path to the build to upload. Supported files include Apk, Aab, XCArchive, and IPA.
+  <PATH>...
+          The path to the build to upload. Supported files include Apk, Aab, XCArchive, and IPA.
 
 Options:
   -o, --org <ORG>
           The organization ID or slug.
+
       --header <KEY:VALUE>
           Custom headers that should be attached to all requests
           in key:value format.
+
   -p, --project <PROJECT>
           The project ID or slug.
+
       --auth-token <AUTH_TOKEN>
           Use the given Sentry auth token.
+
       --head-sha <head_sha>
           The VCS commit sha to use for the upload. If not provided, the current commit sha will be
           used.
+
       --base-sha <base_sha>
           The VCS commit's base sha to use for the upload. If not provided, the merge-base of the
           current and remote branch will be used.
+
       --log-level <LOG_LEVEL>
           Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+
       --quiet
           Do not print any output while preserving correct exit code. This flag is currently
-          implemented only for selected subcommands. [aliases: --silent]
+          implemented only for selected subcommands.
+          
+          [aliases: --silent]
+
       --vcs-provider <vcs_provider>
           The VCS provider to use for the upload. If not provided, the current provider will be
           used.
+
       --head-repo-name <head_repo_name>
           The name of the git repository to use for the upload (e.g. organization/repository). If
           not provided, the current repository will be used.
+
       --base-repo-name <base_repo_name>
           The name of the git repository to use for the upload (e.g. organization/repository). If
           not provided, the current repository will be used.
+
       --head-ref <head_ref>
           The reference (branch) to use for the upload. If not provided, the current reference will
           be used.
+
       --base-ref <base_ref>
           The base reference (branch) to use for the upload. If not provided, the merge-base with
           the remote tracking branch will be used.
+
       --pr-number <pr_number>
           The pull request number to use for the upload. If not provided and running in a
           pull_request-triggered GitHub Actions workflow, the PR number will be automatically
           detected from GitHub Actions environment variables.
+
       --build-configuration <build_configuration>
           The build configuration to use for the upload. If not provided, the current version will
           be used.
+
       --release-notes <release_notes>
           The release notes to use for the upload.
+
       --force-git-metadata
           Force collection and sending of git metadata (branch, commit, etc.). If neither this nor
           --no-git-metadata is specified, git metadata is automatically collected when running in
           most CI environments.
+
       --no-git-metadata
           Disable collection and sending of git metadata.
+
   -h, --help
-          Print help
+          Print help (see a summary with '-h')
 
 ```
