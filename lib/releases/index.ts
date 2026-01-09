@@ -214,9 +214,9 @@ export class Releases {
     if (!options || !options.env) {
       throw new Error('options.env must be a valid name');
     }
-    const args = ['releases', 'deploys']
+    const args = ['deploys', 'new']
       .concat(helper.getProjectFlagsFromOptions(options))
-      .concat([release, 'new']);
+      .concat(['--release', release]);
     return this.execute(helper.prepareCommand(args, DEPLOYS_OPTIONS, options), null);
   }
 
