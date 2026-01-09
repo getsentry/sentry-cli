@@ -123,3 +123,51 @@ fn creates_release_which_is_instantly_finalized() {
         .register_trycmd_test("releases/releases-new-finalize.trycmd")
         .with_default_token();
 }
+
+#[test]
+fn creates_release_with_numeric_project_id() {
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/releases/")
+                .with_status(201)
+                .with_response_file("releases/get-release.json")
+                .with_matcher(Matcher::PartialJson(json!({
+                    "version": "test-release",
+                    "projects": [123],
+                }))),
+        )
+        .register_trycmd_test("releases/releases-new-numeric-project.trycmd")
+        .with_default_token();
+}
+
+#[test]
+fn creates_release_with_multiple_numeric_project_ids() {
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/releases/")
+                .with_status(201)
+                .with_response_file("releases/get-release.json")
+                .with_matcher(Matcher::PartialJson(json!({
+                    "version": "test-release",
+                    "projects": [123, 456],
+                }))),
+        )
+        .register_trycmd_test("releases/releases-new-multiple-numeric-projects.trycmd")
+        .with_default_token();
+}
+
+#[test]
+fn creates_release_with_mixed_project_ids() {
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/releases/")
+                .with_status(201)
+                .with_response_file("releases/get-release.json")
+                .with_matcher(Matcher::PartialJson(json!({
+                    "version": "test-release",
+                    "projects": [123, "my-project", 456],
+                }))),
+        )
+        .register_trycmd_test("releases/releases-new-mixed-projects.trycmd")
+        .with_default_token();
+}
