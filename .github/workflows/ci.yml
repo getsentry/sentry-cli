@@ -37,6 +37,13 @@ jobs:
     name: Test Swift
     uses: ./.github/workflows/swift-test.yml
 
+  changelog_preview:
+    name: Changelog Preview
+    if: ${{ github.event_name == 'pull_request' }}
+    uses: getsentry/craft/.github/workflows/changelog-preview.yml@master
+    permissions:
+      pull-requests: write
+
   danger:
     name: Run Danger Checks
     runs-on: ubuntu-24.04
