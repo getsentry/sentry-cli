@@ -5,6 +5,7 @@ on:
     types: [released]
 
 permissions:
+  packages: write
   contents: write
   pull-requests: write
 
