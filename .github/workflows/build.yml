@@ -31,7 +31,7 @@ jobs:
       image: messense/rust-musl-cross:${{ matrix.container }}
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6 # 6.0.1
 
       - name: Add Rustup Target
         run: |
@@ -67,7 +67,7 @@ jobs:
     runs-on: macos-14
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6 # 6.0.1
 
       - name: Add Rustup Target
         run: rustup target add ${{ matrix.target }}
@@ -154,7 +154,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6 # 6.0.1
 
       - name: Install `rcodesign`
         run: |
@@ -218,7 +218,7 @@ jobs:
     runs-on: windows-2022
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6 # 6.0.1
 
       # When rustup is updated, it tries to replace its binary, which on Windows is somehow locked.
       # This can result in the CI failure, see: https://github.com/rust-lang/rustup/issues/3029
@@ -250,9 +250,9 @@ jobs:
     needs: [linux, macos, macos_universal, windows]
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6 # 6.0.1
 
-      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # 6.1.0
+      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6 # 6.1.0
         with:
           node-version: '20.10.0'
 
@@ -283,7 +283,7 @@ jobs:
     name: python (base)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6 # 6.0.1
       - name: Add Rustup Target
         run: rustup target add x86_64-unknown-linux-musl
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # 6.1.0
@@ -301,7 +301,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows, python-base]
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6 # 6.0.1
       - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # 6.1.0
         with:
           python-version: '3.11'
@@ -327,8 +327,8 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows]
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
-      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # 6.1.0
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6 # 6.0.1
+      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6 # 6.1.0
         with:
           node-version: '20.10.0'
       - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # 7.0.0
@@ -379,7 +379,7 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6 # 6.0.1
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # 3.12.0
