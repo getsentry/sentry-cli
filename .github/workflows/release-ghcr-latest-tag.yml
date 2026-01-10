@@ -4,6 +4,10 @@ on:
   release:
     types: [released]
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   release-ghcr-latest-tag:
     runs-on: ubuntu-24.04
