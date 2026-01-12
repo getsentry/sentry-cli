@@ -1,0 +1,80 @@
+name: Changelog Enforcement
+
+on:
+  workflow_call:
+
+jobs:
+  check-changelog:
+    name: Check Changelog Changes
+    runs-on: ubuntu-24.04
+    if: ${{ github.event_name == 'pull_request' }}
+
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+      - name: Check for CHANGELOG.md modifications
+        uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # 8.0.0
+        with:
+          script: |
+            const prNumber = context.payload.pull_request.number;
+            const prTitle = context.payload.pull_request.title;
+            const isChangelogPR = prTitle.startsWith('meta(changelog):');
+
+            const { data: files } = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prNumber,
+              per_page: 100
+            });
+
+            const changelogModified = files.some(file => file.filename === 'CHANGELOG.md');
+
+            console.log(`PR Title: ${prTitle}`);
+            console.log(`Is Changelog PR: ${isChangelogPR}`);
+            console.log(`CHANGELOG.md Modified: ${changelogModified}`);
+
+            if (changelogModified && !isChangelogPR) {
+              const commentBody = `## :warning: Manual Changelog Changes Detected
+
+            This PR modifies \`CHANGELOG.md\`, but the PR title does not start with \`meta(changelog):\`.
+
+            **Changelogs in this repository are generated automatically during releases.** Manual edits to \`CHANGELOG.md\` are not allowed in regular PRs.
+
+            ### What to do:
+
+            1. **If this change is intentional**: Create a separate PR with a title starting with \`meta(changelog):\` to make changelog edits.
+
+            2. **If this was unintentional**: Remove the \`CHANGELOG.md\` changes from this PR.`;
+
+              // Avoid posting duplicate comments on re-runs
+              const { data: comments } = await github.rest.issues.listComments({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: prNumber
+              });
+
+              const botComment = comments.find(comment =>
+                comment.user.type === 'Bot' &&
+                comment.body.includes('Manual Changelog Changes Detected')
+              );
+
+              if (!botComment) {
+                await github.rest.issues.createComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  issue_number: prNumber,
+                  body: commentBody
+                });
+                console.log('Posted comment explaining changelog policy');
+              } else {
+                console.log('Comment already exists, skipping');
+              }
+
+              core.setFailed('CHANGELOG.md changes are not allowed unless PR title starts with "meta(changelog):"');
+            } else if (changelogModified && isChangelogPR) {
+              console.log('CHANGELOG.md changes allowed in meta(changelog): PR');
+            } else {
+              console.log('No CHANGELOG.md changes detected');
+            }
