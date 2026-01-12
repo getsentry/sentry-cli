@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### New Features
+
+- In the JavaScript API, added multi-project support to `releases.newDeploy()` method. This method now accept a `projects` option (array of project slugs), aligning them with the Rust CLI's multi-project capabilities and matching the existing behavior of `releases.new()` and `releases.uploadSourceMaps()` ([#3001](https://github.com/getsentry/sentry-cli/pull/3001)).
+
+### Fixes
+
 - Fixed a bug that prevented project IDs from being used with the `sentry-cli releases new` command for users with self-hosted Sentry instances on versions older than 25.12.1 ([#3068](https://github.com/getsentry/sentry-cli/issues/3068)).
 
 ## 3.0.3
