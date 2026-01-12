@@ -8,7 +8,6 @@ use symbolic::common::ByteView;
 use uuid::Uuid;
 
 use crate::api::Api;
-use crate::api::ChunkUploadCapability;
 use crate::config::Config;
 use crate::utils::android::dump_proguard_uuids_as_properties;
 use crate::utils::args::ArgExt as _;
@@ -148,10 +147,5 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let (org, project) = config.get_org_and_project(matches)?;
 
     let chunk_upload_options = authenticated_api.get_chunk_upload_options(&org)?;
-
-    if chunk_upload_options.supports(ChunkUploadCapability::Proguard) {
-        proguard::chunk_upload(&mappings, chunk_upload_options, &org, &project)
-    } else {
-        Err(anyhow::anyhow!("Server does not support uploading ProGuard mappings via chunked upload. Please update your Sentry server."))
-    }
+    proguard::chunk_upload(&mappings, chunk_upload_options, &org, &project)
 }

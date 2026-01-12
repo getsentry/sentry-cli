@@ -2,7 +2,7 @@ use std::num::NonZeroUsize;
 
 use serde::Deserialize;
 
-use super::{ChunkCompression, ChunkHashAlgorithm, ChunkUploadCapability};
+use super::{ChunkCompression, ChunkHashAlgorithm};
 
 /// Chunk upload options which are set by the Sentry server.
 #[derive(Debug, Deserialize)]
@@ -23,13 +23,4 @@ pub struct ChunkServerOptions {
     pub concurrency: u8,
     #[serde(default)]
     pub compression: Vec<ChunkCompression>,
-    #[serde(default)]
-    pub accept: Vec<ChunkUploadCapability>,
-}
-
-impl ChunkServerOptions {
-    /// Returns whether the given capability is accepted by the chunk upload endpoint.
-    pub fn supports(&self, capability: ChunkUploadCapability) -> bool {
-        self.accept.contains(&capability)
-    }
 }

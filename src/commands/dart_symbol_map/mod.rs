@@ -7,7 +7,8 @@ const GROUP_ABOUT: &str = "Manage Dart/Flutter symbol maps for Sentry.";
 const UPLOAD_ABOUT: &str =
     "Upload a Dart/Flutter symbol map (dartsymbolmap) for deobfuscating Dart exception types.";
 const UPLOAD_LONG_ABOUT: &str =
-    "Upload a Dart/Flutter symbol map (dartsymbolmap) for deobfuscating Dart exception types.{n}{n}Examples:{n}  sentry-cli dart-symbol-map upload --org my-org --project my-proj path/to/dartsymbolmap.json path/to/debug/file{n}{n}The mapping must be a JSON array of strings with an even number of entries (pairs).{n}The debug file must contain exactly one Debug ID.";
+    "Upload a Dart/Flutter symbol map (dartsymbolmap) for deobfuscating Dart exception types.{n}{n}Examples:{n}  sentry-cli dart-symbol-map upload --org my-org --project my-proj path/to/dartsymbolmap.json path/to/debug/file{n}{n}The mapping must be a JSON array of strings with an even number of entries (pairs).{n}The debug file must contain exactly one Debug ID. {n}{n}\
+    This command is supported on Sentry SaaS and self-hosted versions ≥25.8.0.";
 
 #[derive(Args)]
 pub(super) struct DartSymbolMapArgs {
