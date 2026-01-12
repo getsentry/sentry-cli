@@ -37,10 +37,14 @@ jobs:
     name: Test Swift
     uses: ./.github/workflows/swift-test.yml
 
+  changelog:
+    name: Changelog
+    uses: ./.github/workflows/changelog-enforcement.yml
+
   required:
     name: Check required jobs
     runs-on: ubuntu-24.04
-    needs: [lint, test, test_node, test_swift]
+    needs: [lint, test, test_node, test_swift, changelog]
     if: always()
     steps:
       - name: Check for failure
@@ -48,7 +52,8 @@ jobs:
           needs.lint.result != 'success' ||
           needs.test.result != 'success' ||
           needs.test_node.result != 'success' ||
-          needs.test_swift.result != 'success'
+          needs.test_swift.result != 'success' ||
+          (needs.changelog.result != 'success' && needs.changelog.result != 'skipped')
           }}
         run: |
           echo "One or more jobs failed"
