@@ -540,10 +540,16 @@ impl AuthenticatedApi<'_> {
 
     /// Returns a list of releases for a given project.  This is currently a
     /// capped list by what the server deems an acceptable default limit.
-    pub fn list_releases(&self, org: &str) -> ApiResult<Vec<ReleaseInfo>> {
-        let path = format!("/organizations/{}/releases/", PathArg(org));
-        self.get(&path)?
-            .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::OrganizationNotFound)
+    pub fn list_releases(&self, org: &str, project: Option<&str>) -> ApiResult<Vec<ReleaseInfo>> {
+        if let Some(project) = project {
+            let path = format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project));
+            self.get(&path)?
+                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::ProjectNotFound)
+        } else {
+            let path = format!("/organizations/{}/releases/", PathArg(org));
+            self.get(&path)?
+                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::OrganizationNotFound)
+        }
     }
 
     /// Looks up a release commits and returns it.  If it does not exist `None`
