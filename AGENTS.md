@@ -1,8 +1,3 @@
----
-description: Core development guidelines and context for sentry-cli
-alwaysApply: true
----
-
 # Sentry CLI Development Guidelines
 
 ## Project Overview
@@ -64,5 +59,22 @@ Reference: https://develop.sentry.dev/engineering-practices/commit-messages/
 - Mock HTTP responses in `tests/integration/_responses/`
 - Test fixtures in `tests/integration/_fixtures/`
 - Cross-platform testing via CI matrix
+
+## Code Formatting
+
+**ALWAYS** run `cargo fmt` before committing any Rust code changes to ensure consistent formatting across the codebase.
+
+## Updating These Guidelines
+
+Update AGENTS.md files when you encounter **generally applicable** patterns:
+- Development patterns and best practices
+- Common pitfalls and architecture decisions
+- Workflow improvements and tool configurations
+
+**Do NOT capture**: Task-specific fixes, temporary workarounds, personal preferences.
+
+**Keep AGENTS.md files as concise as possible to minimize token usage.**
+
+---
 
 Remember: This is a production tool used by many developers. Changes should be well-tested, backward-compatible, and follow established patterns.
