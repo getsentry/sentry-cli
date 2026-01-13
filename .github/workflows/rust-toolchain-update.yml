@@ -5,6 +5,10 @@ on:
     # Run weekly on Mondays at 00:00 UTC
     - cron: '0 0 * * 1'
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   check-and-update:
     name: Check for Rust toolchain updates
