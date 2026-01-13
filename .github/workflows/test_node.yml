@@ -12,6 +12,10 @@ on:
         description: 'Matrix job result'
         value: ${{ jobs.test_node.result }}
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   type_check:
     name: Type Check
