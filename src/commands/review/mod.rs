@@ -1,14 +1,11 @@
 //! This module implements the `sentry-cli review` command for AI-powered code review.
 
-use std::time::Duration;
-
 use anyhow::{bail, Context as _, Result};
 use clap::{ArgMatches, Command};
 use console::style;
-use git2::{Diff, DiffFormat, DiffOptions, Oid, Repository};
-use serde::{Deserialize, Serialize, Serializer};
+use git2::{Diff, DiffOptions, Repository};
 
-use crate::api::{Api, Method};
+use crate::api::{Api, ReviewPrediction, ReviewRequest, ReviewResponse};
 use crate::utils::vcs::git_repo_remote_url;
 
 const ABOUT: &str = "[EXPERIMENTAL] Review local changes using Sentry AI";
@@ -20,60 +17,8 @@ Sentry's AI-powered code review service for bug prediction.
 
 The base commit must be pushed to the remote repository.";
 
-/// Timeout for the review API request (10 minutes)
-const REVIEW_TIMEOUT: Duration = Duration::from_secs(600);
-
 /// Maximum diff size in bytes (500 KB)
 const MAX_DIFF_SIZE: usize = 500 * 1024;
-
-/// Serializes git2::Oid as a hex string.
-fn serialize_oid<S>(oid: &Oid, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    serializer.serialize_str(&oid.to_string())
-}
-
-/// Serializes git2::Diff as a unified diff string, skipping binary files.
-fn serialize_diff<S>(diff: &&Diff<'_>, serializer: S) -> Result<S::Ok, S::Error>
-where
-    S: Serializer,
-{
-    let mut output = Vec::new();
-    diff.print(DiffFormat::Patch, |delta, _hunk, line| {
-        if !delta.flags().is_binary() {
-            output.extend_from_slice(line.content());
-        }
-        true
-    })
-    .map_err(serde::ser::Error::custom)?;
-
-    let diff_str = String::from_utf8(output).map_err(serde::ser::Error::custom)?;
-    serializer.serialize_str(&diff_str)
-}
-
-#[derive(Serialize)]
-struct ReviewRequest<'a> {
-    remote_url: String,
-    #[serde(serialize_with = "serialize_oid")]
-    base_commit_sha: Oid,
-    #[serde(serialize_with = "serialize_diff")]
-    diff: &'a Diff<'a>,
-}
-
-#[derive(Deserialize, Debug)]
-struct ReviewResponse {
-    predictions: Vec<Prediction>,
-}
-
-#[derive(Deserialize, Debug)]
-struct Prediction {
-    file_path: String,
-    line_number: Option<u32>,
-    description: String,
-    severity: String,
-    suggested_fix: Option<String>,
-}
 
 pub(super) fn make_command(command: Command) -> Command {
     command.about(ABOUT).long_about(LONG_ABOUT)
@@ -138,7 +83,11 @@ fn run_review() -> Result<()> {
     };
 
     // Send request and display results
-    let response = send_review_request(&request)?;
+    let response = Api::current()
+        .authenticated()
+        .context("Authentication required for review")?
+        .review_code(&request)
+        .context("Failed to get review results")?;
     display_results(response);
 
     Ok(())
@@ -159,25 +108,6 @@ fn validate_diff(diff: &Diff<'_>) -> Result<()> {
     }
 
     Ok(())
-}
-
-/// Sends the review request to the Sentry API.
-fn send_review_request(request: &ReviewRequest<'_>) -> Result<ReviewResponse> {
-    let api = Api::current();
-    api.authenticated()?;
-
-    let path = "/api/0/bug-prediction/cli/";
-
-    let response = api
-        .request(Method::Post, path, None)?
-        .with_json_body(request)?
-        .with_timeout(REVIEW_TIMEOUT)?
-        .send()
-        .context("Failed to send review request")?;
-
-    response
-        .convert::<ReviewResponse>()
-        .context("Failed to parse review response")
 }
 
 /// Displays the review results in a human-readable format.
@@ -204,7 +134,7 @@ fn display_results(response: ReviewResponse) {
 }
 
 /// Displays a single prediction in a formatted way.
-fn display_prediction(index: usize, prediction: &Prediction) {
+fn display_prediction(index: usize, prediction: &ReviewPrediction) {
     let severity_lower = prediction.severity.to_lowercase();
 
     let styled = match severity_lower.as_str() {

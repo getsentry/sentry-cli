@@ -29,13 +29,14 @@ use chrono::Duration;
 use chrono::{DateTime, FixedOffset, Utc};
 use clap::ArgMatches;
 use flate2::write::GzEncoder;
+use git2::{Diff, DiffFormat, Oid};
 use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use parking_lot::Mutex;
 use regex::{Captures, Regex};
 use secrecy::ExposeSecret as _;
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Serialize, Serializer};
 use sha1_smol::Digest;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::ObjectKind;
@@ -68,6 +69,35 @@ const RETRY_STATUS_CODES: &[u32] = &[
     http::HTTP_STATUS_507_INSUFFICIENT_STORAGE,
     http::HTTP_STATUS_524_CLOUDFLARE_TIMEOUT,
 ];
+
+/// Timeout for the review API request (10 minutes)
+const REVIEW_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(600);
+
+/// Serializes git2::Oid as a hex string.
+fn serialize_oid<S>(oid: &Oid, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&oid.to_string())
+}
+
+/// Serializes git2::Diff as a unified diff string, skipping binary files.
+fn serialize_diff<S>(diff: &&Diff<'_>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut output = Vec::new();
+    diff.print(DiffFormat::Patch, |delta, _hunk, line| {
+        if !delta.flags().is_binary() {
+            output.extend_from_slice(line.content());
+        }
+        true
+    })
+    .map_err(serde::ser::Error::custom)?;
+
+    let diff_str = String::from_utf8(output).map_err(serde::ser::Error::custom)?;
+    serializer.serialize_str(&diff_str)
+}
 
 /// Helper for the API access.
 /// Implements the low-level API access methods, and provides high-level implementations for interacting
@@ -965,6 +995,15 @@ impl AuthenticatedApi<'_> {
             }
         }
         Ok(rv)
+    }
+
+    /// Sends code for AI-powered review and returns predictions.
+    pub fn review_code(&self, request: &ReviewRequest<'_>) -> ApiResult<ReviewResponse> {
+        self.request(Method::Post, "/api/0/bug-prediction/cli/")?
+            .with_timeout(REVIEW_TIMEOUT)?
+            .with_json_body(request)?
+            .send()?
+            .convert()
     }
 }
 
@@ -1944,4 +1983,30 @@ pub struct LogEntry {
     pub severity: Option<String>,
     pub timestamp: String,
     pub message: Option<String>,
+}
+
+/// Request for AI code review
+#[derive(Serialize)]
+pub struct ReviewRequest<'a> {
+    pub remote_url: String,
+    #[serde(serialize_with = "serialize_oid")]
+    pub base_commit_sha: Oid,
+    #[serde(serialize_with = "serialize_diff")]
+    pub diff: &'a Diff<'a>,
+}
+
+/// Response from the AI code review endpoint
+#[derive(Deserialize, Debug)]
+pub struct ReviewResponse {
+    pub predictions: Vec<ReviewPrediction>,
+}
+
+/// A single prediction from AI code review
+#[derive(Deserialize, Debug)]
+pub struct ReviewPrediction {
+    pub file_path: String,
+    pub line_number: Option<u32>,
+    pub description: String,
+    pub severity: String,
+    pub suggested_fix: Option<String>,
 }
