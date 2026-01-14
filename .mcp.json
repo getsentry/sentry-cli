@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "rust-analyzer": {
+      "command": "rust-analyzer-mcp"
+    },
+    "crates": {
+      "command": "crates-mcp"
+    }
+  }
+}
