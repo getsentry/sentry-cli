@@ -20,6 +20,7 @@ use std::fs::File;
 use std::io::{self, Read as _, Write};
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::Duration as StdDuration;
 use std::{fmt, thread};
 
 use anyhow::{Context as _, Result};
@@ -36,6 +37,7 @@ use parking_lot::Mutex;
 use regex::{Captures, Regex};
 use secrecy::ExposeSecret as _;
 use serde::de::DeserializeOwned;
+use serde::ser::Error as SerError;
 use serde::{Deserialize, Serialize, Serializer};
 use sha1_smol::Digest;
 use symbolic::common::DebugId;
@@ -71,7 +73,7 @@ const RETRY_STATUS_CODES: &[u32] = &[
 ];
 
 /// Timeout for the review API request (10 minutes)
-const REVIEW_TIMEOUT: std::time::Duration = std::time::Duration::from_secs(600);
+const REVIEW_TIMEOUT: StdDuration = StdDuration::from_secs(600);
 
 /// Serializes git2::Oid as a hex string.
 fn serialize_oid<S>(oid: &Oid, serializer: S) -> Result<S::Ok, S::Error>
@@ -93,9 +95,9 @@ where
         }
         true
     })
-    .map_err(serde::ser::Error::custom)?;
+    .map_err(SerError::custom)?;
 
-    let diff_str = String::from_utf8(output).map_err(serde::ser::Error::custom)?;
+    let diff_str = String::from_utf8(output).map_err(SerError::custom)?;
     serializer.serialize_str(&diff_str)
 }
 
