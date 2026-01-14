@@ -173,7 +173,7 @@ impl Api {
     /// Create a new `ApiRequest` for the given HTTP method and URL.  If the
     /// URL is just a path then it's relative to the configured API host
     /// and authentication is automatically enabled.
-    fn request(
+    pub fn request(
         &self,
         method: Method,
         url: &str,
@@ -1264,6 +1264,13 @@ impl ApiRequest {
     pub fn follow_location(mut self, val: bool) -> ApiResult<Self> {
         debug!("follow redirects: {val}");
         self.handle.follow_location(val)?;
+        Ok(self)
+    }
+
+    /// Sets the timeout for the request.
+    pub fn with_timeout(mut self, timeout: std::time::Duration) -> ApiResult<Self> {
+        debug!("setting timeout: {timeout:?}");
+        self.handle.timeout(timeout)?;
         Ok(self)
     }
 
