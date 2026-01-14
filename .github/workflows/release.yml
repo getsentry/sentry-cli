@@ -6,10 +6,10 @@ on:
         description: Version to release (or "auto")
         required: false
       force:
-        description: Force a release even when there are release-blockers
+        description: Force a release even when there are release-blockers (optional)
         required: false
       merge_target:
-        description: Target branch to merge into
+        description: Target branch to merge into. Uses the default branch as a fallback (optional)
         required: false
 permissions:
   contents: write
@@ -26,7 +26,7 @@ jobs:
         with:
           app-id: ${{ vars.SENTRY_RELEASE_BOT_CLIENT_ID }}
           private-key: ${{ secrets.SENTRY_RELEASE_BOT_PRIVATE_KEY }}
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
         with:
           token: ${{ steps.token.outputs.token }}
           fetch-depth: 0
@@ -35,6 +35,6 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ steps.token.outputs.token }}
         with:
-          version: ${{ inputs.version }}
-          force: ${{ inputs.force }}
-          merge_target: ${{ inputs.merge_target }}
+          version: ${{ github.event.inputs.version }}
+          force: ${{ github.event.inputs.force }}
+          merge_target: ${{ github.event.inputs.merge_target }}
