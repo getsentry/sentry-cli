@@ -3,13 +3,12 @@
 use std::time::Duration;
 
 use anyhow::{bail, Context as _, Result};
-use clap::{ArgMatches, Args, Command, Parser as _};
+use clap::{ArgMatches, Command};
 use console::style;
-use git2::{DiffFormat, DiffOptions, Repository};
-use serde::{Deserialize, Serialize};
+use git2::{Diff, DiffFormat, DiffOptions, Oid, Repository};
+use serde::{Deserialize, Serialize, Serializer};
 
 use crate::api::{Api, Method};
-use crate::commands::derive_parser::{SentryCLI, SentryCLICommand};
 use crate::utils::vcs::git_repo_remote_url;
 
 const ABOUT: &str = "[EXPERIMENTAL] Review local changes using Sentry AI";
@@ -27,16 +26,39 @@ const REVIEW_TIMEOUT: Duration = Duration::from_secs(600);
 /// Maximum diff size in bytes (500 KB)
 const MAX_DIFF_SIZE: usize = 500 * 1024;
 
-#[derive(Args)]
-pub(super) struct ReviewArgs {
-    // No additional args for PoC - reviews HEAD vs HEAD~1
+/// Serializes git2::Oid as a hex string.
+fn serialize_oid<S>(oid: &Oid, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&oid.to_string())
+}
+
+/// Serializes git2::Diff as a unified diff string, skipping binary files.
+fn serialize_diff<S>(diff: &&Diff<'_>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut output = Vec::new();
+    diff.print(DiffFormat::Patch, |delta, _hunk, line| {
+        if !delta.flags().is_binary() {
+            output.extend_from_slice(line.content());
+        }
+        true
+    })
+    .map_err(serde::ser::Error::custom)?;
+
+    let diff_str = String::from_utf8(output).map_err(serde::ser::Error::custom)?;
+    serializer.serialize_str(&diff_str)
 }
 
 #[derive(Serialize)]
-struct ReviewRequest {
+struct ReviewRequest<'a> {
     remote_url: String,
-    base_commit_sha: String,
-    diff: String,
+    #[serde(serialize_with = "serialize_oid")]
+    base_commit_sha: Oid,
+    #[serde(serialize_with = "serialize_diff")]
+    diff: &'a Diff<'a>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -58,10 +80,6 @@ pub(super) fn make_command(command: Command) -> Command {
 }
 
 pub(super) fn execute(_: &ArgMatches) -> Result<()> {
-    let SentryCLICommand::Review(_) = SentryCLI::parse().command else {
-        unreachable!("expected review command");
-    };
-
     eprintln!(
         "{}",
         style("[EXPERIMENTAL] This feature is in development.").yellow()
@@ -71,29 +89,7 @@ pub(super) fn execute(_: &ArgMatches) -> Result<()> {
 }
 
 fn run_review() -> Result<()> {
-    let (remote_url, base_sha, diff) = get_review_data()?;
-
-    if diff.trim().is_empty() {
-        bail!("No changes found between HEAD and HEAD~1");
-    }
-
-    if diff.len() > MAX_DIFF_SIZE {
-        bail!(
-            "Diff size ({} bytes) exceeds maximum allowed size ({MAX_DIFF_SIZE} bytes)",
-            diff.len()
-        );
-    }
-
-    eprintln!("Analyzing commit... (this may take up to 10 minutes)");
-
-    let response = send_review_request(remote_url, base_sha, diff)?;
-    display_results(response);
-
-    Ok(())
-}
-
-/// Extracts git diff and metadata from the repository.
-fn get_review_data() -> Result<(String, String, String)> {
+    // Open repo at top level - keeps it alive for the entire function
     let repo = Repository::open_from_env()
         .context("Failed to open git repository from current directory")?;
 
@@ -109,70 +105,72 @@ fn get_review_data() -> Result<(String, String, String)> {
         bail!("HEAD is a merge commit. Merge commits are not supported for review.");
     }
 
-    // Get HEAD~1 (parent) commit
+    // Get parent commit
     let parent = head
         .parent(0)
         .context("HEAD has no parent commit - cannot review initial commit")?;
-    let base_sha = parent.id().to_string();
 
-    // Get trees for both commits
+    // Get trees for diff
     let head_tree = head.tree().context("Failed to get HEAD tree")?;
     let parent_tree = parent.tree().context("Failed to get parent tree")?;
 
-    // Generate unified diff, excluding binary files
+    // Generate diff (borrows from repo)
     let mut diff_opts = DiffOptions::new();
     let diff = repo
         .diff_tree_to_tree(Some(&parent_tree), Some(&head_tree), Some(&mut diff_opts))
         .context("Failed to generate diff")?;
 
-    let diff_string = generate_diff_string(&diff)?;
+    // Validate diff
+    validate_diff(&diff)?;
 
-    // Get remote URL (prefer origin)
+    // Get remote URL
     let remote_url = git_repo_remote_url(&repo, "origin")
         .or_else(|_| git_repo_remote_url(&repo, "upstream"))
         .context("No remote URL found for 'origin' or 'upstream'")?;
 
-    Ok((remote_url, base_sha, diff_string))
+    eprintln!("Analyzing commit... (this may take up to 10 minutes)");
+
+    // Build request with borrowed diff - repo still alive
+    let request = ReviewRequest {
+        remote_url,
+        base_commit_sha: parent.id(),
+        diff: &diff,
+    };
+
+    // Send request and display results
+    let response = send_review_request(&request)?;
+    display_results(response);
+
+    Ok(())
 }
 
-/// Generates a diff string from a git2::Diff, skipping binary files.
-fn generate_diff_string(diff: &git2::Diff) -> Result<String> {
-    let mut diff_output = Vec::new();
+/// Validates the diff meets requirements.
+fn validate_diff(diff: &Diff<'_>) -> Result<()> {
+    let stats = diff.stats().context("Failed to get diff stats")?;
 
-    diff.print(DiffFormat::Patch, |delta, _hunk, line| {
-        // Skip binary files
-        if delta.flags().is_binary() {
-            return true;
-        }
+    if stats.files_changed() == 0 {
+        bail!("No changes found between HEAD and HEAD~1");
+    }
 
-        diff_output.extend_from_slice(line.content());
-        true
-    })
-    .context("Failed to print diff")?;
+    // Estimate size by summing insertions and deletions (rough approximation)
+    let estimated_size = (stats.insertions() + stats.deletions()) * 80; // ~80 chars per line
+    if estimated_size > MAX_DIFF_SIZE {
+        bail!("Diff is too large (estimated {estimated_size} bytes, max {MAX_DIFF_SIZE} bytes)");
+    }
 
-    String::from_utf8(diff_output).context("Diff contains invalid UTF-8")
+    Ok(())
 }
 
 /// Sends the review request to the Sentry API.
-fn send_review_request(
-    remote_url: String,
-    base_sha: String,
-    diff: String,
-) -> Result<ReviewResponse> {
+fn send_review_request(request: &ReviewRequest<'_>) -> Result<ReviewResponse> {
     let api = Api::current();
     api.authenticated()?;
-
-    let request_body = ReviewRequest {
-        remote_url,
-        base_commit_sha: base_sha,
-        diff,
-    };
 
     let path = "/api/0/bug-prediction/cli/";
 
     let response = api
         .request(Method::Post, path, None)?
-        .with_json_body(&request_body)?
+        .with_json_body(request)?
         .with_timeout(REVIEW_TIMEOUT)?
         .send()
         .context("Failed to send review request")?;
@@ -200,32 +198,23 @@ fn display_results(response: ReviewResponse) {
     );
     println!();
 
-    response
-        .predictions
-        .iter()
-        .enumerate()
-        .for_each(|(i, prediction)| {
-            display_prediction(i + 1, prediction);
-        });
+    for (i, prediction) in response.predictions.iter().enumerate() {
+        display_prediction(i + 1, prediction);
+    }
 }
 
 /// Displays a single prediction in a formatted way.
 fn display_prediction(index: usize, prediction: &Prediction) {
-    let severity_label = match prediction.severity.to_lowercase().as_str() {
-        "high" => "[HIGH]".to_owned(),
-        "medium" => "[MEDIUM]".to_owned(),
-        "low" => "[LOW]".to_owned(),
-        _ => format!("[{}]", prediction.severity.to_uppercase()),
+    let severity_lower = prediction.severity.to_lowercase();
+
+    let styled = match severity_lower.as_str() {
+        "high" => style("[HIGH]".to_owned()).red().bold(),
+        "medium" => style("[MEDIUM]".to_owned()).yellow().bold(),
+        "low" => style("[LOW]".to_owned()).cyan(),
+        _ => style(format!("[{}]", prediction.severity.to_uppercase())).dim(),
     };
 
-    let severity_styled = match prediction.severity.to_lowercase().as_str() {
-        "high" => style(severity_label).red().bold(),
-        "medium" => style(severity_label).yellow().bold(),
-        "low" => style(severity_label).cyan(),
-        _ => style(severity_label).dim(),
-    };
-
-    println!("{index}. {severity_styled} {}", prediction.file_path);
+    println!("{index}. {styled} {}", prediction.file_path);
 
     if let Some(line) = prediction.line_number {
         println!("   Line: {line}");
@@ -233,7 +222,7 @@ fn display_prediction(index: usize, prediction: &Prediction) {
 
     println!("   {}", prediction.description);
 
-    if let Some(ref fix) = prediction.suggested_fix {
+    if let Some(fix) = &prediction.suggested_fix {
         println!("   {}: {fix}", style("Suggested fix").green());
     }
 
