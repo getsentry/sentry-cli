@@ -4,9 +4,6 @@ on:
   release:
     types: [prereleased, released]
 
-permissions:
-  packages: write
-
 jobs:
   release-ghcr-version-tag:
     runs-on: ubuntu-24.04
