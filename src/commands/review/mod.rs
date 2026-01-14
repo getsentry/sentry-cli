@@ -1,10 +1,11 @@
 //! This module implements the `sentry-cli review` command for AI-powered code review.
 
 use anyhow::{bail, Context as _, Result};
-use clap::{ArgMatches, Command};
+use clap::{ArgMatches, Args, Command, Parser as _};
 use console::style;
 use git2::{Diff, DiffOptions, Repository};
 
+use super::derive_parser::{SentryCLI, SentryCLICommand};
 use crate::api::{Api, ReviewPrediction, ReviewRequest, ReviewResponse};
 use crate::utils::vcs::git_repo_remote_url;
 
@@ -20,11 +21,19 @@ The base commit must be pushed to the remote repository.";
 /// Maximum diff size in bytes (500 KB)
 const MAX_DIFF_SIZE: usize = 500 * 1024;
 
+#[derive(Args)]
+#[command(about = ABOUT, long_about = LONG_ABOUT, hide = true)]
+pub(super) struct ReviewArgs;
+
 pub(super) fn make_command(command: Command) -> Command {
-    command.about(ABOUT).long_about(LONG_ABOUT)
+    ReviewArgs::augment_args(command)
 }
 
 pub(super) fn execute(_: &ArgMatches) -> Result<()> {
+    let SentryCLICommand::Review(ReviewArgs) = SentryCLI::parse().command else {
+        unreachable!("expected review command");
+    };
+
     eprintln!(
         "{}",
         style("[EXPERIMENTAL] This feature is in development.").yellow()
