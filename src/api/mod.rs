@@ -203,7 +203,7 @@ impl Api {
     /// Create a new `ApiRequest` for the given HTTP method and URL.  If the
     /// URL is just a path then it's relative to the configured API host
     /// and authentication is automatically enabled.
-    pub fn request(
+    fn request(
         &self,
         method: Method,
         url: &str,
