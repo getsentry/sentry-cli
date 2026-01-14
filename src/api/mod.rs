@@ -15,6 +15,7 @@ mod serialization;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::error::Error as _;
 #[cfg(any(target_os = "macos", not(feature = "managed")))]
 use std::fs::File;
 use std::io::{self, Read as _, Write};
@@ -41,7 +42,7 @@ use symbolic::common::DebugId;
 use symbolic::debuginfo::ObjectKind;
 use uuid::Uuid;
 
-use crate::api::errors::{ProjectRenamedError, RetryError};
+use crate::api::errors::{ProjectRenamedError, RetryError, RetryableCurlError};
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::http::{self, is_absolute_url};
@@ -1313,7 +1314,20 @@ impl ApiRequest {
             debug!("retry number {retry_number}, max retries: {max_retries}");
             *retry_number += 1;
 
-            let mut rv = self.send_into(&mut out)?;
+            let result = self.send_into(&mut out);
+
+            // Check for retriable curl errors (DNS resolution failure)
+            if let Some(curl_err) = result
+                .as_ref()
+                .err()
+                .and_then(|e| e.source())
+                .and_then(|s| s.downcast_ref::<curl::Error>())
+                .filter(|e| e.is_couldnt_resolve_host())
+            {
+                anyhow::bail!(RetryableCurlError::new(curl_err.clone()));
+            }
+
+            let mut rv = result?;
             rv.body = Some(out);
 
             if RETRY_STATUS_CODES.contains(&rv.status) {
@@ -1326,7 +1340,7 @@ impl ApiRequest {
         send_req
             .retry(backoff)
             .sleep(thread::sleep)
-            .when(|e| e.is::<RetryError>())
+            .when(|e| e.is::<RetryError>() || e.is::<RetryableCurlError>())
             .notify(|e, dur| {
                 debug!(
                     "retry number {} failed due to {e:#}, retrying again in {} ms",
@@ -1335,9 +1349,16 @@ impl ApiRequest {
                 );
             })
             .call()
-            .or_else(|err| match err.downcast::<RetryError>() {
-                Ok(err) => Ok(err.into_body()),
-                Err(err) => Err(ApiError::with_source(ApiErrorKind::RequestFailed, err)),
+            .or_else(|err| {
+                err.downcast::<RetryError>()
+                    .map(RetryError::into_body)
+                    .map_err(|err| {
+                        err.downcast::<RetryableCurlError>()
+                            .map(|e| ApiError::from(e.into_source()))
+                            .unwrap_or_else(|e| {
+                                ApiError::with_source(ApiErrorKind::RequestFailed, e)
+                            })
+                    })
             })
     }
 }

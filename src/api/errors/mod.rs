@@ -28,3 +28,20 @@ impl RetryError {
         self.body
     }
 }
+
+#[derive(Debug, thiserror::Error)]
+#[error("request failed with retryable curl error: {source}")]
+pub(super) struct RetryableCurlError {
+    #[source]
+    source: curl::Error,
+}
+
+impl RetryableCurlError {
+    pub fn new(source: curl::Error) -> Self {
+        Self { source }
+    }
+
+    pub fn into_source(self) -> curl::Error {
+        self.source
+    }
+}
