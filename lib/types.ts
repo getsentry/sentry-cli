@@ -205,3 +205,32 @@ export type SentryCliCommitsOptions = {
    */
   ignoreEmpty?: boolean;
 }
+
+/**
+ * Options for injecting debug IDs into source files and source maps
+ */
+export type SentryCliInjectOptions = {
+  /**
+   * One or more paths that Sentry CLI should scan recursively for JavaScript source files.
+   */
+  paths: string[];
+  /**
+   * One or more paths to ignore during injection. Overrides entries in ignoreFile file.
+   * Defaults to ['node_modules'] if neither ignore nor ignoreFile is specified.
+   */
+  ignore?: string[];
+  /**
+   * Path to a file containing list of files/directories to ignore.
+   * Can point to .gitignore or anything with the same format.
+   */
+  ignoreFile?: string;
+  /**
+   * Set the file extensions of JavaScript files that are considered for injection.
+   * This overrides the default extensions (js, cjs, mjs).
+   */
+  ext?: string[];
+  /**
+   * Don't modify files on disk.
+   */
+  dryRun?: boolean;
+}

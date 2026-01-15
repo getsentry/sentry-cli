@@ -120,6 +120,7 @@ export class Releases {
    * @param options Options to configure the source map upload.
    * @returns A promise that resolves when the upload has completed successfully.
    */
+  // TODO: Move `uploadSourceMaps()` from Releases to SourceMaps class as `.upload()`
   async uploadSourceMaps(
     release: string,
     options: SentryCliUploadSourceMapsOptions
