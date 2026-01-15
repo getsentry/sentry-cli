@@ -941,6 +941,74 @@ impl AuthenticatedApi<'_> {
         Ok(rv)
     }
 
+    /// Get detailed information about a specific issue
+    pub fn get_issue_details(&self, org: &str, issue_id: &str) -> ApiResult<IssueDetails> {
+        let path = format!(
+            "/organizations/{}/issues/{}/",
+            PathArg(org),
+            PathArg(issue_id)
+        );
+        self.get(&path)?.convert_rnf(ApiErrorKind::ResourceNotFound)
+    }
+
+    /// Get the latest event for an issue
+    pub fn get_issue_latest_event(
+        &self,
+        org: &str,
+        issue_id: &str,
+    ) -> ApiResult<Option<IssueLatestEvent>> {
+        let path = format!(
+            "/organizations/{}/issues/{}/events/latest/",
+            PathArg(org),
+            PathArg(issue_id)
+        );
+        let resp = self.get(&path)?;
+        if resp.status() == 404 {
+            Ok(None)
+        } else {
+            resp.convert()
+        }
+    }
+
+    /// List events for a specific issue
+    pub fn list_issue_events(
+        &self,
+        org: &str,
+        issue_id: &str,
+        limit: Option<usize>,
+        sort: Option<&str>,
+        stats_period: Option<&str>,
+    ) -> ApiResult<Vec<IssueLatestEvent>> {
+        let limit = limit.unwrap_or(50);
+        let sort = sort.unwrap_or("-timestamp");
+        let stats_period = stats_period.unwrap_or("14d");
+        let path = format!(
+            "/organizations/{}/issues/{}/events/?per_page={}&sort={}&statsPeriod={}",
+            PathArg(org),
+            PathArg(issue_id),
+            limit,
+            QueryArg(sort),
+            QueryArg(stats_period)
+        );
+        self.get(&path)?.convert_rnf(ApiErrorKind::ResourceNotFound)
+    }
+
+    /// Get tag value distribution for an issue
+    pub fn get_issue_tag_values(
+        &self,
+        org: &str,
+        issue_id: &str,
+        tag_key: &str,
+    ) -> ApiResult<IssueTagValues> {
+        let path = format!(
+            "/organizations/{}/issues/{}/tags/{}/",
+            PathArg(org),
+            PathArg(issue_id),
+            PathArg(tag_key)
+        );
+        self.get(&path)?.convert_rnf(ApiErrorKind::ResourceNotFound)
+    }
+
     /// List all repos associated with an organization
     pub fn list_organization_repos(&self, org: &str) -> ApiResult<Vec<Repo>> {
         let mut rv = vec![];
