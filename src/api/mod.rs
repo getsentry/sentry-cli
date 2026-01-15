@@ -1682,6 +1682,94 @@ pub struct Issue {
     pub level: String,
 }
 
+/// Detailed issue information from the API
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueDetails {
+    pub id: String,
+    pub short_id: String,
+    pub title: String,
+    pub culprit: Option<String>,
+    pub status: String,
+    pub level: String,
+    pub count: String,
+    pub user_count: u64,
+    pub first_seen: DateTime<Utc>,
+    pub last_seen: DateTime<Utc>,
+    pub permalink: String,
+}
+
+/// Latest event for an issue
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueLatestEvent {
+    #[serde(alias = "eventID")]
+    pub event_id: String,
+    pub title: Option<String>,
+    #[serde(alias = "dateCreated")]
+    pub date_created: Option<String>,
+    pub tags: Option<Vec<ProcessedEventTag>>,
+}
+
+/// Tag value distribution for an issue
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueTagValues {
+    pub key: String,
+    pub name: String,
+    pub total_values: u64,
+    pub top_values: Vec<IssueTagValue>,
+}
+
+/// Individual tag value with count
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueTagValue {
+    pub value: Option<String>,
+    pub count: u64,
+    pub first_seen: Option<DateTime<Utc>>,
+    pub last_seen: Option<DateTime<Utc>>,
+}
+
+/// Trace metadata summary
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TraceMeta {
+    pub span_count: Option<u64>,
+    pub errors: Option<u64>,
+    pub performance_issues: Option<u64>,
+}
+
+/// Span in a trace tree
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct TraceSpan {
+    pub event_id: Option<String>,
+    pub op: Option<String>,
+    pub description: Option<String>,
+    #[serde(default)]
+    pub duration: Option<f64>,
+    #[serde(default)]
+    pub is_transaction: bool,
+    #[serde(default)]
+    pub children: Vec<TraceSpan>,
+    #[serde(default)]
+    pub errors: Vec<serde_json::Value>,
+}
+
+/// Event attachment metadata
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EventAttachment {
+    pub id: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub attachment_type: String,
+    pub size: u64,
+    pub mimetype: Option<String>,
+    pub date_created: Option<DateTime<Utc>>,
+}
+
 /// Change information for issue bulk updates.
 #[derive(Serialize, Default)]
 pub struct IssueChanges {
