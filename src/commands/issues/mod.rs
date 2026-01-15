@@ -8,6 +8,7 @@ pub mod info;
 pub mod list;
 pub mod mute;
 pub mod resolve;
+pub mod tags;
 pub mod unresolve;
 
 macro_rules! each_subcommand {
@@ -17,6 +18,7 @@ macro_rules! each_subcommand {
         $mac!(list);
         $mac!(mute);
         $mac!(resolve);
+        $mac!(tags);
         $mac!(unresolve);
     };
 }
