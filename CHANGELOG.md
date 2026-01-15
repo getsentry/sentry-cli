@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- Add `sourceMaps.inject()` for injecting debug IDs ([#3088](https://github.com/getsentry/sentry-cli/pull/3088))
+
 ## 3.1.0
 
 ### New Features
