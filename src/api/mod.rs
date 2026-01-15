@@ -1009,6 +1009,65 @@ impl AuthenticatedApi<'_> {
         self.get(&path)?.convert_rnf(ApiErrorKind::ResourceNotFound)
     }
 
+    /// Get trace metadata
+    pub fn get_trace_meta(&self, org: &str, trace_id: &str) -> ApiResult<TraceMeta> {
+        let path = format!(
+            "/organizations/{}/events-trace-meta/{}/",
+            PathArg(org),
+            PathArg(trace_id)
+        );
+        self.get(&path)?.convert_rnf(ApiErrorKind::ResourceNotFound)
+    }
+
+    /// Get trace span tree
+    pub fn get_trace(&self, org: &str, trace_id: &str) -> ApiResult<Vec<TraceSpan>> {
+        let path = format!(
+            "/organizations/{}/events-trace/{}/?limit=100&statsPeriod=14d",
+            PathArg(org),
+            PathArg(trace_id)
+        );
+        self.get(&path)?.convert_rnf(ApiErrorKind::ResourceNotFound)
+    }
+
+    /// List attachments for an event
+    pub fn list_event_attachments(
+        &self,
+        org: &str,
+        project: &str,
+        event_id: &str,
+    ) -> ApiResult<Vec<EventAttachment>> {
+        let path = format!(
+            "/projects/{}/{}/events/{}/attachments/",
+            PathArg(org),
+            PathArg(project),
+            PathArg(event_id)
+        );
+        self.get(&path)?.convert_rnf(ApiErrorKind::ProjectNotFound)
+    }
+
+    /// Download a specific attachment
+    pub fn download_event_attachment(
+        &self,
+        org: &str,
+        project: &str,
+        event_id: &str,
+        attachment_id: &str,
+    ) -> ApiResult<Vec<u8>> {
+        let path = format!(
+            "/projects/{}/{}/events/{}/attachments/{}/?download=1",
+            PathArg(org),
+            PathArg(project),
+            PathArg(event_id),
+            PathArg(attachment_id)
+        );
+        let resp = self.get(&path)?;
+        if resp.status() == 404 {
+            return Err(ApiErrorKind::ResourceNotFound.into());
+        }
+        let resp = resp.into_result()?;
+        Ok(resp.body.unwrap_or_default())
+    }
+
     /// List all repos associated with an organization
     pub fn list_organization_repos(&self, org: &str) -> ApiResult<Vec<Repo>> {
         let mut rv = vec![];
