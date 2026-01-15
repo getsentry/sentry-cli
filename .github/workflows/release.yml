@@ -11,6 +11,7 @@ on:
       merge_target:
         description: Target branch to merge into. Uses the default branch as a fallback (optional)
         required: false
+
 permissions:
   contents: write
   pull-requests: write
@@ -31,7 +32,7 @@ jobs:
           token: ${{ steps.token.outputs.token }}
           fetch-depth: 0
       - name: Prepare release
-        uses: getsentry/craft@c6e2f04939b6ee67030588afbb5af76b127d8203 # v2
+        uses: getsentry/craft@c6e2f04939b6ee67030588afbb5af76b127d8203 # v2.19.0
         env:
           GITHUB_TOKEN: ${{ steps.token.outputs.token }}
         with:
