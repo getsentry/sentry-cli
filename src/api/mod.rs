@@ -1814,6 +1814,7 @@ pub struct Issue {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IssueDetails {
+    #[expect(dead_code, reason = "API response field")]
     pub id: String,
     pub short_id: String,
     pub title: String,
@@ -1833,6 +1834,7 @@ pub struct IssueDetails {
 pub struct IssueLatestEvent {
     #[serde(alias = "eventID")]
     pub event_id: String,
+    #[expect(dead_code, reason = "API response field")]
     pub title: Option<String>,
     #[serde(alias = "dateCreated")]
     pub date_created: Option<String>,
@@ -1843,6 +1845,7 @@ pub struct IssueLatestEvent {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct IssueTagValues {
+    #[expect(dead_code, reason = "API response field")]
     pub key: String,
     pub name: String,
     pub total_values: u64,
@@ -1855,7 +1858,9 @@ pub struct IssueTagValues {
 pub struct IssueTagValue {
     pub value: Option<String>,
     pub count: u64,
+    #[expect(dead_code, reason = "API response field")]
     pub first_seen: Option<DateTime<Utc>>,
+    #[expect(dead_code, reason = "API response field")]
     pub last_seen: Option<DateTime<Utc>>,
 }
 
@@ -1872,12 +1877,14 @@ pub struct TraceMeta {
 #[derive(Clone, Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct TraceSpan {
+    #[expect(dead_code, reason = "API response field")]
     pub event_id: Option<String>,
     pub op: Option<String>,
     pub description: Option<String>,
     #[serde(default)]
     pub duration: Option<f64>,
     #[serde(default)]
+    #[expect(dead_code, reason = "API response field")]
     pub is_transaction: bool,
     #[serde(default)]
     pub children: Vec<TraceSpan>,
@@ -1895,6 +1902,7 @@ pub struct EventAttachment {
     pub attachment_type: String,
     pub size: u64,
     pub mimetype: Option<String>,
+    #[expect(dead_code, reason = "API response field")]
     pub date_created: Option<DateTime<Utc>>,
 }
 
