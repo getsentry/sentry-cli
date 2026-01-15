@@ -346,7 +346,8 @@ impl Api {
             warn!("Unable to find release file");
             Ok(None)
         } else {
-            info!("Release registry returned {}", resp.status());
+            let status = resp.status();
+            info!("Release registry returned {status}");
             Ok(None)
         }
     }
@@ -982,13 +983,12 @@ impl AuthenticatedApi<'_> {
         let limit = limit.unwrap_or(50);
         let sort = sort.unwrap_or("-timestamp");
         let stats_period = stats_period.unwrap_or("14d");
+        let org_arg = PathArg(org);
+        let issue_arg = PathArg(issue_id);
+        let sort_arg = QueryArg(sort);
+        let stats_arg = QueryArg(stats_period);
         let path = format!(
-            "/organizations/{}/issues/{}/events/?per_page={}&sort={}&statsPeriod={}",
-            PathArg(org),
-            PathArg(issue_id),
-            limit,
-            QueryArg(sort),
-            QueryArg(stats_period)
+            "/organizations/{org_arg}/issues/{issue_arg}/events/?per_page={limit}&sort={sort_arg}&statsPeriod={stats_arg}"
         );
         self.get(&path)?.convert_rnf(ApiErrorKind::ResourceNotFound)
     }
@@ -1113,7 +1113,8 @@ impl Dataset {
 
 impl fmt::Display for Dataset {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "{}", self.as_str())
+        let s = self.as_str();
+        write!(f, "{s}")
     }
 }
 

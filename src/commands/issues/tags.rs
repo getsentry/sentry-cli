@@ -26,8 +26,10 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let org = config.get_org(matches)?;
-    let issue_id = matches.get_one::<String>("issue_id").unwrap();
-    let tag_key = matches.get_one::<String>("key").unwrap();
+    let issue_id = matches
+        .get_one::<String>("issue_id")
+        .expect("issue_id is required");
+    let tag_key = matches.get_one::<String>("key").expect("key is required");
 
     let api = Api::current();
     let tag_values = api
@@ -41,7 +43,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     println!();
 
     if tag_values.top_values.is_empty() {
-        println!("No values found for tag '{}'", tag_key);
+        println!("No values found for tag '{tag_key}'");
         return Ok(());
     }
 
@@ -55,10 +57,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         } else {
             0.0
         };
-        println!(
-            "  {:30} {:>8} events ({:.0}%)",
-            display_value, value.count, percentage
-        );
+        let count = value.count;
+        println!("  {display_value:30} {count:>8} events ({percentage:.0}%)");
     }
 
     Ok(())

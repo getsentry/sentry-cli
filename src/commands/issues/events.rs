@@ -42,8 +42,12 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let org = config.get_org(matches)?;
-    let issue_id = matches.get_one::<String>("issue_id").unwrap();
-    let limit = *matches.get_one::<usize>("limit").unwrap();
+    let issue_id = matches
+        .get_one::<String>("issue_id")
+        .expect("issue_id is required");
+    let limit = *matches
+        .get_one::<usize>("limit")
+        .expect("limit has default value");
     let sort = matches.get_one::<String>("sort").map(|s| s.as_str());
     let period = matches.get_one::<String>("period").map(|s| s.as_str());
 
@@ -53,11 +57,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .list_issue_events(&org, issue_id, Some(limit), sort, period)?;
 
     if events.is_empty() {
-        println!("No events found for issue {}", issue_id);
+        println!("No events found for issue {issue_id}");
         return Ok(());
     }
 
-    println!("Events for {} (showing {}):", issue_id, events.len());
+    let event_count = events.len();
+    println!("Events for {issue_id} (showing {event_count}):");
     println!();
 
     let mut table = Table::new();

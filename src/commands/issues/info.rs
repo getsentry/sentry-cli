@@ -18,7 +18,9 @@ pub fn make_command(command: Command) -> Command {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let org = config.get_org(matches)?;
-    let issue_id = matches.get_one::<String>("issue_id").unwrap();
+    let issue_id = matches
+        .get_one::<String>("issue_id")
+        .expect("issue_id is required");
 
     let api = Api::current();
     let authenticated = api.authenticated()?;
@@ -32,7 +34,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     println!("Issue: {}", issue.short_id);
     println!("Title: {}", issue.title);
     if let Some(culprit) = &issue.culprit {
-        println!("Culprit: {}", culprit);
+        println!("Culprit: {culprit}");
     }
     println!("Status: {}", issue.status);
     println!("Level: {}", issue.level);
@@ -46,7 +48,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         println!();
         println!("Latest Event: {}", event.event_id);
         if let Some(date) = &event.date_created {
-            println!("  Timestamp: {}", date);
+            println!("  Timestamp: {date}");
         }
         if let Some(tags) = &event.tags {
             for tag in tags {

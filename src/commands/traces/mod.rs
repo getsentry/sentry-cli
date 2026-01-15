@@ -33,7 +33,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 fn execute_info(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let org = config.get_org(matches)?;
-    let trace_id = matches.get_one::<String>("trace_id").unwrap();
+    let trace_id = matches
+        .get_one::<String>("trace_id")
+        .expect("trace_id is required");
 
     let api = Api::current();
     let authenticated = api.authenticated()?;
@@ -41,7 +43,7 @@ fn execute_info(matches: &ArgMatches) -> Result<()> {
     let meta = authenticated.get_trace_meta(&org, trace_id)?;
     let spans = authenticated.get_trace(&org, trace_id)?;
 
-    println!("Trace: {}", trace_id);
+    println!("Trace: {trace_id}");
     println!();
     println!("Summary:");
     println!("  Spans: {}", meta.span_count.unwrap_or(0));
@@ -70,16 +72,13 @@ fn print_span(span: &TraceSpan, depth: usize) {
     let desc = span.description.as_deref().unwrap_or("");
     let duration = span
         .duration
-        .map(|d| format!(" ({:.0}ms)", d))
+        .map(|d| format!(" ({d:.0}ms)"))
         .unwrap_or_default();
 
     let has_error = !span.errors.is_empty();
     let error_marker = if has_error { " [error]" } else { "" };
 
-    println!(
-        "{}{} [{}] {}{}{}",
-        indent, prefix, op, desc, duration, error_marker
-    );
+    println!("{indent}{prefix} [{op}] {desc}{duration}{error_marker}");
 
     for child in &span.children {
         print_span(child, depth + 1);

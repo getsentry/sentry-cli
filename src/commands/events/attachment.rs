@@ -1,5 +1,5 @@
 use std::fs::File;
-use std::io::Write;
+use std::io::Write as _;
 use std::path::Path;
 
 use anyhow::{bail, Result};
@@ -36,7 +36,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let org = config.get_org(matches)?;
     let project = config.get_project(matches)?;
-    let event_id = matches.get_one::<String>("event_id").unwrap();
+    let event_id = matches
+        .get_one::<String>("event_id")
+        .expect("event_id is required");
     let attachment_id = matches.get_one::<String>("attachment_id");
     let output_path = matches.get_one::<String>("output");
 
@@ -49,11 +51,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             let attachments = authenticated.list_event_attachments(&org, &project, event_id)?;
 
             if attachments.is_empty() {
-                println!("No attachments found for event {}", event_id);
+                println!("No attachments found for event {event_id}");
                 return Ok(());
             }
 
-            println!("Attachments for event {}:", event_id);
+            println!("Attachments for event {event_id}:");
             println!();
 
             let mut table = Table::new();
@@ -89,11 +91,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             let mut file = File::create(path)?;
             file.write_all(&data)?;
 
-            println!(
-                "Downloaded: {} ({})",
-                output,
-                format_size(data.len() as u64)
-            );
+            let size = format_size(data.len() as u64);
+            println!("Downloaded: {output} ({size})");
         }
     }
 
@@ -106,6 +105,6 @@ fn format_size(bytes: u64) -> String {
     } else if bytes >= 1024 {
         format!("{:.1} KB", bytes as f64 / 1024.0)
     } else {
-        format!("{} B", bytes)
+        format!("{bytes} B")
     }
 }
