@@ -3,10 +3,12 @@ use clap::{ArgMatches, Command};
 
 use crate::utils::args::ArgExt as _;
 
+pub mod attachment;
 pub mod list;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
+        $mac!(attachment);
         $mac!(list);
     };
 }
