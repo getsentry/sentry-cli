@@ -3,6 +3,7 @@ use clap::{Arg, ArgAction, ArgMatches, Command};
 
 use crate::utils::args::ArgExt as _;
 
+pub mod events;
 pub mod info;
 pub mod list;
 pub mod mute;
@@ -11,6 +12,7 @@ pub mod unresolve;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
+        $mac!(events);
         $mac!(info);
         $mac!(list);
         $mac!(mute);
