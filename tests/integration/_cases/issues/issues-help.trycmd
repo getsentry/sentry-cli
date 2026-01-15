@@ -7,9 +7,12 @@ Manage issues in Sentry.
 Usage: sentry-cli[EXE] issues [OPTIONS] <COMMAND>
 
 Commands:
+  events     List events for a specific issue.
+  info       Get detailed information about a specific issue.
   list       List all issues in your organization.
   mute       Bulk mute all selected issues.
   resolve    Bulk resolve all selected issues.
+  tags       Get tag value distribution for an issue.
   unresolve  Bulk unresolve all selected issues.
   help       Print this message or the help of the given subcommand(s)
 

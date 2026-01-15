@@ -28,6 +28,7 @@ Commands:
   send-event       Send a manual event to Sentry.
   send-envelope    Send a stored envelope to Sentry.
   sourcemaps       Manage sourcemaps for Sentry releases.
+  traces           Manage traces in Sentry.
   dart-symbol-map  Manage Dart/Flutter symbol maps for Sentry.
   upload-proguard  Upload ProGuard mapping files to a project.
   help             Print this message or the help of the given subcommand(s)
