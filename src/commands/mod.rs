@@ -36,6 +36,7 @@ mod projects;
 mod react_native;
 mod releases;
 mod repos;
+mod review;
 mod send_envelope;
 mod send_event;
 mod sourcemaps;
@@ -64,6 +65,7 @@ macro_rules! each_subcommand {
         $mac!(react_native);
         $mac!(releases);
         $mac!(repos);
+        $mac!(review);
         $mac!(send_event);
         $mac!(send_envelope);
         $mac!(sourcemaps);

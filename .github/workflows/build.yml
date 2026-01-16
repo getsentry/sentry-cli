@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - release/**
+  # Make release builds so we can test the PoC
+  pull_request:
 
 jobs:
   linux:
