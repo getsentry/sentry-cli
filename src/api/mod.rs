@@ -1000,8 +1000,9 @@ impl AuthenticatedApi<'_> {
     }
 
     /// Sends code for AI-powered review and returns predictions.
-    pub fn review_code(&self, request: &ReviewRequest<'_>) -> ApiResult<ReviewResponse> {
-        self.request(Method::Post, "/api/0/bug-prediction/cli/")?
+    pub fn review_code(&self, org: &str, request: &ReviewRequest<'_>) -> ApiResult<ReviewResponse> {
+        let path = format!("/api/0/organizations/{}/code-review/local/", PathArg(org));
+        self.request(Method::Post, &path)?
             .with_timeout(REVIEW_TIMEOUT)?
             .with_json_body(request)?
             .send()?
@@ -1987,28 +1988,40 @@ pub struct LogEntry {
     pub message: Option<String>,
 }
 
+/// Nested repository info for review request
+#[derive(Serialize)]
+pub struct ReviewRepository {
+    pub name: String,
+    #[serde(serialize_with = "serialize_oid")]
+    pub base_commit_sha: Oid,
+}
+
 /// Request for AI code review
 #[derive(Serialize)]
 pub struct ReviewRequest<'a> {
-    pub remote_url: String,
-    #[serde(serialize_with = "serialize_oid")]
-    pub base_commit_sha: Oid,
+    pub repository: ReviewRepository,
     #[serde(serialize_with = "serialize_diff")]
     pub diff: &'a Diff<'a>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub current_branch: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub commit_message: Option<String>,
 }
 
 /// Response from the AI code review endpoint
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 pub struct ReviewResponse {
+    pub status: String,
     pub predictions: Vec<ReviewPrediction>,
+    pub diagnostics: serde_json::Value,
+    pub seer_run_id: Option<u64>,
 }
 
 /// A single prediction from AI code review
-#[derive(Deserialize, Debug)]
+#[derive(Deserialize, Debug, Serialize)]
 pub struct ReviewPrediction {
-    pub file_path: String,
-    pub line_number: Option<u32>,
-    pub description: String,
-    pub severity: String,
-    pub suggested_fix: Option<String>,
+    pub path: String,
+    pub line: Option<u32>,
+    pub message: String,
+    pub level: String,
 }

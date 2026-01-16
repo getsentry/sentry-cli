@@ -6,8 +6,9 @@ use console::style;
 use git2::{Diff, DiffOptions, Repository};
 
 use super::derive_parser::{SentryCLI, SentryCLICommand};
-use crate::api::{Api, ReviewPrediction, ReviewRequest, ReviewResponse};
-use crate::utils::vcs::git_repo_remote_url;
+use crate::api::{Api, ReviewRepository, ReviewRequest};
+use crate::config::Config;
+use crate::utils::vcs::{get_repo_from_remote, git_repo_remote_url};
 
 const ABOUT: &str = "[EXPERIMENTAL] Review local changes using Sentry AI";
 const LONG_ABOUT: &str = "\
@@ -23,14 +24,18 @@ const MAX_DIFF_SIZE: usize = 500 * 1024;
 
 #[derive(Args)]
 #[command(about = ABOUT, long_about = LONG_ABOUT, hide = true)]
-pub(super) struct ReviewArgs;
+pub(super) struct ReviewArgs {
+    #[arg(short = 'o', long = "org")]
+    #[arg(help = "The organization ID or slug.")]
+    org: Option<String>,
+}
 
 pub(super) fn make_command(command: Command) -> Command {
     ReviewArgs::augment_args(command)
 }
 
 pub(super) fn execute(_: &ArgMatches) -> Result<()> {
-    let SentryCLICommand::Review(ReviewArgs) = SentryCLI::parse().command else {
+    let SentryCLICommand::Review(args) = SentryCLI::parse().command else {
         unreachable!("expected review command");
     };
 
@@ -39,18 +44,29 @@ pub(super) fn execute(_: &ArgMatches) -> Result<()> {
         style("[EXPERIMENTAL] This feature is in development.").yellow()
     );
 
-    run_review()
+    run_review(args)
 }
 
-fn run_review() -> Result<()> {
+fn run_review(args: ReviewArgs) -> Result<()> {
+    // Resolve organization
+    let config = Config::current();
+    let (default_org, _) = config.get_org_and_project_defaults();
+    let org = args.org.as_ref().or(default_org.as_ref()).ok_or_else(|| {
+        anyhow::anyhow!(
+            "No organization specified. Please specify an organization using the --org argument."
+        )
+    })?;
+
     // Open repo at top level - keeps it alive for the entire function
     let repo = Repository::open_from_env()
         .context("Failed to open git repository from current directory")?;
 
+    // Get HEAD reference for current branch name
+    let head_ref = repo.head().context("Failed to get HEAD reference")?;
+    let current_branch = head_ref.shorthand().map(String::from);
+
     // Get HEAD commit
-    let head = repo
-        .head()
-        .context("Failed to get HEAD reference")?
+    let head = head_ref
         .peel_to_commit()
         .context("Failed to resolve HEAD to a commit")?;
 
@@ -58,6 +74,9 @@ fn run_review() -> Result<()> {
     if head.parent_count() > 1 {
         bail!("HEAD is a merge commit. Merge commits are not supported for review.");
     }
+
+    // Get commit message
+    let commit_message = head.message().map(ToOwned::to_owned);
 
     // Get parent commit
     let parent = head
@@ -77,27 +96,34 @@ fn run_review() -> Result<()> {
     // Validate diff
     validate_diff(&diff)?;
 
-    // Get remote URL
+    // Get remote URL and extract repo name
     let remote_url = git_repo_remote_url(&repo, "origin")
         .or_else(|_| git_repo_remote_url(&repo, "upstream"))
         .context("No remote URL found for 'origin' or 'upstream'")?;
+    let repo_name = get_repo_from_remote(&remote_url);
 
     eprintln!("Analyzing commit... (this may take up to 10 minutes)");
 
     // Build request with borrowed diff - repo still alive
     let request = ReviewRequest {
-        remote_url,
-        base_commit_sha: parent.id(),
+        repository: ReviewRepository {
+            name: repo_name,
+            base_commit_sha: parent.id(),
+        },
         diff: &diff,
+        current_branch,
+        commit_message,
     };
 
-    // Send request and display results
+    // Send request and output raw JSON
     let response = Api::current()
         .authenticated()
         .context("Authentication required for review")?
-        .review_code(&request)
+        .review_code(org, &request)
         .context("Failed to get review results")?;
-    display_results(response);
+
+    // Output raw JSON for agentic workflow consumption
+    println!("{}", serde_json::to_string(&response)?);
 
     Ok(())
 }
@@ -117,53 +143,4 @@ fn validate_diff(diff: &Diff<'_>) -> Result<()> {
     }
 
     Ok(())
-}
-
-/// Displays the review results in a human-readable format.
-fn display_results(response: ReviewResponse) {
-    if response.predictions.is_empty() {
-        println!("{}", style("No issues found in this commit.").green());
-        return;
-    }
-
-    println!(
-        "{}",
-        style(format!(
-            "Found {} potential issue(s):",
-            response.predictions.len()
-        ))
-        .yellow()
-        .bold()
-    );
-    println!();
-
-    for (i, prediction) in response.predictions.iter().enumerate() {
-        display_prediction(i + 1, prediction);
-    }
-}
-
-/// Displays a single prediction in a formatted way.
-fn display_prediction(index: usize, prediction: &ReviewPrediction) {
-    let severity_lower = prediction.severity.to_lowercase();
-
-    let styled = match severity_lower.as_str() {
-        "high" => style("[HIGH]".to_owned()).red().bold(),
-        "medium" => style("[MEDIUM]".to_owned()).yellow().bold(),
-        "low" => style("[LOW]".to_owned()).cyan(),
-        _ => style(format!("[{}]", prediction.severity.to_uppercase())).dim(),
-    };
-
-    println!("{index}. {styled} {}", prediction.file_path);
-
-    if let Some(line) = prediction.line_number {
-        println!("   Line: {line}");
-    }
-
-    println!("   {}", prediction.description);
-
-    if let Some(fix) = &prediction.suggested_fix {
-        println!("   {}: {fix}", style("Suggested fix").green());
-    }
-
-    println!();
 }
