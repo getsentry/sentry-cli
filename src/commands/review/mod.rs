@@ -31,7 +31,7 @@ pub(super) struct ReviewArgs {
 }
 
 pub(super) fn make_command(command: Command) -> Command {
-    ReviewArgs::augment_args(command)
+    ReviewArgs::augment_args(command.about(ABOUT).long_about(LONG_ABOUT).hide(true))
 }
 
 pub(super) fn execute(_: &ArgMatches) -> Result<()> {

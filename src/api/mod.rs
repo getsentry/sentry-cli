@@ -1001,7 +1001,10 @@ impl AuthenticatedApi<'_> {
 
     /// Sends code for AI-powered review and returns predictions.
     pub fn review_code(&self, org: &str, request: &ReviewRequest<'_>) -> ApiResult<ReviewResponse> {
-        let path = format!("/api/0/organizations/{}/code-review/local/", PathArg(org));
+        let path = format!(
+            "/api/0/organizations/{}/code-review/local-review/",
+            PathArg(org)
+        );
         self.request(Method::Post, &path)?
             .with_timeout(REVIEW_TIMEOUT)?
             .with_json_body(request)?
