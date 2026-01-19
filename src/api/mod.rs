@@ -91,6 +91,10 @@ where
     let mut output = Vec::new();
     diff.print(DiffFormat::Patch, |delta, _hunk, line| {
         if !delta.flags().is_binary() {
+            let origin = line.origin();
+            if matches!(origin, '+' | '-' | ' ') {
+                output.push(origin as u8);
+            }
             output.extend_from_slice(line.content());
         }
         true
@@ -2023,8 +2027,11 @@ pub struct ReviewResponse {
 /// A single prediction from AI code review
 #[derive(Deserialize, Debug, Serialize)]
 pub struct ReviewPrediction {
-    pub path: String,
-    pub line: Option<u32>,
-    pub message: String,
-    pub level: String,
+    pub description: String,
+    pub short_description: String,
+    pub suggested_fix: String,
+    pub encoded_location: String,
+    pub severity: f64,
+    pub confidence: f64,
+    pub title: String,
 }
