@@ -20,6 +20,7 @@ use std::fs::File;
 use std::io::{self, Read as _, Write};
 use std::rc::Rc;
 use std::sync::Arc;
+use std::time::Duration as StdDuration;
 use std::{fmt, thread};
 
 use anyhow::{Context as _, Result};
@@ -29,13 +30,15 @@ use chrono::Duration;
 use chrono::{DateTime, FixedOffset, Utc};
 use clap::ArgMatches;
 use flate2::write::GzEncoder;
+use git2::{Diff, DiffFormat, Oid};
 use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use parking_lot::Mutex;
 use regex::{Captures, Regex};
 use secrecy::ExposeSecret as _;
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::ser::Error as SerError;
+use serde::{Deserialize, Serialize, Serializer};
 use sha1_smol::Digest;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::ObjectKind;
@@ -68,6 +71,39 @@ const RETRY_STATUS_CODES: &[u32] = &[
     http::HTTP_STATUS_507_INSUFFICIENT_STORAGE,
     http::HTTP_STATUS_524_CLOUDFLARE_TIMEOUT,
 ];
+
+/// Timeout for the review API request (10 minutes)
+const REVIEW_TIMEOUT: StdDuration = StdDuration::from_secs(600);
+
+/// Serializes git2::Oid as a hex string.
+fn serialize_oid<S>(oid: &Oid, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    serializer.serialize_str(&oid.to_string())
+}
+
+/// Serializes git2::Diff as a unified diff string, skipping binary files.
+fn serialize_diff<S>(diff: &&Diff<'_>, serializer: S) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let mut output = Vec::new();
+    diff.print(DiffFormat::Patch, |delta, _hunk, line| {
+        if !delta.flags().is_binary() {
+            let origin = line.origin();
+            if matches!(origin, '+' | '-' | ' ') {
+                output.push(origin as u8);
+            }
+            output.extend_from_slice(line.content());
+        }
+        true
+    })
+    .map_err(SerError::custom)?;
+
+    let diff_str = String::from_utf8(output).map_err(SerError::custom)?;
+    serializer.serialize_str(&diff_str)
+}
 
 /// Helper for the API access.
 /// Implements the low-level API access methods, and provides high-level implementations for interacting
@@ -966,6 +1002,19 @@ impl AuthenticatedApi<'_> {
         }
         Ok(rv)
     }
+
+    /// Sends code for AI-powered review and returns predictions.
+    pub fn review_code(&self, org: &str, request: &ReviewRequest<'_>) -> ApiResult<ReviewResponse> {
+        let path = format!(
+            "/api/0/organizations/{}/code-review/local-review/",
+            PathArg(org)
+        );
+        self.request(Method::Post, &path)?
+            .with_timeout(REVIEW_TIMEOUT)?
+            .with_json_body(request)?
+            .send()?
+            .convert()
+    }
 }
 
 /// Available datasets for fetching organization events
@@ -1264,6 +1313,13 @@ impl ApiRequest {
     pub fn follow_location(mut self, val: bool) -> ApiResult<Self> {
         debug!("follow redirects: {val}");
         self.handle.follow_location(val)?;
+        Ok(self)
+    }
+
+    /// Sets the timeout for the request.
+    pub fn with_timeout(mut self, timeout: std::time::Duration) -> ApiResult<Self> {
+        debug!("setting timeout: {timeout:?}");
+        self.handle.timeout(timeout)?;
         Ok(self)
     }
 
@@ -1937,4 +1993,45 @@ pub struct LogEntry {
     pub severity: Option<String>,
     pub timestamp: String,
     pub message: Option<String>,
+}
+
+/// Nested repository info for review request
+#[derive(Serialize)]
+pub struct ReviewRepository {
+    pub name: String,
+    #[serde(serialize_with = "serialize_oid")]
+    pub base_commit_sha: Oid,
+}
+
+/// Request for AI code review
+#[derive(Serialize)]
+pub struct ReviewRequest<'a> {
+    pub repository: ReviewRepository,
+    #[serde(serialize_with = "serialize_diff")]
+    pub diff: &'a Diff<'a>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub current_branch: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub commit_message: Option<String>,
+}
+
+/// Response from the AI code review endpoint
+#[derive(Deserialize, Debug, Serialize)]
+pub struct ReviewResponse {
+    pub status: String,
+    pub predictions: Vec<ReviewPrediction>,
+    pub diagnostics: serde_json::Value,
+    pub seer_run_id: Option<u64>,
+}
+
+/// A single prediction from AI code review
+#[derive(Deserialize, Debug, Serialize)]
+pub struct ReviewPrediction {
+    pub description: String,
+    pub short_description: String,
+    pub suggested_fix: String,
+    pub encoded_location: String,
+    pub severity: f64,
+    pub confidence: f64,
+    pub title: String,
 }
