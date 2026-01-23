@@ -5,10 +5,6 @@ use sha1_smol::Digest;
 
 use super::ChunkedFileState;
 
-fn is_empty_slice<T>(slice: &[T]) -> bool {
-    slice.is_empty()
-}
-
 #[derive(Debug, Serialize)]
 pub struct ChunkedBuildRequest<'a> {
     pub checksum: Digest,
@@ -17,7 +13,7 @@ pub struct ChunkedBuildRequest<'a> {
     pub build_configuration: Option<&'a str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub release_notes: Option<&'a str>,
-    #[serde(skip_serializing_if = "is_empty_slice")]
+    #[serde(skip_serializing_if = "<[_]>::is_empty")]
     pub install_groups: &'a [String],
     #[serde(flatten)]
     pub vcs_info: &'a VcsInfo<'a>,
