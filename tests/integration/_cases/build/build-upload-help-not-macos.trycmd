@@ -74,8 +74,8 @@ Options:
           The release notes to use for the upload.
 
       --install-group <install_group>
-          The install group(s) for this build. Can be specified multiple times. Builds with at
-          least one matching install group will be shown updates for each other.
+          The install group(s) for this build. Can be specified multiple times. Builds with at least
+          one matching install group will be shown updates for each other.
 
       --force-git-metadata
           Force collection and sending of git metadata (branch, commit, etc.). If neither this nor
