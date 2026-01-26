@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+Sentry CLI now can make pasta.
+
 ## 3.1.0
 
 ### New Features
