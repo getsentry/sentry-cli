@@ -107,6 +107,16 @@ pub fn make_command(command: Command) -> Command {
                 .help("The release notes to use for the upload.")
         )
         .arg(
+            Arg::new("install_group")
+                .long("install-group")
+                .action(ArgAction::Append)
+                .help(
+                    "The install group(s) for this build. Can be specified multiple times. \
+                    Builds with at least one matching install group will be shown updates \
+                    for each other.",
+                )
+        )
+        .arg(
             Arg::new("force_git_metadata")
                 .long("force-git-metadata")
                 .action(ArgAction::SetTrue)
@@ -175,6 +185,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
     let release_notes = matches.get_one("release_notes").map(String::as_str);
+    let install_groups: Vec<String> = matches
+        .get_many("install_group")
+        .map(|vals| vals.cloned().collect())
+        .unwrap_or_default();
 
     let (plugin_name, plugin_version) = parse_plugin_from_pipeline(config.get_pipeline_env());
 
@@ -237,15 +251,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     for (path, zip) in normalized_zips {
         info!("Uploading file: {}", path.display());
         let bytes = ByteView::open(zip.path())?;
-        match upload_file(
-            &authenticated_api,
-            &bytes,
-            &org,
-            &project,
+        let metadata = BuildMetadata {
             build_configuration,
             release_notes,
-            &vcs_info,
-        ) {
+            install_groups: &install_groups,
+            vcs_info: &vcs_info,
+        };
+        match upload_file(&authenticated_api, &bytes, &org, &project, &metadata) {
             Ok(artifact_url) => {
                 info!("Successfully uploaded file: {}", path.display());
                 uploaded_paths_and_urls.push((path.to_path_buf(), artifact_url));
@@ -588,19 +600,27 @@ fn handle_directory(
     normalize_directory(path, temp_dir.path(), plugin_name, plugin_version)
 }
 
+/// Metadata for a build upload.
+struct BuildMetadata<'a> {
+    build_configuration: Option<&'a str>,
+    release_notes: Option<&'a str>,
+    install_groups: &'a [String],
+    vcs_info: &'a VcsInfo<'a>,
+}
+
 /// Returns artifact url if upload was successful.
 fn upload_file(
     api: &AuthenticatedApi,
     bytes: &[u8],
     org: &str,
     project: &str,
-    build_configuration: Option<&str>,
-    release_notes: Option<&str>,
-    vcs_info: &VcsInfo<'_>,
+    metadata: &BuildMetadata<'_>,
 ) -> Result<String> {
     debug!(
-        "Uploading file to organization: {org}, project: {project}, build_configuration: {}, vcs_info: {vcs_info:?}",
-        build_configuration.unwrap_or("unknown"),
+        "Uploading file to organization: {org}, project: {project}, build_configuration: {}, install_groups: {:?}, vcs_info: {:?}",
+        metadata.build_configuration.unwrap_or("unknown"),
+        metadata.install_groups,
+        metadata.vcs_info,
     );
 
     let chunk_upload_options = api.get_chunk_upload_options(org)?;
@@ -641,9 +661,10 @@ fn upload_file(
             &ChunkedBuildRequest {
                 checksum,
                 chunks: &checksums,
-                build_configuration,
-                release_notes,
-                vcs_info,
+                build_configuration: metadata.build_configuration,
+                release_notes: metadata.release_notes,
+                install_groups: metadata.install_groups,
+                vcs_info: metadata.vcs_info,
             },
         )?;
         chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
