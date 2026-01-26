@@ -22,7 +22,8 @@ jobs:
             const prTitle = context.payload.pull_request.title;
             const isChangelogPR = prTitle.startsWith('meta(changelog):');
 
-            const { data: files } = await github.rest.pulls.listFiles({
+            // Paginate through all files to handle PRs with >100 changed files
+            const files = await github.paginate(github.rest.pulls.listFiles, {
               owner: context.repo.owner,
               repo: context.repo.repo,
               pull_number: prNumber,
@@ -49,10 +50,12 @@ jobs:
             2. **If this was unintentional**: Remove the \`CHANGELOG.md\` changes from this PR.`;
 
               // Avoid posting duplicate comments on re-runs
-              const { data: comments } = await github.rest.issues.listComments({
+              // Paginate through all comments to handle PRs with many comments
+              const comments = await github.paginate(github.rest.issues.listComments, {
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                issue_number: prNumber
+                issue_number: prNumber,
+                per_page: 100
               });
 
               const botComment = comments.find(comment =>
