@@ -36,8 +36,9 @@ jobs:
             console.log(`Is Changelog PR: ${isChangelogPR}`);
             console.log(`CHANGELOG.md Modified: ${changelogModified}`);
 
-            if (changelogModified && !isChangelogPR) {
-              const commentBody = `## :warning: Manual Changelog Changes Detected
+            const commentMarker = '<!--changelog_enforcement_violation_comment-->';
+            const commentBody = `${commentMarker}
+            ## :warning: Manual Changelog Changes Detected
 
             This PR modifies \`CHANGELOG.md\`, but the PR title does not start with \`meta(changelog):\`.
 
@@ -49,20 +50,20 @@ jobs:
 
             2. **If this was unintentional**: Remove the \`CHANGELOG.md\` changes from this PR.`;
 
-              // Avoid posting duplicate comments on re-runs
-              // Paginate through all comments to handle PRs with many comments
-              const comments = await github.paginate(github.rest.issues.listComments, {
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                issue_number: prNumber,
-                per_page: 100
-              });
+            // Paginate through all comments to handle PRs with many comments
+            const comments = await github.paginate(github.rest.issues.listComments, {
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: prNumber,
+              per_page: 100
+            });
 
-              const botComment = comments.find(comment =>
-                comment.user.type === 'Bot' &&
-                comment.body.includes('Manual Changelog Changes Detected')
-              );
+            const botComment = comments.find(comment =>
+              comment.body.includes(commentMarker)
+            );
 
+            if (changelogModified && !isChangelogPR) {
+              // Violation: post comment if not already present
               if (!botComment) {
                 await github.rest.issues.createComment({
                   owner: context.repo.owner,
@@ -76,8 +77,20 @@ jobs:
               }
 
               core.setFailed('CHANGELOG.md changes are not allowed unless PR title starts with "meta(changelog):"');
-            } else if (changelogModified && isChangelogPR) {
-              console.log('CHANGELOG.md changes allowed in meta(changelog): PR');
             } else {
-              console.log('No CHANGELOG.md changes detected');
+              // No violation: delete comment if it exists from a previous run
+              if (botComment) {
+                await github.rest.issues.deleteComment({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  comment_id: botComment.id
+                });
+                console.log('Deleted outdated violation comment');
+              }
+
+              if (changelogModified && isChangelogPR) {
+                console.log('CHANGELOG.md changes allowed in meta(changelog): PR');
+              } else {
+                console.log('No CHANGELOG.md changes detected');
+              }
             }
