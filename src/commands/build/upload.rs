@@ -186,7 +186,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
     let release_notes = matches.get_one("release_notes").map(String::as_str);
     let install_groups: Vec<String> = matches
-        .get_many::<String>("install_group")
+        .get_many("install_group")
         .map(|vals| vals.cloned().collect())
         .unwrap_or_default();
 
