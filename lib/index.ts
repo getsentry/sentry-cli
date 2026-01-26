@@ -3,6 +3,7 @@
 import * as pkgInfo from '../package.json';
 import * as helper from './helper';
 import { Releases } from './releases';
+import { SourceMaps } from './sourceMaps';
 import type { SentryCliOptions } from './types';
 
 export type {
@@ -11,6 +12,7 @@ export type {
   SourceMapsPathDescriptor,
   SentryCliNewDeployOptions,
   SentryCliCommitsOptions,
+  SentryCliInjectOptions,
 } from './types';
 
 /**
@@ -30,6 +32,7 @@ export type {
  */
 export class SentryCli {
   public releases: Releases;
+  public sourceMaps: SourceMaps;
 
   /**
    * Creates a new `SentryCli` instance.
@@ -49,6 +52,7 @@ export class SentryCli {
     }
     this.options = options || { silent: false };
     this.releases = new Releases(this.options, configFile);
+    this.sourceMaps = new SourceMaps(this.options, configFile);
   }
 
   /**
