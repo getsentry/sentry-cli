@@ -23,7 +23,7 @@ pub fn make_command(command: Command) -> Command {
             "Upload build snapshots to a project.\n\n{EXPERIMENTAL_WARNING}"
         ))
         .org_arg()
-        .project_arg(true)
+        .project_arg(false)
         .arg(
             Arg::new("path")
                 .value_name("PATH")
@@ -36,14 +36,6 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("ID")
                 .help("The snapshot identifier to associate with the upload.")
                 .required(true),
-        )
-        .arg(
-            Arg::new("shard_index")
-                .long("shard-index")
-                .value_name("INDEX")
-                .value_parser(clap::value_parser!(u32))
-                .default_value("0")
-                .help("The shard index for this snapshot upload."),
         )
 }
 
@@ -60,13 +52,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let snapshot_id = matches
         .get_one::<String>("snapshot_id")
         .expect("snapshot_id argument is required");
-    let shard_index = matches
-        .get_one::<u32>("shard_index")
-        .expect("shard_index has a default value");
 
     info!("Processing build snapshots from: {path}");
     info!("Using snapshot ID: {snapshot_id}");
-    info!("Shard index: {shard_index}");
     info!("Organization: {org}");
     info!("Project: {project}");
 
@@ -86,7 +74,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     );
 
     // Upload files using objectstore client
-    upload_files(&files, &org, &project, snapshot_id, *shard_index)?;
+    upload_files(&files, &org, &project, snapshot_id)?;
 
     println!("{} Successfully uploaded snapshots", style(">").dim());
     Ok(())
@@ -144,7 +132,6 @@ fn upload_files(
     org: &str,
     project: &str,
     snapshot_id: &str,
-    _shard_index: u32,
 ) -> Result<()> {
     // Create objectstore client
     let client = Client::new("http://127.0.0.1:8888/")?;
