@@ -1,13 +1,6 @@
 ```
 $ sentry-cli releases new wat-release --url https://oh.rly
-? 1
-error: API request failed
-
-Caused by:
-    0: API request failed
-    1: [6] Couldn't resolve host name (Could not resolve host: oh.rly)
-
-Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
-Please attach the full debug log to all bug reports.
+? success
+Created release wat-release
 
 ```
