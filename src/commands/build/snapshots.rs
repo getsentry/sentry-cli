@@ -9,8 +9,11 @@ use objectstore_client::{Client, Usecase};
 use sha2::{Digest as _, Sha256};
 use walkdir::WalkDir;
 
+use crate::api::Api;
 use crate::config::Config;
+use crate::utils::api::get_org_project_id;
 use crate::utils::args::ArgExt as _;
+use crate::utils::objectstore::get_objectstore_url;
 
 const EXPERIMENTAL_WARNING: &str =
     "[EXPERIMENTAL] The \"build snapshots\" command is experimental. \
@@ -133,11 +136,14 @@ fn upload_files(
     project: &str,
     snapshot_id: &str,
 ) -> Result<()> {
-    // Create objectstore client
-    let client = Client::new("http://127.0.0.1:8888/")?;
-    let session = Usecase::new("preprod").for_project(1, 2).session(&client)?;
+    let url = get_objectstore_url(Api::current(), org)?;
+    let client = Client::new(url)?;
 
-    // Create a multi-threaded tokio runtime for async operations
+    let (org, project) = get_org_project_id(Api::current(), org, project)?;
+    let session = Usecase::new("preprod")
+        .for_project(org, project)
+        .session(&client)?;
+
     let runtime = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
