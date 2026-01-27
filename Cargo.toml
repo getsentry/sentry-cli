@@ -42,6 +42,7 @@ java-properties = "2.0.0"
 lazy_static = "1.4.0"
 libc = "0.2.139"
 log = { version = "0.4.17", features = ["std"] }
+objectstore-client = { git =  "https://github.com/getsentry/objectstore.git", branch = "lcian/feat/rust-batch-client" }
 open = "3.2.0"
 parking_lot = "0.12.1"
 percent-encoding = "2.2.0"
@@ -62,6 +63,7 @@ sentry = { version = "0.46.0", default-features = false, features = [
 serde = { version = "1.0.152", features = ["derive"] }
 serde_json = "1.0.93"
 sha1_smol = { version = "1.0.0", features = ["serde", "std"] }
+sha2 = "0.10.9"
 sourcemap = { version = "9.3.0", features = ["ram_bundle"] }
 symbolic = { version = "12.13.3", features = ["debuginfo-serde", "il2cpp"] }
 thiserror = "1.0.38"
@@ -77,9 +79,7 @@ chrono-tz = "0.8.4"
 secrecy = "0.8.0"
 lru = "0.16.0"
 backon = { version = "1.5.2", features = ["std", "std-blocking-sleep"] }
-objectstore-client = "0.0.14"
-sha2 = "0.10"
-tokio = { version = "1.47", features = ["rt", "macros"] }
+tokio = { version = "1.47", features = ["rt", "rt-multi-thread", "macros"] }
 
 [dev-dependencies]
 assert_cmd = "2.0.11"
