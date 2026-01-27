@@ -9,6 +9,8 @@ Options:
       --config-status-json       Return the status of the config that sentry-cli loads as JSON dump.
                                  This can be used by external tools to aid the user towards
                                  configuration.
+      --url <URL>                Fully qualified URL to the Sentry server.
+                                 [default: https://sentry.io/]
       --header <KEY:VALUE>       Custom headers that should be attached to all requests
                                  in key:value format.
       --no-defaults              Skip default organization and project checks. This allows you to

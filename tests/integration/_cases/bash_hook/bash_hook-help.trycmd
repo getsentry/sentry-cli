@@ -7,6 +7,8 @@ Usage: sentry-cli[EXE] bash-hook [OPTIONS]
 
 Options:
       --no-exit                  Do not turn on -e (exit immediately) flag automatically
+      --url <URL>                Fully qualified URL to the Sentry server.
+                                 [default: https://sentry.io/]
       --header <KEY:VALUE>       Custom headers that should be attached to all requests
                                  in key:value format.
       --no-environ               Do not send environment variables along

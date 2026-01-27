@@ -6,6 +6,10 @@
 
 - Add `--install-group` parameter to `sentry-cli build upload` for controlling update visibility between builds ([#3094](https://github.com/getsentry/sentry-cli/pull/3094))
 
+### Fixes
+
+- Fixed a bug where the `--url` global argument was not recognized by the `dart-symbol-map` command and potentially other commands ([#3108](https://github.com/getsentry/sentry-cli/pull/3108)).
+
 ## 3.1.0
 
 ### New Features
