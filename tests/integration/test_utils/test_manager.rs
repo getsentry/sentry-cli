@@ -1,6 +1,7 @@
 use std::ffi::OsStr;
 use std::fmt::Display;
 
+use assert_cmd::cargo::cargo_bin;
 use assert_cmd::Command;
 use mockito::{Mock, Server, ServerGuard};
 use thiserror::Error;
@@ -163,6 +164,7 @@ impl TrycmdTestManager {
 
     fn new(manager: TestManager, path: impl Display) -> Self {
         let test_case = TestCases::new();
+        test_case.register_bin("sentry-cli", cargo_bin!("sentry-cli"));
 
         env::set(manager.server_info(), |k, v| {
             test_case.env(k, v);
@@ -228,7 +230,7 @@ impl AssertCmdTestManager {
         I: IntoIterator<Item = S>,
         S: AsRef<OsStr>,
     {
-        let mut command = Command::cargo_bin("sentry-cli").expect("sentry-cli should be available");
+        let mut command = Command::new(cargo_bin!("sentry-cli"));
         command.args(args);
 
         env::set(manager.server_info(), |k, v| {
