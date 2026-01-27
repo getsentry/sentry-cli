@@ -962,6 +962,13 @@ impl AuthenticatedApi<'_> {
         }
         Ok(rv)
     }
+
+    /// Fetch organization details including ID and links
+    pub fn fetch_organization_details(&self, org: &str) -> ApiResult<OrganizationDetails> {
+        let path = format!("/api/0/organizations/{}/", PathArg(org));
+        self.get(&path)?
+            .convert_rnf(ApiErrorKind::OrganizationNotFound)
+    }
 }
 
 /// Available datasets for fetching organization events
@@ -1759,6 +1766,20 @@ pub struct Organization {
     pub require_email_verification: bool,
     #[expect(dead_code)]
     pub features: Vec<String>,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct OrganizationLinks {
+    #[serde(rename = "organizationUrl")]
+    pub organization_url: String,
+    #[serde(rename = "regionUrl")]
+    pub region_url: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct OrganizationDetails {
+    pub id: String,
+    pub links: OrganizationLinks,
 }
 
 #[derive(Deserialize, Debug)]
