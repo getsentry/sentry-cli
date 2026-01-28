@@ -79,7 +79,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // Upload files using objectstore client
     upload_files(&files, &org, &project, snapshot_id)?;
 
-    println!("{} Successfully uploaded snapshots", style(">").dim());
     Ok(())
 }
 
@@ -149,14 +148,14 @@ fn upload_files(
         .build()
         .context("Failed to create tokio runtime")?;
 
+    let mut many_builder = session.many();
+
     for file_path in files {
         debug!("Processing file: {}", file_path.display());
 
-        // Read file contents
         let contents = fs::read(file_path)
             .with_context(|| format!("Failed to read file: {}", file_path.display()))?;
 
-        // Determine the key based on file type
         let key = if is_json_file(file_path) {
             // For JSON files, use {org}/{snapshotId}/{filename}
             let filename = file_path
@@ -170,27 +169,37 @@ fn upload_files(
             format!("{org}/{project}/{hash}")
         };
 
-        info!("Uploading {} as {key}", file_path.display());
+        info!("Queueing {} as {key}", file_path.display());
 
-        // Upload to objectstore using the runtime thread pool
-        runtime.block_on(async {
-            session
-                .put(contents)
-                .key(&key)
-                .send()
-                .await
-                .with_context(|| format!("Failed to upload file: {}", file_path.display()))
-        })?;
-
-        println!(
-            "{} Uploaded {} (key: {})",
-            style(">").dim(),
-            file_path.display(),
-            style(&key).cyan()
-        );
+        many_builder = many_builder.push(session.put(contents).key(&key));
     }
 
-    Ok(())
+    let upload = runtime
+        .block_on(async { many_builder.send().await })
+        .context("Failed to upload files")?;
+
+    match upload.error_for_failures() {
+        Ok(()) => {
+            println!(
+                "{} Uploaded {} {}",
+                style(">").dim(),
+                style(files.len()).yellow(),
+                if files.len() == 1 { "file" } else { "files" }
+            );
+            Ok(())
+        }
+        Err(errors) => {
+            eprintln!("There were errors uploading files:");
+            for error in &errors {
+                eprintln!("  {}", style(error).red());
+            }
+            anyhow::bail!(
+                "Failed to upload {} out of {} files",
+                errors.len(),
+                files.len()
+            )
+        }
+    }
 }
 
 fn compute_sha256_hash(data: &[u8]) -> String {
