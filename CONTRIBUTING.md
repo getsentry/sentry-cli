@@ -1,12 +1,3 @@
-# Adding new commands
-For new commands, it is recommended to use clap's [Derive API](https://docs.rs/clap/latest/clap/_derive/index.html).
-In contrast to the [Builder API](https://docs.rs/clap/latest/clap/_tutorial/index.html), the Derive API makes it:
-- Easier to read, write, and modify commands and arguments.
-- Easier to keep argument declaration and reading in sync.
-- Easier to reuse shared arguments.
-
-An existing example of how to use the Derive API is the `send-metric` command.
-
 # Integration Tests
 
 Integration tests are written using `trycmd` crate. Consult the docs in case you need to understand how it works https://docs.rs/trycmd/latest/trycmd/.
