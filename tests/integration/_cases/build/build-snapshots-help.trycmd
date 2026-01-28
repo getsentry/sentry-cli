@@ -6,7 +6,7 @@ Upload build snapshots to a project.
 [EXPERIMENTAL] The "build snapshots" command is experimental. The command is subject to breaking
 changes, including removal, in any Sentry CLI release.
 
-Usage: sentry-cli build snapshots [OPTIONS] --snapshot-id <ID> <PATH>
+Usage: sentry-cli[EXE] build snapshots [OPTIONS] --snapshot-id <ID> <PATH>
 
 Arguments:
   <PATH>
