@@ -1770,8 +1770,6 @@ pub struct Organization {
 
 #[derive(Deserialize, Debug)]
 pub struct OrganizationLinks {
-    #[serde(rename = "organizationUrl")]
-    pub organization_url: String,
     #[serde(rename = "regionUrl")]
     pub region_url: String,
 }
