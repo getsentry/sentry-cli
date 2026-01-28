@@ -2438,7 +2438,7 @@ dependencies = [
 [[package]]
 name = "objectstore-client"
 version = "0.0.15"
-source = "git+https://github.com/getsentry/objectstore.git?branch=lcian%2Ffeat%2Frust-batch-client#75a144ab923a258395afdff98b65eb6839af68cc"
+source = "git+https://github.com/getsentry/objectstore.git?branch=lcian%2Ffeat%2Frust-batch-client#1364c9d7ff5d1fe39c8c7be30c5c2f9d2c8c2ed2"
 dependencies = [
  "async-compression",
  "async-stream",
@@ -2462,7 +2462,7 @@ dependencies = [
 [[package]]
 name = "objectstore-types"
 version = "0.0.15"
-source = "git+https://github.com/getsentry/objectstore.git?branch=lcian%2Ffeat%2Frust-batch-client#75a144ab923a258395afdff98b65eb6839af68cc"
+source = "git+https://github.com/getsentry/objectstore.git?branch=lcian%2Ffeat%2Frust-batch-client#1364c9d7ff5d1fe39c8c7be30c5c2f9d2c8c2ed2"
 dependencies = [
  "http",
  "humantime",

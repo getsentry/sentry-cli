@@ -963,7 +963,7 @@ impl AuthenticatedApi<'_> {
         Ok(rv)
     }
 
-    /// Fetch organization details including ID and links
+    /// Fetch organization details
     pub fn fetch_organization_details(&self, org: &str) -> ApiResult<OrganizationDetails> {
         let path = format!("/api/0/organizations/{}/", PathArg(org));
         self.get(&path)?
