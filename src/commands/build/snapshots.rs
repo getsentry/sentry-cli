@@ -143,7 +143,7 @@ fn upload_files(
         .for_project(org, project)
         .session(&client)?;
 
-    let runtime = tokio::runtime::Builder::new_multi_thread()
+    let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
         .context("Failed to create tokio runtime")?;
