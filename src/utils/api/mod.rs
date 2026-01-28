@@ -1,7 +1,7 @@
 //! Utilities that rely on the Sentry API.
 
 use crate::api::{Api, AuthenticatedApi};
-use anyhow::{Context, Result};
+use anyhow::{Context as _, Result};
 
 /// Given an org and project slugs or IDs, returns the IDs of both.
 pub fn get_org_project_id(api: impl AsRef<Api>, org: &str, project: &str) -> Result<(u64, u64)> {
@@ -18,10 +18,10 @@ fn get_org_id(api: AuthenticatedApi<'_>, org: &str) -> Result<u64> {
         return Ok(id);
     }
     let details = api.fetch_organization_details(org)?;
-    Ok(details
+    details
         .id
         .parse::<u64>()
-        .context("Unable to parse org id")?)
+        .context("Unable to parse org id")
 }
 
 /// Given an org and project slugs or IDs, returns the project ID.
