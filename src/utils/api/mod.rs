@@ -18,10 +18,7 @@ fn get_org_id(api: AuthenticatedApi<'_>, org: &str) -> Result<u64> {
         return Ok(id);
     }
     let details = api.fetch_organization_details(org)?;
-    details
-        .id
-        .parse::<u64>()
-        .context("Unable to parse org id")
+    details.id.parse::<u64>().context("Unable to parse org id")
 }
 
 /// Given an org and project slugs or IDs, returns the project ID.
