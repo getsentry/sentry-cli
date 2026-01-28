@@ -42,7 +42,7 @@ use symbolic::common::DebugId;
 use symbolic::debuginfo::ObjectKind;
 use uuid::Uuid;
 
-use crate::api::errors::{ProjectRenamedError, RetryError, RetryableCurlError};
+use crate::api::errors::{ProjectRenamedError, RetryError};
 use crate::config::{Auth, Config};
 use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::http::{self, is_absolute_url};
@@ -1314,24 +1314,27 @@ impl ApiRequest {
             debug!("retry number {retry_number}, max retries: {max_retries}");
             *retry_number += 1;
 
-            let result = self.send_into(&mut out);
+            let mut rv = match self.send_into(&mut out) {
+                Ok(rv) => rv,
+                Err(err) => {
+                    let is_retryable_dns = err
+                        .source()
+                        .and_then(|s| s.downcast_ref::<curl::Error>())
+                        .is_some_and(|e| e.is_couldnt_resolve_host());
 
-            // Check for retriable curl errors (DNS resolution failure)
-            if let Some(curl_err) = result
-                .as_ref()
-                .err()
-                .and_then(|e| e.source())
-                .and_then(|s| s.downcast_ref::<curl::Error>())
-                .filter(|e| e.is_couldnt_resolve_host())
-            {
-                anyhow::bail!(RetryableCurlError::new(curl_err.clone()));
-            }
+                    // Wrap DNS errors in a RetryError so they get retried
+                    if is_retryable_dns {
+                        anyhow::bail!(RetryError::from(err));
+                    }
 
-            let mut rv = result?;
+                    anyhow::bail!(err);
+                }
+            };
+
             rv.body = Some(out);
 
             if RETRY_STATUS_CODES.contains(&rv.status) {
-                anyhow::bail!(RetryError::new(rv));
+                anyhow::bail!(RetryError::Status { body: rv });
             }
 
             Ok(rv)
@@ -1340,7 +1343,7 @@ impl ApiRequest {
         send_req
             .retry(backoff)
             .sleep(thread::sleep)
-            .when(|e| e.is::<RetryError>() || e.is::<RetryableCurlError>())
+            .when(|e| e.is::<RetryError>())
             .notify(|e, dur| {
                 debug!(
                     "retry number {} failed due to {e:#}, retrying again in {} ms",
@@ -1349,16 +1352,10 @@ impl ApiRequest {
                 );
             })
             .call()
-            .or_else(|err| {
-                err.downcast::<RetryError>()
-                    .map(RetryError::into_body)
-                    .map_err(|err| {
-                        err.downcast::<RetryableCurlError>()
-                            .map(|e| ApiError::from(e.into_source()))
-                            .unwrap_or_else(|e| {
-                                ApiError::with_source(ApiErrorKind::RequestFailed, e)
-                            })
-                    })
+            .or_else(|err| match err.downcast::<RetryError>() {
+                Ok(RetryError::Status { body }) => Ok(body),
+                Ok(RetryError::ApiError { source }) => Err(source),
+                Err(err) => Err(ApiError::with_source(ApiErrorKind::RequestFailed, err)),
             })
     }
 }
