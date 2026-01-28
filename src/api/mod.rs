@@ -15,6 +15,7 @@ mod serialization;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::error::Error as _;
 #[cfg(any(target_os = "macos", not(feature = "managed")))]
 use std::fs::File;
 use std::io::{self, Read as _, Write};
@@ -1313,11 +1314,27 @@ impl ApiRequest {
             debug!("retry number {retry_number}, max retries: {max_retries}");
             *retry_number += 1;
 
-            let mut rv = self.send_into(&mut out)?;
+            let mut rv = match self.send_into(&mut out) {
+                Ok(rv) => rv,
+                Err(err) => {
+                    let is_retryable_dns = err
+                        .source()
+                        .and_then(|s| s.downcast_ref::<curl::Error>())
+                        .is_some_and(|e| e.is_couldnt_resolve_host());
+
+                    // Wrap DNS errors in a RetryError so they get retried
+                    if is_retryable_dns {
+                        anyhow::bail!(RetryError::from(err));
+                    }
+
+                    anyhow::bail!(err);
+                }
+            };
+
             rv.body = Some(out);
 
             if RETRY_STATUS_CODES.contains(&rv.status) {
-                anyhow::bail!(RetryError::new(rv));
+                anyhow::bail!(RetryError::Status { body: rv });
             }
 
             Ok(rv)
@@ -1336,7 +1353,8 @@ impl ApiRequest {
             })
             .call()
             .or_else(|err| match err.downcast::<RetryError>() {
-                Ok(err) => Ok(err.into_body()),
+                Ok(RetryError::Status { body }) => Ok(body),
+                Ok(RetryError::ApiError { source }) => Err(source),
                 Err(err) => Err(ApiError::with_source(ApiErrorKind::RequestFailed, err)),
             })
     }
