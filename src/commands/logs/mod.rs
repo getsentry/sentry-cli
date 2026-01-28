@@ -39,9 +39,7 @@ pub(super) fn make_command(command: Command) -> Command {
 }
 
 pub(super) fn execute(_: &ArgMatches) -> Result<()> {
-    let SentryCLICommand::Logs(LogsArgs { subcommand }) = SentryCLI::parse().command else {
-        unreachable!("expected logs subcommand");
-    };
+    let SentryCLICommand::Logs(LogsArgs { subcommand }) = SentryCLI::parse().command;
     eprintln!("{BETA_WARNING}");
 
     match subcommand {
