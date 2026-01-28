@@ -2,7 +2,6 @@ use crate::utils::auth_token::AuthToken;
 use crate::utils::value_parsers::{auth_token_parser, kv_parser};
 use clap::{ArgAction::SetTrue, Parser, Subcommand};
 
-use super::dart_symbol_map::DartSymbolMapArgs;
 use super::logs::LogsArgs;
 
 #[derive(Parser)]
@@ -38,5 +37,4 @@ pub(super) struct SentryCLI {
 #[derive(Subcommand)]
 pub(super) enum SentryCLICommand {
     Logs(LogsArgs),
-    DartSymbolMap(DartSymbolMapArgs),
 }

@@ -9,6 +9,7 @@
 ### Fixes
 
 - Fixed a bug where the `dart-symbol-map` command did not accept the `--url` argument ([#3108](https://github.com/getsentry/sentry-cli/pull/3108)).
+- The `dart-symbol-map upload` command now correctly resolves the organization from the auth token payload ([#3065](https://github.com/getsentry/sentry-cli/pull/3065)).
 
 ## 3.1.0
 
