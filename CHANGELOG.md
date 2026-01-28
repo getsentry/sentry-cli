@@ -6,6 +6,10 @@
 
 - Add `--install-group` parameter to `sentry-cli build upload` for controlling update visibility between builds ([#3094](https://github.com/getsentry/sentry-cli/pull/3094))
 
+### Fixes
+
+- The `dart-symbol-map upload` command now correctly resolves the organization from the auth token payload ([#3065](https://github.com/getsentry/sentry-cli/pull/3065)).
+
 ## 3.1.0
 
 ### New Features
