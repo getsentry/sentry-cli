@@ -8,8 +8,6 @@ Usage: sentry-cli[EXE] events list [OPTIONS]
 Options:
   -o, --org <ORG>                The organization ID or slug.
   -U, --show-user                Display the Users column.
-      --url <URL>                Fully qualified URL to the Sentry server.
-                                 [default: https://sentry.io/]
       --header <KEY:VALUE>       Custom headers that should be attached to all requests
                                  in key:value format.
   -p, --project <PROJECT>        The project ID or slug.

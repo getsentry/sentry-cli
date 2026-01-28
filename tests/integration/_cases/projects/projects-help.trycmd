@@ -11,8 +11,6 @@ Commands:
 
 Options:
   -o, --org <ORG>                The organization ID or slug.
-      --url <URL>                Fully qualified URL to the Sentry server.
-                                 [default: https://sentry.io/]
       --header <KEY:VALUE>       Custom headers that should be attached to all requests
                                  in key:value format.
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.

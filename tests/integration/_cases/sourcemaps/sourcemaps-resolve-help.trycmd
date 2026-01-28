@@ -11,8 +11,6 @@ Arguments:
 Options:
   -l, --line <LINE>              Line number for minified source.
   -o, --org <ORG>                The organization ID or slug.
-      --url <URL>                Fully qualified URL to the Sentry server.
-                                 [default: https://sentry.io/]
   -c, --column <COLUMN>          Column number for minified source.
       --header <KEY:VALUE>       Custom headers that should be attached to all requests
                                  in key:value format.

@@ -154,7 +154,7 @@ fn app() -> Command {
         .max_term_width(100)
         .subcommand_required(true)
         .arg_required_else_help(true)
-        .arg(Arg::new("url").value_name("URL").long("url").global(true).help(
+        .arg(Arg::new("url").value_name("URL").long("url").help(
             "Fully qualified URL to the Sentry server.{n}\
              [default: https://sentry.io/]",
         ))
