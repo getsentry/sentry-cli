@@ -102,3 +102,76 @@ fn command_upload_dart_symbol_map_invalid_mapping() {
         .with_default_token()
         .run_and_assert(AssertCommand::Failure);
 }
+
+#[test]
+fn command_upload_dart_symbol_map_with_custom_url() {
+    let call_count = AtomicU8::new(0);
+
+    let manager = TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
+                .with_response_file("dart_symbol_map/get-chunk-upload.json"),
+        )
+        .mock_endpoint(MockEndpointBuilder::new(
+            "POST",
+            "/api/0/organizations/wat-org/chunk-upload/",
+        ))
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
+            )
+            .with_response_fn(move |_request| {
+                let value = match call_count.fetch_add(1, Ordering::Relaxed) {
+                    0 => serde_json::json!({
+                        "state": "not_found",
+                        "missingChunks": ["6aa44eb08e4a72d1cf32fe7c2504216fb1a3e862"]
+                    }),
+                    1 => serde_json::json!({
+                        "state": "created",
+                        "missingChunks": []
+                    }),
+                    2 => serde_json::json!({
+                        "state": "ok",
+                        "detail": serde_json::Value::Null,
+                        "missingChunks": [],
+                        "dif": {
+                            "id": "1",
+                            "uuid": "00000000-0000-0000-0000-000000000000",
+                            "debugId": "00000000-0000-0000-0000-000000000000",
+                            "objectName": "dartsymbolmap.json",
+                            "cpuName": "any",
+                            "headers": { "Content-Type": "application/octet-stream" },
+                            "size": 1,
+                            "sha1": "6aa44eb08e4a72d1cf32fe7c2504216fb1a3e862",
+                            "dateCreated": "1776-07-04T12:00:00.000Z",
+                            "data": {}
+                        }
+                    }),
+                    n => panic!(
+                        "Only 3 calls to the assemble endpoint expected, but there were {}.",
+                        n + 1
+                    ),
+                };
+                let response = serde_json::json!({
+                    "6aa44eb08e4a72d1cf32fe7c2504216fb1a3e862": value
+                });
+                serde_json::to_vec(&response).unwrap()
+            })
+            .expect(3),
+        );
+
+    let server_url = manager.server_url();
+
+    manager
+        .assert_cmd([
+            "--url",
+            &server_url,
+            "dart-symbol-map",
+            "upload",
+            "tests/integration/_fixtures/dart_symbol_map/dartsymbolmap.json",
+            "tests/integration/_fixtures/Sentry.Samples.Console.Basic.pdb",
+        ])
+        .with_default_token()
+        .run_and_assert(AssertCommand::Success);
+}

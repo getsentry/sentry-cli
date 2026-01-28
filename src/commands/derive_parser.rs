@@ -18,6 +18,10 @@ pub(super) struct SentryCLI {
     #[arg(help = "Use the given Sentry auth token")]
     pub(super) auth_token: Option<AuthToken>,
 
+    #[arg(global = true, long, value_name = "URL")]
+    #[arg(help = "Fully qualified URL to the Sentry server.{n}[default: https://sentry.io/]")]
+    pub(super) url: Option<String>,
+
     #[arg(global=true, ignore_case=true, value_parser=["trace", "debug", "info", "warn", "error"])]
     #[arg(long, help = "Set the log output verbosity")]
     pub(super) log_level: Option<String>,
