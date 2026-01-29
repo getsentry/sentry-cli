@@ -1,5 +1,27 @@
 # Debug files upload compression findings
 
+## Conversation summary
+- `debug-files upload` does not compress whole debug files; it uploads raw bytes
+  in chunks and only applies per-chunk transport compression (gzip or
+  uncompressed).
+- There is no CLI option to compress entire debug files before upload.
+- The symbolic crates (v12.16.3) do not expose a whole-file DIF compression API.
+  They only decompress compressed sections or embedded payloads when reading,
+  and provide ZIP creation for source bundles.
+- `symsorter` in the symbolicator repo performs whole-file compression itself
+  using zstd, with `-z/-zz/-zzz` mapping to zstd levels. Symbolic is used there
+  only for parsing/iterating objects.
+- A symsorter-compressed file passed to `sentry-cli debug-files upload` would be
+  skipped because format detection relies on object-file magic bytes; zstd
+  wrappers do not match any supported DIF format. There is no whole-file
+  decompression step in the upload path. If the format check were bypassed, the
+  raw compressed bytes would be uploaded (still subject to per-chunk transport
+  compression).
+- Extracting the symsorter compression logic into symbolic would likely require
+  a small public helper in `symbolic-debuginfo` (or similar) that wraps zstd
+  encoding, and then updating symsorter to call it while keeping the CLI's
+  compression-level mapping in symsorter.
+
 ## Question
 Does `debug-files upload` ever compress the entire debug file before uploading
 (not just transport-level chunk compression)?
@@ -58,3 +80,27 @@ Does `debug-files upload` ever compress the entire debug file before uploading
 - `symbolic` is used for parsing and iterating over objects (`Archive`, `Object`,
   `ObjectKind`), but compression is performed in symsorter, not via symbolic
   APIs. (See `symbolicator/crates/symsorter/src/app.rs` imports and usage.)
+
+## CLI compression option
+- `debug-files upload` does not expose a flag to compress whole debug files
+  before upload. The upload path only applies per-chunk transport compression
+  negotiated with the server. (See `src/commands/debug_files/upload.rs` and
+  `src/api/mod.rs:L354-L392`.)
+
+## Symsorter-compressed file uploaded via sentry-cli
+- DIF discovery uses `Archive::peek` to identify object formats. If the format
+  is `Unknown`, the file is skipped during collection. (See
+  `src/utils/dif_upload/mod.rs:L733-L754`.)
+- `Archive::peek` looks for known object magic bytes (ELF, PE, Mach-O, PDB,
+  etc.) and does not recognize zstd wrappers. (See
+  `symbolic-debuginfo-12.16.3/src/object.rs:L127-L172`.)
+- There is no whole-file decompression step in the upload path, so a symsorter
+  zstd-wrapped file would not be decompressed by sentry-cli. If the format check
+  were bypassed, the raw compressed bytes would be uploaded.
+
+## Extracting symsorter compression into symbolic (discussion)
+- This would require adding a public helper (likely in `symbolic-debuginfo`) to
+  zstd-compress raw bytes or write a compressed stream, then updating symsorter
+  to call that helper.
+- The policy mapping of `-z/-zz/-zzz` to zstd levels is CLI-specific and should
+  remain in symsorter, while symbolic would accept a raw zstd level.
