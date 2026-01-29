@@ -46,3 +46,15 @@ Does `debug-files upload` ever compress the entire debug file before uploading
   separate artifact type and not a general-purpose DIF compressor. (See
   `symbolic-debuginfo-12.16.3/src/sourcebundle/mod.rs:L1076-L1139` and
   `L1114-L1121`.)
+
+## Symsorter implementation (symbolicator repo)
+- `symsorter` implements whole-file compression itself, using the `zstd` crate
+  directly. The `--compress/-z` flag increments a `compression_level`, which is
+  mapped to zstd levels and applied when writing each object to disk with
+  `zstd::stream::copy_encode`. (See
+  `symbolicator/crates/symsorter/src/app.rs`, `Cli::compression_level` and
+  `process_file` where `copy_encode(obj.data(), &mut out, compression_level)` is
+  called.)
+- `symbolic` is used for parsing and iterating over objects (`Archive`, `Object`,
+  `ObjectKind`), but compression is performed in symsorter, not via symbolic
+  APIs. (See `symbolicator/crates/symsorter/src/app.rs` imports and usage.)
