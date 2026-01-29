@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 use std::io::Write as _;
 use std::path::Path;
+use std::thread;
+use std::time::Instant;
 
 use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
@@ -13,13 +15,14 @@ use zip::{DateTime, ZipWriter};
 
 use crate::api::{Api, AuthenticatedApi, ChunkedBuildRequest, ChunkedFileState, VcsInfo};
 use crate::config::Config;
+use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::ArgExt as _;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use crate::utils::build::{handle_asset_catalogs, ipa_to_xcarchive, is_apple_app, is_ipa_file};
 use crate::utils::build::{
     is_aab_file, is_apk_file, is_zip_file, normalize_directory, write_version_metadata,
 };
-use crate::utils::chunks::{upload_chunks, Chunk};
+use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::ci::is_ci;
 use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempDir;
@@ -654,7 +657,9 @@ fn upload_file(
     // iteration of the loop) we get:
     // n. state=error, artifact_url unset
 
-    let result = loop {
+    let assemble_start = Instant::now();
+
+    loop {
         let response = api.assemble_build(
             org,
             project,
@@ -685,15 +690,23 @@ fn upload_file(
         }
 
         if let Some(artifact_url) = response.artifact_url {
-            break Ok(artifact_url);
+            return Ok(artifact_url);
         }
 
         if response.state.is_finished() {
             bail!("File upload is_finished() but did not succeeded or error");
         }
-    };
 
-    result
+        // Check for timeout to prevent infinite loop
+        if assemble_start.elapsed() > DEFAULT_MAX_WAIT {
+            bail!(
+                "Timeout waiting for build assembly after {} seconds",
+                DEFAULT_MAX_WAIT.as_secs()
+            );
+        }
+
+        thread::sleep(ASSEMBLE_POLL_INTERVAL);
+    }
 }
 
 /// Utility function to parse a SHA1 digest, allowing empty strings.
