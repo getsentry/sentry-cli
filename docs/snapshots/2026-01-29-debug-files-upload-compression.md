@@ -27,3 +27,22 @@ Does `debug-files upload` ever compress the entire debug file before uploading
   via `SourceBundleWriter` and uploads those bundles as separate DIFs. This is
   creation of a new archive artifact, not compression of the original DIF
   itself. (See `src/utils/dif_upload/mod.rs:L1052-L1098`.)
+
+## Symbolic crate findings (v12.16.3)
+- The symbolic crate documentation focuses on symbolication and debug info
+  parsing (object formats, symcache, minidump, etc.) and does not describe an
+  API for compressing entire debug files. (See
+  `/workspace/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/symbolic-12.16.3/README.md`
+  and `src/lib.rs`.)
+- `symbolic-debuginfo` includes **decompression** support for compressed data
+  inside debug files (e.g., compressed DWARF sections and embedded portable PDB
+  payloads), but this is for reading/expanding data on access, not for creating
+  compressed DIFs. (See
+  `symbolic-debuginfo-12.16.3/src/dwarf.rs:L182-L205`,
+  `symbolic-debuginfo-12.16.3/src/elf.rs:L577-L626`,
+  `symbolic-debuginfo-12.16.3/src/pe.rs:L502-L523`.)
+- The only write-side “compression” in symbolic is for **source bundles**: the
+  `SourceBundleWriter` builds a ZIP archive using `ZipWriter`, which is a
+  separate artifact type and not a general-purpose DIF compressor. (See
+  `symbolic-debuginfo-12.16.3/src/sourcebundle/mod.rs:L1076-L1139` and
+  `L1114-L1121`.)
