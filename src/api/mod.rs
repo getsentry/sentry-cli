@@ -1317,20 +1317,17 @@ impl ApiRequest {
             debug!("retry number {retry_number}, max retries: {max_retries}");
             *retry_number += 1;
 
-            let mut rv = match self.send_into(&mut out) {
-                Ok(rv) => rv,
-                Err(err) => {
-                    // Retry DNS failures for sentry.io, as these likely indicate
-                    // a network issue. DNS failures for other domains should not
-                    // be retried, to avoid masking configuration problems (e.g.
-                    // if the user has mistyped their self-hosted URL).
-                    if is_dns_error(&err) && self.is_sentry_io_host() {
-                        anyhow::bail!(RetryError::from(err));
-                    }
-
-                    anyhow::bail!(err);
+            let mut rv = self.send_into(&mut out).map_err(|err| {
+                // Retry DNS failures for sentry.io, as these likely indicate
+                // a network issue. DNS failures for other domains should not
+                // be retried, to avoid masking configuration problems (e.g.
+                // if the user has mistyped their self-hosted URL).
+                if is_dns_error(&err) && self.is_sentry_io_host() {
+                    anyhow::anyhow!(RetryError::from(err))
+                } else {
+                    anyhow::anyhow!(err)
                 }
-            };
+            })?;
 
             rv.body = Some(out);
 
