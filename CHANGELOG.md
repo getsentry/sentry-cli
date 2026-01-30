@@ -9,6 +9,7 @@
 ### Fixes
 
 - Fixed a bug where the `dart-symbol-map` command did not accept the `--url` argument ([#3108](https://github.com/getsentry/sentry-cli/pull/3108)).
+- Retry DNS resolution failures for `sentry.io` requests to reduce intermittent failures for some users ([#3085](https://github.com/getsentry/sentry-cli/pull/3085))
 
 ## 3.1.0
 
