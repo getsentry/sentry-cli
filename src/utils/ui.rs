@@ -11,7 +11,7 @@ pub fn prompt_to_continue(message: &str) -> io::Result<bool> {
 
         let mut buf = String::new();
         io::stdin().read_line(&mut buf)?;
-        let input = buf.trim();
+        let input = buf.trim().to_lowercase();
 
         if input == "y" {
             return Ok(true);
