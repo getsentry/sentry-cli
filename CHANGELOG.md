@@ -9,6 +9,7 @@
 ### Fixes
 
 - Fixed a bug where the `dart-symbol-map` command did not accept the `--url` argument ([#3108](https://github.com/getsentry/sentry-cli/pull/3108)).
+- Add timeout to `build upload` polling loop to prevent infinite loop when server returns unexpected state ([#3118](https://github.com/getsentry/sentry-cli/pull/3118)).
 
 ## 3.1.0
 
