@@ -1,12 +1,10 @@
 use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::LazyLock;
+
+use serde_json::Value;
 
 use crate::integration::test_utils::AssertCommand;
 use crate::integration::{MockEndpointBuilder, TestManager};
-
-/// A test org auth token with org="wat-org" and empty URL.
-/// Format: sntrys_{base64_payload}_{base64_secret}
-/// Payload: {"iat":1704374159.069583,"url":"","region_url":"","org":"wat-org"}
-const ORG_AUTH_TOKEN_WAT_ORG: &str = "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";
 
 #[test]
 fn command_upload_dart_symbol_map_missing_capability() {
@@ -181,26 +179,47 @@ fn command_upload_dart_symbol_map_with_custom_url() {
         .run_and_assert(AssertCommand::Success);
 }
 
+/// A test to ensure that the command can resolve an organization from an
+/// org auth token.
 #[test]
 fn command_upload_dart_symbol_map_org_from_token() {
+    /// Path to the mapping file
+    const MAPPING_PATH: &str = "tests/integration/_fixtures/dart_symbol_map/dartsymbolmap.json";
+
+    /// A test org auth token with org="wat-org" and empty URL.
+    /// Format: sntrys_{base64_payload}_{base64_secret}
+    /// Payload: {"iat":1704374159.069583,"url":"","region_url":"","org":"wat-org"}
+    const ORG_AUTH_TOKEN_WAT_ORG: &str = "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";
+
+    /// Checksum of the mapping file
+    const EXPECTED_CHECKSUM: &str = "6aa44eb08e4a72d1cf32fe7c2504216fb1a3e862";
+
+    /// Expected request body for uploading the Dart symbol map
+    static EXPECTED_REQUEST: LazyLock<Value> = LazyLock::new(|| {
+        serde_json::json!({
+            EXPECTED_CHECKSUM: {
+                "chunks": [EXPECTED_CHECKSUM],
+                "debug_id": "54fdf14a-41a1-426a-a073-8185e11a89d6-83920e6f",
+                "name": "dartsymbolmap.json",
+            }
+        })
+    });
+
     // When no --org is provided and SENTRY_ORG is not set, the org should be resolved
     // from the org auth token.
     let call_count = AtomicU8::new(0);
 
     TestManager::new()
-        // Server advertises capability including `dartsymbolmap`.
         // This endpoint uses "wat-org" in the path - if org resolution fails,
         // the request would go to a different path and not match.
         .mock_endpoint(
             MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
                 .with_response_file("dart_symbol_map/get-chunk-upload.json"),
         )
-        // Accept chunk upload requests for the missing chunks
         .mock_endpoint(MockEndpointBuilder::new(
             "POST",
             "/api/0/organizations/wat-org/chunk-upload/",
         ))
-        // Assemble flow: 1) not_found (missingChunks), 2) created, 3) ok
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "POST",
@@ -212,30 +231,37 @@ fn command_upload_dart_symbol_map_org_from_token() {
                 let body_json: serde_json::Value =
                     serde_json::from_slice(body).expect("request body should be valid JSON");
 
-                let (checksum, _obj) = body_json
-                    .as_object()
-                    .and_then(|m| m.iter().next())
-                    .map(|(k, v)| (k.clone(), v.clone()))
-                    .expect("assemble request must contain at least one object");
+                assert_eq!(
+                    body_json, *EXPECTED_REQUEST,
+                    "assemble request should match expected checksum payload"
+                );
 
-                match call_count.fetch_add(1, Ordering::Relaxed) {
-                    0 => format!(
-                        "{{\"{checksum}\":{{\"state\":\"not_found\",\"missingChunks\":[\"{checksum}\"]}}}}"
-                    )
-                    .into(),
-                    1 => format!(
-                        "{{\"{checksum}\":{{\"state\":\"created\",\"missingChunks\":[]}}}}"
-                    )
-                    .into(),
-                    2 => format!(
-                        "{{\"{checksum}\":{{\"state\":\"ok\",\"detail\":null,\"missingChunks\":[],\"dif\":{{\"id\":\"1\",\"uuid\":\"00000000-0000-0000-0000-000000000000\",\"debugId\":\"00000000-0000-0000-0000-000000000000\",\"objectName\":\"dartsymbolmap.json\",\"cpuName\":\"any\",\"headers\":{{\"Content-Type\":\"application/octet-stream\"}},\"size\":1,\"sha1\":\"{checksum}\",\"dateCreated\":\"1776-07-04T12:00:00.000Z\",\"data\":{{}}}}}}}}"
-                    )
-                    .into(),
+                let response = match call_count.fetch_add(1, Ordering::Relaxed) {
+                    0 => serde_json::json!({
+                        EXPECTED_CHECKSUM: {
+                            "state": "not_found",
+                            "missingChunks": [EXPECTED_CHECKSUM],
+                        }
+                    }),
+                    1 => serde_json::json!({
+                        EXPECTED_CHECKSUM: {
+                            "state": "created",
+                            "missingChunks": [],
+                        }
+                    }),
+                    2 => serde_json::json!({
+                        EXPECTED_CHECKSUM: {
+                            "state": "ok",
+                            "missingChunks": [],
+                        }
+                    }),
                     n => panic!(
                         "Only 3 calls to the assemble endpoint expected, but there were {}.",
                         n + 1
                     ),
-                }
+                };
+
+                serde_json::to_vec(&response).expect("assemble response should be valid JSON")
             })
             .expect(3),
         )
@@ -243,7 +269,7 @@ fn command_upload_dart_symbol_map_org_from_token() {
             "dart-symbol-map",
             "upload",
             // No --org flag provided!
-            "tests/integration/_fixtures/dart_symbol_map/dartsymbolmap.json",
+            MAPPING_PATH,
             "tests/integration/_fixtures/Sentry.Samples.Console.Basic.pdb",
         ])
         // Use org auth token with embedded org="wat-org" instead of default token
