@@ -62,3 +62,7 @@ Also, there is a Dockerfile that builds an Alpine-based Docker image with
 docker build -t sentry-cli .
 docker run --rm -v $(pwd):/work sentry-cli --help
 ```
+
+## Internal docs
+
+Snapshot: [Sentry CLI distribution as of 2026-01-29](docs/snapshots/2026-01-29-sentry-cli-distribution.md).
