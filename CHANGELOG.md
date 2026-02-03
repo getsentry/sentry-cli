@@ -9,6 +9,7 @@
 
 ### Fixes
 
+- Recognize `*.ghe.com` URLs as `github_enterprise` VCS provider ([#3127](https://github.com/getsentry/sentry-cli/pull/3127)).
 - Fixed a bug where the `dart-symbol-map` command did not accept the `--url` argument ([#3108](https://github.com/getsentry/sentry-cli/pull/3108)).
 - Add timeout to `build upload` polling loop to prevent infinite loop when server returns unexpected state ([#3118](https://github.com/getsentry/sentry-cli/pull/3118)).
 
