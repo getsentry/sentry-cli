@@ -220,6 +220,12 @@ impl VcsUrl {
 
 fn extract_provider_name(host: &str) -> &str {
     let trimmed = host.trim_end_matches('.');
+
+    // GitHub Enterprise Server uses *.ghe.com domains
+    if trimmed.ends_with(".ghe.com") {
+        return "github_enterprise";
+    }
+
     trimmed.rsplit('.').nth(1).unwrap_or(trimmed)
 }
 
@@ -1085,6 +1091,13 @@ mod tests {
         // Test edge case with trailing dots
         assert_eq!(extract_provider_name("github.com."), "github");
 
+        // Test GitHub Enterprise Server (*.ghe.com)
+        assert_eq!(extract_provider_name("foo.ghe.com"), "github_enterprise");
+        assert_eq!(
+            extract_provider_name("mycompany.ghe.com"),
+            "github_enterprise"
+        );
+
         // Test subdomain cases - we want the part before TLD, not the subdomain
         assert_eq!(extract_provider_name("api.github.com"), "github");
         assert_eq!(extract_provider_name("ssh.dev.azure.com"), "azure");
@@ -1124,6 +1137,15 @@ mod tests {
         assert_eq!(
             get_provider_from_remote("https://source.developers.google.com/p/project/r/repo"),
             "google"
+        );
+        // Test GitHub Enterprise Server (*.ghe.com)
+        assert_eq!(
+            get_provider_from_remote("https://foo.ghe.com/bar/baz.git"),
+            "github_enterprise"
+        );
+        assert_eq!(
+            get_provider_from_remote("git@mycompany.ghe.com:org/repo.git"),
+            "github_enterprise"
         );
         // Test edge case with trailing dot in hostname
         assert_eq!(
