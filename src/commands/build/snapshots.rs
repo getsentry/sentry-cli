@@ -4,16 +4,19 @@ use std::path::Path;
 use anyhow::{Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use console::style;
+use http::header::AUTHORIZATION;
 use log::{debug, info};
-use objectstore_client::{Client, Usecase};
+use objectstore_client::{Client, ClientBuilder, Usecase};
+use secrecy::ExposeSecret as _;
 use sha2::{Digest as _, Sha256};
 use walkdir::WalkDir;
 
 use crate::api::Api;
-use crate::config::Config;
+use crate::config::{Auth, Config};
 use crate::utils::api::get_org_project_id;
 use crate::utils::args::ArgExt as _;
 use crate::utils::objectstore::get_objectstore_url;
+use http::{self, HeaderValue};
 
 const EXPERIMENTAL_WARNING: &str =
     "[EXPERIMENTAL] The \"build snapshots\" command is experimental. \
@@ -135,8 +138,26 @@ fn upload_files(
     project: &str,
     snapshot_id: &str,
 ) -> Result<()> {
+    let config = Config::current();
+    let auth = config
+        .get_auth()
+        .ok_or_else(|| anyhow::anyhow!("Authentication required"))?;
+    let token = match auth {
+        Auth::Token(token) => token.raw().expose_secret(),
+    };
+
     let url = get_objectstore_url(Api::current(), org)?;
-    let client = Client::new(url)?;
+    let client = ClientBuilder::new(url.clone())
+        .configure_reqwest(move |r| {
+            let mut headers = http::HeaderMap::new();
+            headers.insert(
+                AUTHORIZATION,
+                HeaderValue::from_str(&format!("Bearer {token}"))
+                    .expect("always a valid header value"),
+            );
+            r.default_headers(headers)
+        })
+        .build()?;
 
     let (org, project) = get_org_project_id(Api::current(), org, project)?;
     let session = Usecase::new("preprod")
