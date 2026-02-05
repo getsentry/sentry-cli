@@ -1,7 +1,7 @@
 [package]
 build = "build.rs"
 name = "sentry-cli"
-version = "3.0.0"
+version = "3.1.0"
 edition = "2021"
 rust-version = "1.91"
 
@@ -24,7 +24,7 @@ clap = { version = "4.1.6", default-features = false, features = [
 ] }
 clap_complete = "4.4.3"
 console = "0.15.5"
-curl = { version = "0.4.46", features = ["static-curl", "static-ssl"] }
+curl = "0.4.46"
 dirs = "4.0.0"
 dotenvy = "0.15.7"
 elementtree = "1.2.3"
@@ -77,7 +77,7 @@ data-encoding = "2.3.3"
 magic_string = "0.3.4"
 chrono-tz = "0.8.4"
 secrecy = "0.8.0"
-lru = "0.16.0"
+lru = "0.16.3"
 backon = { version = "1.5.2", features = ["std", "std-blocking-sleep"] }
 tokio = { version = "1.47", features = ["rt"] }
 http = "1.4.0"
@@ -130,6 +130,12 @@ openssl-probe = "0.1.5"
 
 [target."cfg(windows)".dependencies]
 windows-sys = { version = "0.59.0", features = ["Win32_Storage_FileSystem"] }
+
+# Use static curl/SSL on non-macOS platforms
+# We link dynamically on macOS; that way we can support self-signed certificates
+# trusted in the macOS keychain.
+[target."cfg(not(target_os = \"macos\"))".dependencies]
+curl = { version = "0.4.46", features = ["static-curl", "static-ssl"] }
 
 # We optimize the release build for size.
 [profile.release]

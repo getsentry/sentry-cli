@@ -1,9 +1,3 @@
----
-description: Rust development patterns and conventions for sentry-cli
-globs: *.rs,Cargo.*,.cargo/**/*,src/**/*,apple-catalog-parsing/**/*
-alwaysApply: false
----
-
 # Rust Development Guidelines
 
 ## Code Organization

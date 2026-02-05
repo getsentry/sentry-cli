@@ -10,6 +10,7 @@ mod data_types;
 mod encoding;
 mod errors;
 mod pagination;
+mod serialization;
 
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -238,9 +239,6 @@ impl Api {
         }
         handle.ssl_verify_host(self.config.should_verify_ssl())?;
         handle.ssl_verify_peer(self.config.should_verify_ssl())?;
-
-        // This toggles gzipping, useful for uploading large files
-        handle.transfer_encoding(self.config.allow_transfer_encoding())?;
 
         let env = self.config.get_pipeline_env();
         let headers = self.config.get_headers();
@@ -542,10 +540,16 @@ impl AuthenticatedApi<'_> {
 
     /// Returns a list of releases for a given project.  This is currently a
     /// capped list by what the server deems an acceptable default limit.
-    pub fn list_releases(&self, org: &str) -> ApiResult<Vec<ReleaseInfo>> {
-        let path = format!("/organizations/{}/releases/", PathArg(org));
-        self.get(&path)?
-            .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::OrganizationNotFound)
+    pub fn list_releases(&self, org: &str, project: Option<&str>) -> ApiResult<Vec<ReleaseInfo>> {
+        if let Some(project) = project {
+            let path = format!("/projects/{}/{}/releases/", PathArg(org), PathArg(project));
+            self.get(&path)?
+                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::ProjectNotFound)
+        } else {
+            let path = format!("/organizations/{}/releases/", PathArg(org));
+            self.get(&path)?
+                .convert_rnf::<Vec<ReleaseInfo>>(ApiErrorKind::OrganizationNotFound)
+        }
     }
 
     /// Looks up a release commits and returns it.  If it does not exist `None`
@@ -1540,6 +1544,7 @@ pub struct AuthInfo {
 #[derive(Debug, Serialize, Default)]
 pub struct NewRelease {
     pub version: String,
+    #[serde(serialize_with = "serialization::serialize_id_slug_list")]
     pub projects: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,

@@ -31,7 +31,7 @@ jobs:
       image: messense/rust-musl-cross:${{ matrix.container }}
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
 
       - name: Add Rustup Target
         run: |
@@ -47,7 +47,7 @@ jobs:
       - name: Rename Binary
         run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Linux-${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
         with:
           name: artifact-bin-linux-${{ matrix.arch }}
           path: sentry-cli-Linux-${{ matrix.arch }}
@@ -67,10 +67,38 @@ jobs:
     runs-on: macos-14
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
 
       - name: Add Rustup Target
         run: rustup target add ${{ matrix.target }}
+
+      # On x86_64, this environment variable specifies to the openssl-sys crate
+      # where to find the OpenSSL library.
+      - name: Set OpenSSL env (x86_64)
+        if: matrix.arch == 'x86_64'
+        run: echo "X86_64_APPLE_DARWIN_OPENSSL_DIR=${{ github.workspace }}/openssl-x86_64" >> $GITHUB_ENV
+
+      - name: Get OpenSSL cache month (x86_64)
+        if: matrix.arch == 'x86_64'
+        id: cache-date
+        run: echo "month=$(date +%Y-%m)" >> $GITHUB_OUTPUT
+
+      - name: Cache x86_64 OpenSSL
+        if: matrix.arch == 'x86_64'
+        id: cache-openssl-x86
+        uses: actions/cache@8b402f58fbc84540c8b491a91e594a4576fec3d7 # 5.0.2
+        with:
+          path: ${{ env.X86_64_APPLE_DARWIN_OPENSSL_DIR }}
+          key: openssl-x86_64-${{ runner.os }}-${{ steps.cache-date.outputs.month }}
+
+      # To cross-compile for x86_64 from an ARM-based macOS runner, we need to have the
+      # x86_64 OpenSSL libraries installed locally.
+      - name: Download x86_64 OpenSSL
+        if: matrix.arch == 'x86_64' && steps.cache-openssl-x86.outputs.cache-hit != 'true'
+        run: |
+          brew fetch --bottle-tag=sonoma openssl@3
+          mkdir -p $X86_64_APPLE_DARWIN_OPENSSL_DIR
+          tar xzf $(brew --cache --bottle-tag=sonoma openssl@3) -C $X86_64_APPLE_DARWIN_OPENSSL_DIR --strip-components=2
 
       - name: Cache Dependencies
         uses: swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # 2.8.2
@@ -81,7 +109,7 @@ jobs:
       - name: Rename Binary
         run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Darwin-${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
         with:
           name: unsigned-bin-macos-${{ matrix.arch }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
@@ -93,7 +121,7 @@ jobs:
     runs-on: macos-14
 
     steps:
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # 7.0.0
         with:
           pattern: unsigned-bin-macos-*
           merge-multiple: true
@@ -101,7 +129,7 @@ jobs:
       - name: Link universal binary
         run: lipo -create -output sentry-cli-Darwin-universal sentry-cli-Darwin-x86_64 sentry-cli-Darwin-arm64
 
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
         with:
           name: unsigned-bin-macos-universal
           path: sentry-cli-Darwin-universal
@@ -126,7 +154,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
 
       - name: Install `rcodesign`
         run: |
@@ -146,7 +174,7 @@ jobs:
           echo "$APPLE_API_KEY" | base64 --decode > ${{ env.APPLE_API_KEY_PATH }}
 
       - name: Download unsigned binary
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # 7.0.0
         with:
           name: unsigned-bin-macos-${{ matrix.arch }}
 
@@ -171,7 +199,7 @@ jobs:
             sentry-cli-Darwin-${{ matrix.arch }}.zip
 
       - name: Upload signed binary
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
         with:
           name: artifact-bin-macos-${{ matrix.arch }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
@@ -190,7 +218,7 @@ jobs:
     runs-on: windows-2022
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
 
       # When rustup is updated, it tries to replace its binary, which on Windows is somehow locked.
       # This can result in the CI failure, see: https://github.com/rust-lang/rustup/issues/3029
@@ -210,7 +238,7 @@ jobs:
       - name: Rename Binary
         run: mv target/${{ env.TARGET }}/release/sentry-cli.exe sentry-cli-Windows-${{ matrix.arch }}.exe
 
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
         with:
           name: artifact-bin-windows-${{ matrix.arch }}
           path: sentry-cli-Windows-${{ matrix.arch }}.exe
@@ -222,9 +250,9 @@ jobs:
     needs: [linux, macos, macos_universal, windows]
 
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
 
-      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # 6.1.0
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # 6.2.0
         with:
           node-version: '20.10.0'
 
@@ -232,7 +260,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Download compiled binaries
-        uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # 7.0.0
         with:
           pattern: artifact-bin-*
           merge-multiple: true
@@ -245,7 +273,7 @@ jobs:
 
       - run: npm pack
 
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
         with:
           name: artifact-pkg-node
           path: '*.tgz'
@@ -255,14 +283,14 @@ jobs:
     name: python (base)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
       - name: Add Rustup Target
         run: rustup target add x86_64-unknown-linux-musl
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # 6.1.0
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # 6.2.0
         with:
           python-version: '3.11'
       - run: python3 -m pip install build && python3 -m build
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
         with:
           name: python-base
           path: dist/*
@@ -273,22 +301,22 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows, python-base]
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
-      - uses: actions/setup-python@83679a892e2d95755f2dac6acb0bfd1e9ac5d548 # 6.1.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+      - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # 6.2.0
         with:
           python-version: '3.11'
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # 7.0.0
         with:
           pattern: artifact-bin-*
           merge-multiple: true
           path: binaries
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # 7.0.0
         with:
           name: python-base
           merge-multiple: true
           path: python-base
       - run: scripts/wheels --binaries binaries --base python-base --dest dist
-      - uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
+      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
         with:
           name: artifact-pkg-python
           path: dist/*
@@ -299,11 +327,11 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows]
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
-      - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # 6.1.0
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # 6.2.0
         with:
           node-version: '20.10.0'
-      - uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # 6.0.0
+      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # 7.0.0
         with:
           pattern: artifact-bin-*
           merge-multiple: true
@@ -331,7 +359,7 @@ jobs:
           done
 
       - name: Upload packaged npm binary distributions
-        uses: actions/upload-artifact@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
         with:
           name: artifact-npm-binary-distributions
           path: npm-binary-distributions/*/*.tgz
@@ -351,10 +379,10 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@e468171a9de216ec08956ac3ada2f0791b6bd435 # 3.11.1
+        uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # 3.12.0
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@5e57cd118135c172c3672efd75eb46360885c0ef # 3.6.0
@@ -398,7 +426,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows, npm-distributions, node, python]
     steps:
-      - uses: actions/upload-artifact/merge@330a01c490aca151604b8cf639adc76d48f6c5d4 # 5.0.0
+      - uses: actions/upload-artifact/merge@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
         with:
           # Craft expects release assets to be a single artifact named after the sha.
           name: ${{ github.sha }}

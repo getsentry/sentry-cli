@@ -1,9 +1,3 @@
----
-description: CI/CD workflow patterns and conventions for sentry-cli
-globs: .github/workflows/**/*
-alwaysApply: false
----
-
 # CI/CD Workflow Guidelines
 
 ## Security: Pin Actions by Commit Hash
@@ -13,11 +7,11 @@ alwaysApply: false
 Example:
 
 ```yaml
-# ✅ CORRECT - Pinned by hash with version comment
+# Correct - Pinned by hash with version comment
 - uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # 5.0.0
 - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # 4.6.2
 
-# ❌ INCORRECT - Using version tag
+# Incorrect - Using version tag
 - uses: actions/checkout@v4
 - uses: actions/upload-artifact@v4.6.2
 ```

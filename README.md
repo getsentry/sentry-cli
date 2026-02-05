@@ -20,20 +20,24 @@ Please refer to [Sentry CLI's documentation page](https://docs.sentry.io/cli/).
 
 ## Compatibility
 
-Sentry CLI officially supports [Sentry SaaS](https://sentry.io/) and [Sentry Self-Hosted](https://github.com/getsentry/self-hosted) versions 25.11.1 and above.
+Sentry CLI officially supports [Sentry SaaS](https://sentry.io/) and [Sentry Self-Hosted](https://github.com/getsentry/self-hosted) versions 24.11.1 and above.
 
-### Self-Hosted Sentry
+<details>
 
-Although some Sentry CLI features may work with versions of Sentry Self-Hosted prior to 25.11.1, we recommend users upgrade their self-hosted installations to a compatible version.
+<summary><h3>Self-Hosted Sentry</h3></summary>
 
-For users who cannot upgrade their self-hosted installation, we recommend using the latest compatible Sentry CLI version, per the table below:
+For self-hosted installations, only those features which were available in Sentry CLI at the time of the release of the given self-hosted version are supported, as new features may require server-side support. Additionally, some features, like the `sentry-cli build` commands, are restricted to Sentry SaaS.
+
+Users who are using Sentry Self-Hosted versions older than 24.11.1 are encouraged to upgrade their Sentry Self-Hosted installations before using Sentry CLI versions 3.0.0 and above. For users who cannot upgrade, please use the version indicated in the table below.
 
 | **Sentry Self-Hosted Version** | **Newest Compatible Sentry CLI Version**                              |
 | ------------------------------ | --------------------------------------------------------------------- |
-| ≥ 25.11.1                      | [latest](https://github.com/getsentry/sentry-cli/releases/latest)     |
-| < 25.11.1                      | [2.58.4](https://github.com/getsentry/sentry-cli/releases/tag/2.58.4) |
+| ≥ 24.11.1                      | [latest](https://github.com/getsentry/sentry-cli/releases/latest)     |
+| < 24.11.1                      | [2.58.4](https://github.com/getsentry/sentry-cli/releases/tag/2.58.4) |
 
 Note that we can only provide support for officially-supported Sentry Self-Hosted versions. We will not backport fixes for older Sentry CLI versions, even if they should be compatible with your self-hosted version.
+
+</details>
 
 ## Versioning
 
@@ -58,3 +62,7 @@ Also, there is a Dockerfile that builds an Alpine-based Docker image with
 docker build -t sentry-cli .
 docker run --rm -v $(pwd):/work sentry-cli --help
 ```
+
+## Internal docs
+
+Snapshot: [Sentry CLI distribution as of 2026-01-29](docs/snapshots/2026-01-29-sentry-cli-distribution.md).

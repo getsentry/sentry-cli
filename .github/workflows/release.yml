@@ -3,14 +3,19 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version to release
-        required: true
+        description: Version to release (or "auto")
+        required: false
       force:
         description: Force a release even when there are release-blockers (optional)
         required: false
       merge_target:
         description: Target branch to merge into. Uses the default branch as a fallback (optional)
         required: false
+
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   release:
     runs-on: ubuntu-24.04
@@ -22,12 +27,12 @@ jobs:
         with:
           app-id: ${{ vars.SENTRY_RELEASE_BOT_CLIENT_ID }}
           private-key: ${{ secrets.SENTRY_RELEASE_BOT_PRIVATE_KEY }}
-      - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # 6.0.1
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
         with:
           token: ${{ steps.token.outputs.token }}
           fetch-depth: 0
       - name: Prepare release
-        uses: getsentry/action-prepare-release@3cea80dc3938c0baf5ec4ce752ecb311f8780cdc # 1.6.4
+        uses: getsentry/craft@fd370d4d54bec9ff07f909d88a3c4aec6f0ba22b # v2.20.0
         env:
           GITHUB_TOKEN: ${{ steps.token.outputs.token }}
         with:

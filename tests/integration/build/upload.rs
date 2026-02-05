@@ -167,7 +167,7 @@ fn command_build_upload_apk_chunked() {
                 if is_first_assemble_call.swap(false, Ordering::Relaxed) {
                     r#"{
                         "state": "created",
-                        "missingChunks": ["60863d91bb673a1b1b92dbbe91b1de5cc0dde146"]
+                        "missingChunks": ["7138c09b474a5c84ac60e1b145855bf6dcc88913"]
                     }"#
                 } else {
                     r#"{
@@ -224,7 +224,7 @@ fn command_build_upload_ipa_chunked() {
                 if is_first_assemble_call.swap(false, Ordering::Relaxed) {
                     r#"{
                         "state": "created",
-                        "missingChunks": ["ed9da71e3688261875db21b266da84ffe004a8a4"]
+                        "missingChunks": ["ecf0e7cb306f29b21189f49d0879bd85aa4be146"]
                     }"#
                 } else {
                     r#"{
@@ -238,6 +238,9 @@ fn command_build_upload_ipa_chunked() {
             .expect(2),
         )
         .register_trycmd_test("build/build-upload-ipa.trycmd")
+        // We override the version in the metadata field to ensure a consistent checksum
+        // for the uploaded files.
+        .env("SENTRY_CLI_INTEGRATION_TEST_VERSION_OVERRIDE", "0.0.0-test")
         .with_default_token();
 }
 

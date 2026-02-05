@@ -4,7 +4,54 @@
 
 ### Features
 
-- Added experimental `sentry-cli build snapshots` command to upload build snapshots to a project ([#3110](https://github.com/getsentry/sentry-cli/pull/3110)). This command uploads files from a specified directory to Sentry's Objectstore, associating them with a snapshot identifier. The command is experimental and subject to breaking changes or removal in future releases.
+- Added experimental `sentry-cli build snapshots` command to upload build snapshots to a project ([#3110](https://github.com/getsentry/sentry-cli/pull/3110)). 
+  - This command uploads files from a specified directory to Sentry's Objectstore, associating them with a snapshot identifier.
+  - The command is experimental and subject to breaking changes or removal in future releases.
+- Add `sourceMaps.inject()` for injecting debug IDs ([#3088](https://github.com/getsentry/sentry-cli/pull/3088))
+- Add `--install-group` parameter to `sentry-cli build upload` for controlling update visibility between builds ([#3094](https://github.com/getsentry/sentry-cli/pull/3094))
+
+### Fixes
+
+- Recognize `*.ghe.com` URLs as `github_enterprise` VCS provider ([#3127](https://github.com/getsentry/sentry-cli/pull/3127)).
+- Fixed a bug where the `dart-symbol-map` command did not accept the `--url` argument ([#3108](https://github.com/getsentry/sentry-cli/pull/3108)).
+- Add timeout to `build upload` polling loop to prevent infinite loop when server returns unexpected state ([#3118](https://github.com/getsentry/sentry-cli/pull/3118)).
+
+## 3.1.0
+
+### New Features
+
+- In the JavaScript API, added multi-project support to `releases.newDeploy()` method. This method now accept a `projects` option (array of project slugs), aligning them with the Rust CLI's multi-project capabilities and matching the existing behavior of `releases.new()` and `releases.uploadSourceMaps()` ([#3001](https://github.com/getsentry/sentry-cli/pull/3001)).
+
+### Improvements
+
+- This release includes some changes to enable support for older self-hosted Sentry versions. With these changes, Sentry CLI now officially self-hosted Sentry versions 24.11.1 and above ([#3070](https://github.com/getsentry/sentry-cli/pull/3070))
+
+### Fixes
+
+- Fixed a bug that prevented project IDs from being used with the `sentry-cli releases new` command for users with self-hosted Sentry instances on versions older than 25.12.1 ([#3068](https://github.com/getsentry/sentry-cli/issues/3068)).
+- Fixed a bug, introduced in version 3.0.0, where the `sentry-cli releases list` command ignored the `--project` option ([#3048](https://github.com/getsentry/sentry-cli/pull/3048)). The command now correctly can filter releases by a single project when supplied via `--project`. This change does not enable filtering by multiple projects, which has never been supported.
+
+## 3.0.3
+
+### Fixes
+
+- Fixed a bug on Intel-based macOS systems that prevented Sentry CLI from respecting self-signed certificates trusted in the macOS keychain ([#3059](https://github.com/getsentry/sentry-cli/issues/#3059)).
+
+## 3.0.2
+
+### Fixes
+
+- Fixed a bug on ARM-based macOS systems that prevented Sentry CLI from respecting self-signed certificates trusted in the macOS keychain ([#3057](https://github.com/getsentry/sentry-cli/issues/3057)).
+
+### Versioning Policy Update
+
+Our [versioning policy](VERSIONING.md) has reclassified the minimum supported self-hosted Sentry version as being part of the public API. Therefore, we will only increase this minimum supported self-hosted Sentry version in a major release of Sentry CLI.
+
+## 3.0.1
+
+### Performance Improvements
+
+- We switch to a faster compression algorithm (zstd) for uploading size analysis builds (`sentry build upload`) in preparation for this week's beta release! ([#3038](https://github.com/getsentry/sentry-cli/pull/3038))
 
 ## 3.0.0
 
@@ -14,10 +61,7 @@
 
 ### New Versioning Policy
 
-Sentry CLI now defines a [semantic versioning policy](VERSIONING.md). We did not explicitly define a versioning policy before, but the new versioning policy contains some notable changes versus the previous implicit policy we had been following. The main change is that dropping support for self-hosted Sentry versions now only requires a minor version bump, although such changes will be clearly communicated in the changelog.
-
-> [!IMPORTANT]
-> **Self-hosted users**: We strongly recommend pinning your Sentry CLI version, since Sentry CLI may drop support for your self-hosted Sentry version in any future minor release. Always check the changelog before upgrading Sentry CLI.
+Sentry CLI now defines a [semantic versioning policy](VERSIONING.md). We did not explicitly define a versioning policy previously, and this new policy should give more clarity about what can change in minor or patch releases versus what requires a major version bump.
 
 ### Breaking Changes
 

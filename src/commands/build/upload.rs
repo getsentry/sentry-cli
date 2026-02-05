@@ -1,6 +1,8 @@
 use std::borrow::Cow;
 use std::io::Write as _;
 use std::path::Path;
+use std::thread;
+use std::time::Instant;
 
 use anyhow::{anyhow, bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
@@ -11,17 +13,16 @@ use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
-use crate::api::{
-    Api, AuthenticatedApi, ChunkUploadCapability, ChunkedBuildRequest, ChunkedFileState, VcsInfo,
-};
+use crate::api::{Api, AuthenticatedApi, ChunkedBuildRequest, ChunkedFileState, VcsInfo};
 use crate::config::Config;
+use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::args::ArgExt as _;
 #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
 use crate::utils::build::{handle_asset_catalogs, ipa_to_xcarchive, is_apple_app, is_ipa_file};
 use crate::utils::build::{
     is_aab_file, is_apk_file, is_zip_file, normalize_directory, write_version_metadata,
 };
-use crate::utils::chunks::{upload_chunks, Chunk};
+use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::ci::is_ci;
 use crate::utils::fs::get_sha1_checksums;
 use crate::utils::fs::TempDir;
@@ -42,6 +43,7 @@ pub fn make_command(command: Command) -> Command {
         "The path to the build to upload. Supported files include Apk, and Aab.";
     command
         .about("Upload builds to a project.")
+        .long_about("Upload builds to a project.\n\nThis feature only works with Sentry SaaS.")
         .org_arg()
         .project_arg(false)
         .arg(
@@ -106,6 +108,16 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("release_notes")
                 .long("release-notes")
                 .help("The release notes to use for the upload.")
+        )
+        .arg(
+            Arg::new("install_group")
+                .long("install-group")
+                .action(ArgAction::Append)
+                .help(
+                    "The install group(s) for this build. Can be specified multiple times. \
+                    Builds with at least one matching install group will be shown updates \
+                    for each other.",
+                )
         )
         .arg(
             Arg::new("force_git_metadata")
@@ -176,6 +188,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let build_configuration = matches.get_one("build_configuration").map(String::as_str);
     let release_notes = matches.get_one("release_notes").map(String::as_str);
+    let install_groups: Vec<String> = matches
+        .get_many("install_group")
+        .map(|vals| vals.cloned().collect())
+        .unwrap_or_default();
 
     let (plugin_name, plugin_version) = parse_plugin_from_pipeline(config.get_pipeline_env());
 
@@ -238,15 +254,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     for (path, zip) in normalized_zips {
         info!("Uploading file: {}", path.display());
         let bytes = ByteView::open(zip.path())?;
-        match upload_file(
-            &authenticated_api,
-            &bytes,
-            &org,
-            &project,
+        let metadata = BuildMetadata {
             build_configuration,
             release_notes,
-            &vcs_info,
-        ) {
+            install_groups: &install_groups,
+            vcs_info: &vcs_info,
+        };
+        match upload_file(&authenticated_api, &bytes, &org, &project, &metadata) {
             Ok(artifact_url) => {
                 info!("Successfully uploaded file: {}", path.display());
                 uploaded_paths_and_urls.push((path.to_path_buf(), artifact_url));
@@ -563,7 +577,7 @@ fn normalize_file(
     // This is important as an optimization to avoid re-uploading the same chunks if they're already on the server
     // but the last modified time being different will cause checksums to be different.
     let options = SimpleFileOptions::default()
-        .compression_method(zip::CompressionMethod::Stored)
+        .compression_method(zip::CompressionMethod::Zstd)
         .last_modified_time(DateTime::default());
 
     zip.start_file(file_name, options)?;
@@ -589,32 +603,30 @@ fn handle_directory(
     normalize_directory(path, temp_dir.path(), plugin_name, plugin_version)
 }
 
+/// Metadata for a build upload.
+struct BuildMetadata<'a> {
+    build_configuration: Option<&'a str>,
+    release_notes: Option<&'a str>,
+    install_groups: &'a [String],
+    vcs_info: &'a VcsInfo<'a>,
+}
+
 /// Returns artifact url if upload was successful.
 fn upload_file(
     api: &AuthenticatedApi,
     bytes: &[u8],
     org: &str,
     project: &str,
-    build_configuration: Option<&str>,
-    release_notes: Option<&str>,
-    vcs_info: &VcsInfo<'_>,
+    metadata: &BuildMetadata<'_>,
 ) -> Result<String> {
-    const SELF_HOSTED_ERROR_HINT: &str = "If you are using a self-hosted Sentry server, \
-        update to the latest version of Sentry to use the build upload command.";
-
     debug!(
-        "Uploading file to organization: {org}, project: {project}, build_configuration: {}, vcs_info: {vcs_info:?}",
-        build_configuration.unwrap_or("unknown"),
+        "Uploading file to organization: {org}, project: {project}, build_configuration: {}, install_groups: {:?}, vcs_info: {:?}",
+        metadata.build_configuration.unwrap_or("unknown"),
+        metadata.install_groups,
+        metadata.vcs_info,
     );
 
     let chunk_upload_options = api.get_chunk_upload_options(org)?;
-
-    if !chunk_upload_options.supports(ChunkUploadCapability::PreprodArtifacts) {
-        bail!(
-            "The Sentry server lacks support for receiving files uploaded \
-            with this command. {SELF_HOSTED_ERROR_HINT}"
-        );
-    }
 
     let progress_style =
         ProgressStyle::default_spinner().template("{spinner} Preparing for upload...");
@@ -645,16 +657,19 @@ fn upload_file(
     // iteration of the loop) we get:
     // n. state=error, artifact_url unset
 
-    let result = loop {
+    let assemble_start = Instant::now();
+
+    loop {
         let response = api.assemble_build(
             org,
             project,
             &ChunkedBuildRequest {
                 checksum,
                 chunks: &checksums,
-                build_configuration,
-                release_notes,
-                vcs_info,
+                build_configuration: metadata.build_configuration,
+                release_notes: metadata.release_notes,
+                install_groups: metadata.install_groups,
+                vcs_info: metadata.vcs_info,
             },
         )?;
         chunks.retain(|Chunk((digest, _))| response.missing_chunks.contains(digest));
@@ -675,15 +690,23 @@ fn upload_file(
         }
 
         if let Some(artifact_url) = response.artifact_url {
-            break Ok(artifact_url);
+            return Ok(artifact_url);
         }
 
         if response.state.is_finished() {
             bail!("File upload is_finished() but did not succeeded or error");
         }
-    };
 
-    result
+        // Check for timeout to prevent infinite loop
+        if assemble_start.elapsed() > DEFAULT_MAX_WAIT {
+            bail!(
+                "Timeout waiting for build assembly after {} seconds",
+                DEFAULT_MAX_WAIT.as_secs()
+            );
+        }
+
+        thread::sleep(ASSEMBLE_POLL_INTERVAL);
+    }
 }
 
 /// Utility function to parse a SHA1 digest, allowing empty strings.

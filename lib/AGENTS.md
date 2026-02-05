@@ -1,9 +1,3 @@
----
-description: JavaScript/TypeScript development patterns for sentry-cli npm wrapper
-globs: js/**/*,scripts/**/*,package.json,*.js
-alwaysApply: false
----
-
 # JavaScript Development Guidelines
 
 ## Code Organization

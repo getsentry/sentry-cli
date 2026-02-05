@@ -6,7 +6,7 @@ use std::path::Path;
 use anyhow::{bail, Context as _, Result};
 use clap::Args;
 
-use crate::api::{Api, ChunkUploadCapability};
+use crate::api::Api;
 use crate::config::Config;
 use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
 use crate::utils::chunks::{upload_chunked_objects, Assemblable, ChunkOptions, Chunked};
@@ -134,11 +134,6 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
                 .authenticated()?
                 .get_chunk_upload_options(org)?;
 
-            if !chunk_upload_options.supports(ChunkUploadCapability::DartSymbolMap) {
-                bail!(
-                    "Server does not support uploading Dart symbol maps via chunked upload. Please update your Sentry server."
-                );
-            }
 
             // Early file size check against server or default limits (same as debug files)
             let effective_max_file_size = if chunk_upload_options.max_file_size > 0 {

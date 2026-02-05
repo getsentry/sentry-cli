@@ -310,15 +310,6 @@ impl Config {
         }
     }
 
-    /// Indicates whether uploads may use gzip transfer encoding.
-    pub fn allow_transfer_encoding(&self) -> bool {
-        let val = self.ini.get_from(Some("http"), "transfer_encoding");
-        match val {
-            None => true,
-            Some(val) => val == "true",
-        }
-    }
-
     /// Controls the SSL revocation check on windows.  This can be used as a
     /// workaround for misconfigured local SSL proxies.
     pub fn disable_ssl_revocation_check(&self) -> bool {

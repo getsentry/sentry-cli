@@ -120,6 +120,7 @@ export class Releases {
    * @param options Options to configure the source map upload.
    * @returns A promise that resolves when the upload has completed successfully.
    */
+  // TODO: Add `uploadSourceMaps()` to SourceMaps class as `.upload()` (keep it here too for backward compatibility)
   async uploadSourceMaps(
     release: string,
     options: SentryCliUploadSourceMapsOptions
@@ -203,6 +204,7 @@ export class Releases {
    *   time: 1295,                 // deployment duration in seconds. This can be specified alternatively to `started` and `finished`
    *   name: 'PickleRick',         // human readable name for this deployment
    *   url: 'https://example.com', // URL that points to the deployment
+   *   projects: ['project1', 'project2'], // list of projects to deploy to
    * });
    *
    * @param release Unique name of the release.
@@ -213,7 +215,9 @@ export class Releases {
     if (!options || !options.env) {
       throw new Error('options.env must be a valid name');
     }
-    const args = ['releases', 'deploys', release, 'new'];
+    const args = ['deploys', 'new']
+      .concat(helper.getProjectFlagsFromOptions(options))
+      .concat(['--release', release]);
     return this.execute(helper.prepareCommand(args, DEPLOYS_OPTIONS, options), null);
   }
 
