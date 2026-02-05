@@ -6,7 +6,7 @@ use clap::{Arg, ArgMatches, Command};
 use console::style;
 use http::header::AUTHORIZATION;
 use log::{debug, info};
-use objectstore_client::{Client, ClientBuilder, Usecase};
+use objectstore_client::{ClientBuilder, Usecase};
 use secrecy::ExposeSecret as _;
 use sha2::{Digest as _, Sha256};
 use walkdir::WalkDir;
