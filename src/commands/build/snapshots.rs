@@ -5,9 +5,11 @@ use anyhow::{Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use console::style;
 use http::header::AUTHORIZATION;
-use log::{debug, info};
+use log::{debug, info, warn};
 use objectstore_client::{ClientBuilder, Usecase};
 use secrecy::ExposeSecret as _;
+use serde::Deserialize;
+use serde_json::json;
 use sha2::{Digest as _, Sha256};
 use walkdir::WalkDir;
 
@@ -22,6 +24,8 @@ const EXPERIMENTAL_WARNING: &str =
     "[EXPERIMENTAL] The \"build snapshots\" command is experimental. \
     The command is subject to breaking changes, including removal, in any Sentry CLI release.";
 
+const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg"];
+
 pub fn make_command(command: Command) -> Command {
     command
         .about("[EXPERIMENTAL] Upload build snapshots to a project.")
@@ -33,16 +37,32 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("path")
                 .value_name("PATH")
-                .help("The path to the folder containing build snapshots.")
+                .help("The path to the folder containing images to upload.")
                 .required(true),
         )
         .arg(
-            Arg::new("snapshot_id")
-                .long("snapshot-id")
-                .value_name("ID")
-                .help("The snapshot identifier to associate with the upload.")
+            Arg::new("app_id")
+                .long("app-id")
+                .value_name("APP_ID")
+                .help("The application identifier.")
                 .required(true),
         )
+}
+
+#[derive(Deserialize)]
+struct CreateSnapshotResponse {
+    #[serde(rename = "artifactId")]
+    artifact_id: String,
+    #[serde(rename = "imageCount")]
+    image_count: u64,
+}
+
+struct ImageInfo {
+    path: std::path::PathBuf,
+    relative_path: String,
+    hash: String,
+    width: u32,
+    height: u32,
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -55,89 +75,198 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let path = matches
         .get_one::<String>("path")
         .expect("path argument is required");
-    let snapshot_id = matches
-        .get_one::<String>("snapshot_id")
-        .expect("snapshot_id argument is required");
+    let app_id = matches
+        .get_one::<String>("app_id")
+        .expect("app_id argument is required");
+    let dir_path = Path::new(path);
+    if !dir_path.is_dir() {
+        anyhow::bail!("Path is not a directory: {}", dir_path.display());
+    }
 
-    info!("Processing build snapshots from: {path}");
-    info!("Using snapshot ID: {snapshot_id}");
-    info!("Organization: {org}");
-    info!("Project: {project}");
+    debug!("Scanning for images in: {}", dir_path.display());
+    debug!("Organization: {org}");
+    debug!("Project: {project}");
 
-    // Collect files to upload
-    let files = collect_files(Path::new(path))?;
-
-    if files.is_empty() {
-        println!("{} No files found to upload", style("!").yellow());
+    // Collect image files and read their dimensions
+    let images = collect_images(dir_path)?;
+    if images.is_empty() {
+        println!("{} No image files found", style("!").yellow());
         return Ok(());
     }
 
     println!(
-        "{} Found {} {} to upload",
+        "{} Found {} image {}",
         style(">").dim(),
-        style(files.len()).yellow(),
-        if files.len() == 1 { "file" } else { "files" }
+        style(images.len()).yellow(),
+        if images.len() == 1 { "file" } else { "files" }
     );
 
-    // Upload files using objectstore client
-    upload_files(&files, &org, &project, snapshot_id)?;
+    // Build manifest from discovered images
+    let mut manifest = json!({
+        "app_id": app_id,
+        "images": {},
+    });
+
+    let images_obj = manifest["images"]
+        .as_object_mut()
+        .expect("images object was just created");
+    for image in &images {
+        images_obj.insert(
+            image.hash.clone(),
+            json!({
+                "file_name": image.relative_path,
+                "width": image.width,
+                "height": image.height,
+            }),
+        );
+    }
+
+    // Upload image files to objectstore
+    println!(
+        "{} Uploading {} image {}",
+        style(">").dim(),
+        style(images.len()).yellow(),
+        if images.len() == 1 { "file" } else { "files" }
+    );
+    upload_images(&images, &org, &project)?;
+
+    // POST manifest to API
+    println!("{} Creating snapshot...", style(">").dim());
+    let api = Api::current();
+    let response: CreateSnapshotResponse = api
+        .authenticated()?
+        .create_preprod_snapshot(&org, &project, &manifest)?
+        .convert()?;
+
+    println!(
+        "{} Created snapshot {} with {} {}",
+        style(">").dim(),
+        style(&response.artifact_id).yellow(),
+        style(response.image_count).yellow(),
+        if response.image_count == 1 {
+            "image"
+        } else {
+            "images"
+        }
+    );
 
     Ok(())
 }
 
-fn collect_files(path: &Path) -> Result<Vec<std::path::PathBuf>> {
-    if !path.exists() {
-        anyhow::bail!("Path does not exist: {}", path.display());
-    }
+fn collect_images(dir: &Path) -> Result<Vec<ImageInfo>> {
+    let mut images = Vec::new();
 
-    let mut files = Vec::new();
-
-    if path.is_file() {
-        // Only add if not hidden
-        if !is_hidden_file(path) {
-            files.push(path.to_path_buf());
+    for entry in WalkDir::new(dir)
+        .follow_links(true)
+        .into_iter()
+        .filter_entry(|e| !is_hidden(e.path()))
+        .filter_map(Result::ok)
+    {
+        if !entry.metadata()?.is_file() {
+            continue;
         }
-    } else if path.is_dir() {
-        for entry in WalkDir::new(path)
-            .follow_links(true)
-            .into_iter()
-            .filter_map(Result::ok)
-        {
-            if entry.metadata()?.is_file() {
-                let entry_path = entry.path();
-                // Skip hidden files
-                if !is_hidden_file(entry_path) {
-                    files.push(entry_path.to_path_buf());
-                }
+
+        let path = entry.path();
+        if !is_image_file(path) {
+            continue;
+        }
+
+        let contents =
+            fs::read(path).with_context(|| format!("Failed to read: {}", path.display()))?;
+
+        let (width, height) = match read_image_dimensions(&contents) {
+            Some(dims) => dims,
+            None => {
+                warn!("Could not read dimensions from: {}", path.display());
+                continue;
             }
-        }
-    } else {
-        anyhow::bail!("Path is neither a file nor directory: {}", path.display());
+        };
+
+        let relative = path
+            .strip_prefix(dir)
+            .unwrap_or(path)
+            .to_string_lossy()
+            .to_string();
+
+        let hash = compute_sha256_hash(&contents);
+
+        images.push(ImageInfo {
+            path: path.to_path_buf(),
+            relative_path: relative,
+            hash,
+            width,
+            height,
+        });
     }
 
-    Ok(files)
+    Ok(images)
 }
 
-fn is_hidden_file(path: &Path) -> bool {
+fn is_hidden(path: &Path) -> bool {
     path.file_name()
         .and_then(|name| name.to_str())
         .map(|name| name.starts_with('.'))
         .unwrap_or(false)
 }
 
-fn is_json_file(path: &Path) -> bool {
+fn is_image_file(path: &Path) -> bool {
     path.extension()
         .and_then(|ext| ext.to_str())
-        .map(|ext| ext.eq_ignore_ascii_case("json"))
+        .map(|ext| IMAGE_EXTENSIONS.iter().any(|e| ext.eq_ignore_ascii_case(e)))
         .unwrap_or(false)
 }
 
-fn upload_files(
-    files: &[std::path::PathBuf],
-    org: &str,
-    project: &str,
-    snapshot_id: &str,
-) -> Result<()> {
+/// Read image dimensions from file bytes. Supports PNG and JPEG.
+fn read_image_dimensions(data: &[u8]) -> Option<(u32, u32)> {
+    // PNG: signature followed by IHDR chunk with width/height
+    if data.len() >= 24 && data[0..8] == *b"\x89PNG\r\n\x1a\n" {
+        let width = u32::from_be_bytes([data[16], data[17], data[18], data[19]]);
+        let height = u32::from_be_bytes([data[20], data[21], data[22], data[23]]);
+        return Some((width, height));
+    }
+
+    // JPEG: starts with FF D8, scan for SOF marker
+    if data.len() >= 2 && data[0] == 0xFF && data[1] == 0xD8 {
+        return read_jpeg_dimensions(data);
+    }
+
+    None
+}
+
+fn read_jpeg_dimensions(data: &[u8]) -> Option<(u32, u32)> {
+    let mut i = 2;
+    while i + 1 < data.len() {
+        if data[i] != 0xFF {
+            i += 1;
+            continue;
+        }
+
+        let marker = data[i + 1];
+        i += 2;
+
+        // SOF markers: C0-CF except C4 (DHT), C8 (JPG extension), and CC (DAC)
+        if (0xC0..=0xCF).contains(&marker) && marker != 0xC4 && marker != 0xC8 && marker != 0xCC {
+            if i + 7 < data.len() {
+                let height = u16::from_be_bytes([data[i + 3], data[i + 4]]) as u32;
+                let width = u16::from_be_bytes([data[i + 5], data[i + 6]]) as u32;
+                return Some((width, height));
+            }
+            return None;
+        }
+
+        // Skip segment using its length field
+        if i + 1 < data.len() {
+            let length = u16::from_be_bytes([data[i], data[i + 1]]) as usize;
+            i += length;
+        } else {
+            break;
+        }
+    }
+
+    None
+}
+
+fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
     let config = Config::current();
     let auth = config
         .get_auth()
@@ -159,9 +288,9 @@ fn upload_files(
         })
         .build()?;
 
-    let (org, project) = get_org_project_id(Api::current(), org, project)?;
+    let (org_id, project_id) = get_org_project_id(Api::current(), org, project)?;
     let session = Usecase::new("preprod")
-        .for_project(org, project)
+        .for_project(org_id, project_id)
         .session(&client)?;
 
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -171,53 +300,42 @@ fn upload_files(
 
     let mut many_builder = session.many();
 
-    for file_path in files {
-        debug!("Processing file: {}", file_path.display());
+    for image in images {
+        debug!("Processing image: {}", image.path.display());
 
-        let contents = fs::read(file_path)
-            .with_context(|| format!("Failed to read file: {}", file_path.display()))?;
+        let contents = fs::read(&image.path)
+            .with_context(|| format!("Failed to read image: {}", image.path.display()))?;
 
-        let key = if is_json_file(file_path) {
-            // For JSON files, use {org}/{snapshotId}/{filename}
-            let filename = file_path
-                .file_name()
-                .and_then(|name| name.to_str())
-                .unwrap_or("unknown.json");
-            format!("{org}/{snapshot_id}/{filename}")
-        } else {
-            // For other files, use {org}/{project}/{hash}
-            let hash = compute_sha256_hash(&contents);
-            format!("{org}/{project}/{hash}")
-        };
+        let obj_key = format!("{org_id}/{project_id}/{}", image.hash);
 
-        info!("Queueing {} as {key}", file_path.display());
+        info!("Queueing {} as {obj_key}", image.path.display());
 
-        many_builder = many_builder.push(session.put(contents).key(&key));
+        many_builder = many_builder.push(session.put(contents).key(&obj_key));
     }
 
     let upload = runtime
         .block_on(async { many_builder.send().await })
-        .context("Failed to upload files")?;
+        .context("Failed to upload image files")?;
 
     match upload.error_for_failures() {
         Ok(()) => {
             println!(
-                "{} Uploaded {} {}",
+                "{} Uploaded {} image {}",
                 style(">").dim(),
-                style(files.len()).yellow(),
-                if files.len() == 1 { "file" } else { "files" }
+                style(images.len()).yellow(),
+                if images.len() == 1 { "file" } else { "files" }
             );
             Ok(())
         }
         Err(errors) => {
-            eprintln!("There were errors uploading files:");
+            eprintln!("There were errors uploading images:");
             for error in &errors {
                 eprintln!("  {}", style(error).red());
             }
             anyhow::bail!(
-                "Failed to upload {} out of {} files",
+                "Failed to upload {} out of {} images",
                 errors.len(),
-                files.len()
+                images.len()
             )
         }
     }

@@ -973,6 +973,21 @@ impl AuthenticatedApi<'_> {
         self.get(&path)?
             .convert_rnf(ApiErrorKind::OrganizationNotFound)
     }
+
+    /// Creates a preprod snapshot artifact for the given project.
+    pub fn create_preprod_snapshot<S: Serialize>(
+        &self,
+        org: &str,
+        project: &str,
+        body: &S,
+    ) -> ApiResult<ApiResponse> {
+        let path = format!(
+            "/projects/{}/{}/preprodartifacts/snapshots/",
+            PathArg(org),
+            PathArg(project)
+        );
+        self.post(&path, body)
+    }
 }
 
 /// Available datasets for fetching organization events
