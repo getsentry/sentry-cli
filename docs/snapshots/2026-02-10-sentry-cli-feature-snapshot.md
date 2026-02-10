@@ -1,7 +1,7 @@
 # Sentry CLI Feature Snapshot
 
 > [!NOTE]
-> This document was updated on **2026-02-06** and is accurate as of that date. We do not intend to actively maintain this document; it should only be considered as a snapshot of the Sentry CLI feature surface area at that time.
+> This document was updated on **2026-02-10** and is accurate as of that date. We do not intend to actively maintain this document; it should only be considered as a snapshot of the Sentry CLI feature surface area at that time.
 
 ## Scope
 
@@ -43,8 +43,6 @@ Commands that create, manage, and annotate releases and deployments.
 - `deploys` — Manage deployments for Sentry releases.
 - `deploys list` — List all deployments of a release.
 - `deploys new` — Creates a new release deployment.
-- `build` — Manage builds.
-- `build upload` — Upload builds to a project.
 
 ## Artifacts And Symbolication
 
@@ -67,6 +65,8 @@ Commands that upload, analyze, or manage build artifacts and symbolication input
 - `react-native` — Upload build artifacts for react-native projects.
 - `react-native gradle` — Upload react-native projects in a gradle build step.
 - `react-native xcode` — Upload react-native projects in a Xcode build step.
+- `build` — Manage builds.
+- `build upload` — Upload builds to a project.
 
 ## Events, Issues, And Logs
 
