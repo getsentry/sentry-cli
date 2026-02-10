@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- The `dart-symbol-map upload` command now correctly resolves the organization from the auth token payload ([#3065](https://github.com/getsentry/sentry-cli/pull/3065)).
+
 ## 3.2.0
 
 ### Features
