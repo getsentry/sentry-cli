@@ -1,0 +1,50 @@
+```
+$ sentry-cli build snapshots --help
+? success
+Upload build snapshots to a project.
+
+[EXPERIMENTAL] The "build snapshots" command is experimental. The command is subject to breaking
+changes, including removal, in any Sentry CLI release.
+
+Usage: sentry-cli build snapshots [OPTIONS] --snapshot-id <ID> <PATH>
+
+Arguments:
+  <PATH>
+          The path to the folder containing build snapshots.
+
+Options:
+  -o, --org <ORG>
+          The organization ID or slug.
+
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
+
+  -p, --project <PROJECT>
+          The project ID or slug.
+
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
+
+      --snapshot-id <ID>
+          The snapshot identifier to associate with the upload.
+
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+
+      --shard-index <INDEX>
+          The shard index for this snapshot upload.
+          
+          [default: 0]
+
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands.
+          
+          [aliases: --silent]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+```
+
