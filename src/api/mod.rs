@@ -988,6 +988,13 @@ impl AuthenticatedApi<'_> {
         );
         self.post(&path, body)
     }
+
+    /// Fetches preprod retention settings for the given organization.
+    pub fn fetch_preprod_retention(&self, org: &str) -> ApiResult<PreprodRetention> {
+        let path = format!("/api/0/organizations/{}/preprod/retention/", PathArg(org));
+        self.get(&path)?
+            .convert_rnf(ApiErrorKind::OrganizationNotFound)
+    }
 }
 
 /// Available datasets for fetching organization events
@@ -1971,4 +1978,11 @@ pub struct LogEntry {
     pub severity: Option<String>,
     pub timestamp: String,
     pub message: Option<String>,
+}
+
+/// Preprod retention settings for an organization.
+#[derive(Debug, Deserialize)]
+pub struct PreprodRetention {
+    /// Retention period for snapshots, in days.
+    pub snapshots: u64,
 }

@@ -1,13 +1,14 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
+use std::time::Duration;
 
 use anyhow::{Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use console::style;
 use http::header::AUTHORIZATION;
 use log::{debug, info, warn};
-use objectstore_client::{ClientBuilder, Usecase};
+use objectstore_client::{ClientBuilder, ExpirationPolicy, Usecase};
 use secrecy::ExposeSecret as _;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
@@ -301,6 +302,11 @@ fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
         Auth::Token(token) => token.raw().expose_secret(),
     };
 
+    let api = Api::current();
+    let retention = api.authenticated()?.fetch_preprod_retention(org)?;
+    let expiration =
+        ExpirationPolicy::TimeToLive(Duration::from_secs(retention.snapshots * 24 * 60 * 60));
+
     let url = get_objectstore_url(Api::current(), org)?;
     let client = ClientBuilder::new(url)
         .configure_reqwest(move |r| {
@@ -336,7 +342,12 @@ fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
 
         info!("Queueing {} as {obj_key}", image.path.display());
 
-        many_builder = many_builder.push(session.put(contents).key(&obj_key));
+        many_builder = many_builder.push(
+            session
+                .put(contents)
+                .key(&obj_key)
+                .expiration_policy(expiration),
+        );
     }
 
     let upload = runtime
