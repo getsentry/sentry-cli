@@ -966,6 +966,35 @@ impl AuthenticatedApi<'_> {
         }
         Ok(rv)
     }
+
+    /// Fetch organization details
+    pub fn fetch_organization_details(&self, org: &str) -> ApiResult<OrganizationDetails> {
+        let path = format!("/api/0/organizations/{}/", PathArg(org));
+        self.get(&path)?
+            .convert_rnf(ApiErrorKind::OrganizationNotFound)
+    }
+
+    /// Creates a preprod snapshot artifact for the given project.
+    pub fn create_preprod_snapshot<S: Serialize>(
+        &self,
+        org: &str,
+        project: &str,
+        body: &S,
+    ) -> ApiResult<ApiResponse> {
+        let path = format!(
+            "/projects/{}/{}/preprodartifacts/snapshots/",
+            PathArg(org),
+            PathArg(project)
+        );
+        self.post(&path, body)
+    }
+
+    /// Fetches preprod retention settings for the given organization.
+    pub fn fetch_preprod_retention(&self, org: &str) -> ApiResult<PreprodRetention> {
+        let path = format!("/api/0/organizations/{}/preprod/retention/", PathArg(org));
+        self.get(&path)?
+            .convert_rnf(ApiErrorKind::OrganizationNotFound)
+    }
 }
 
 /// Available datasets for fetching organization events
@@ -1767,6 +1796,18 @@ pub struct Organization {
 }
 
 #[derive(Deserialize, Debug)]
+pub struct OrganizationLinks {
+    #[serde(rename = "regionUrl")]
+    pub region_url: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct OrganizationDetails {
+    pub id: String,
+    pub links: OrganizationLinks,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct Team {
     #[expect(dead_code)]
     pub id: String,
@@ -1937,4 +1978,11 @@ pub struct LogEntry {
     pub severity: Option<String>,
     pub timestamp: String,
     pub message: Option<String>,
+}
+
+/// Preprod retention settings for an organization.
+#[derive(Debug, Deserialize)]
+pub struct PreprodRetention {
+    /// Retention period for snapshots, in days.
+    pub snapshots: u64,
 }
