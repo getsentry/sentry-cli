@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
 
@@ -8,8 +9,7 @@ use http::header::AUTHORIZATION;
 use log::{debug, info, warn};
 use objectstore_client::{ClientBuilder, Usecase};
 use secrecy::ExposeSecret as _;
-use serde::Deserialize;
-use serde_json::json;
+use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use walkdir::WalkDir;
 
@@ -50,11 +50,23 @@ pub fn make_command(command: Command) -> Command {
 }
 
 #[derive(Deserialize)]
+#[serde(rename_all = "camelCase")]
 struct CreateSnapshotResponse {
-    #[serde(rename = "artifactId")]
     artifact_id: String,
-    #[serde(rename = "imageCount")]
     image_count: u64,
+}
+
+#[derive(Serialize)]
+struct SnapshotsManifest {
+    app_id: String,
+    images: HashMap<String, ImageMetadata>,
+}
+
+#[derive(Serialize)]
+struct ImageMetadata {
+    file_name: String,
+    width: u32,
+    height: u32,
 }
 
 struct ImageInfo {
@@ -63,6 +75,24 @@ struct ImageInfo {
     hash: String,
     width: u32,
     height: u32,
+}
+
+impl ImageInfo {
+    fn into_manifest_entry(self) -> (String, ImageMetadata) {
+        let file_name = Path::new(&self.relative_path)
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .into_owned();
+        (
+            self.hash,
+            ImageMetadata {
+                file_name,
+                width: self.width,
+                height: self.height,
+            },
+        )
+    }
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -101,26 +131,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         if images.len() == 1 { "file" } else { "files" }
     );
 
-    // Build manifest from discovered images
-    let mut manifest = json!({
-        "app_id": app_id,
-        "images": {},
-    });
-
-    let images_obj = manifest["images"]
-        .as_object_mut()
-        .expect("images object was just created");
-    for image in &images {
-        images_obj.insert(
-            image.hash.clone(),
-            json!({
-                "file_name": image.relative_path,
-                "width": image.width,
-                "height": image.height,
-            }),
-        );
-    }
-
     // Upload image files to objectstore
     println!(
         "{} Uploading {} image {}",
@@ -129,6 +139,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         if images.len() == 1 { "file" } else { "files" }
     );
     upload_images(&images, &org, &project)?;
+
+    // Build manifest from discovered images
+    let manifest = SnapshotsManifest {
+        app_id: app_id.clone(),
+        images: images
+            .into_iter()
+            .map(ImageInfo::into_manifest_entry)
+            .collect(),
+    };
 
     // POST manifest to API
     println!("{} Creating snapshot...", style(">").dim());
@@ -154,52 +173,59 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 }
 
 fn collect_images(dir: &Path) -> Result<Vec<ImageInfo>> {
-    let mut images = Vec::new();
-
-    for entry in WalkDir::new(dir)
+    WalkDir::new(dir)
         .follow_links(true)
         .into_iter()
         .filter_entry(|e| !is_hidden(e.path()))
-        .filter_map(Result::ok)
-    {
-        if !entry.metadata()?.is_file() {
-            continue;
-        }
-
-        let path = entry.path();
-        if !is_image_file(path) {
-            continue;
-        }
-
-        let contents =
-            fs::read(path).with_context(|| format!("Failed to read: {}", path.display()))?;
-
-        let (width, height) = match read_image_dimensions(&contents) {
-            Some(dims) => dims,
-            None => {
-                warn!("Could not read dimensions from: {}", path.display());
-                continue;
+        .filter_map(|res| match res {
+            Ok(entry) => Some(entry),
+            Err(err) => {
+                warn!("Failed to access file during directory walk: {err}");
+                None
             }
-        };
+        })
+        .filter(|entry| entry.file_type().is_file())
+        .filter(|entry| is_image_file(entry.path()))
+        .map(|entry| collect_image_info(dir, entry.path()))
+        .filter_map(|result| result.transpose())
+        .collect()
+}
+/// Builds [`ImageInfo`] for a discovered image path during snapshot collection.
+///
+/// Returns `Ok(Some(ImageInfo))` when the file is readable and its dimensions can
+/// be parsed, `Ok(None)` when the file should be skipped (currently when image
+/// dimensions cannot be determined), and `Err` for hard failures such as I/O
+/// errors reading the file.
+fn collect_image_info(dir: &Path, path: &Path) -> Result<Option<ImageInfo>> {
+    let contents = fs::read(path).with_context(|| format!("Failed to read: {}", path.display()))?;
+    let (width, height) = match read_image_dimensions(&contents) {
+        Some(dims) => dims,
+        None => {
+            warn!("Could not read dimensions from: {}", path.display());
+            return Ok(None);
+        }
+    };
+    let relative = path
+        .strip_prefix(dir)
+        .unwrap_or(path)
+        .to_string_lossy()
+        .to_string();
 
-        let relative = path
-            .strip_prefix(dir)
-            .unwrap_or(path)
-            .to_string_lossy()
-            .to_string();
+    let hash = compute_sha256_hash(&contents);
+    Ok(Some(ImageInfo {
+        path: path.to_path_buf(),
+        relative_path: relative,
+        hash,
+        width,
+        height,
+    }))
+}
 
-        let hash = compute_sha256_hash(&contents);
-
-        images.push(ImageInfo {
-            path: path.to_path_buf(),
-            relative_path: relative,
-            hash,
-            width,
-            height,
-        });
-    }
-
-    Ok(images)
+fn compute_sha256_hash(data: &[u8]) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(data);
+    let result = hasher.finalize();
+    format!("{result:x}")
 }
 
 fn is_hidden(path: &Path) -> bool {
@@ -276,7 +302,7 @@ fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
     };
 
     let url = get_objectstore_url(Api::current(), org)?;
-    let client = ClientBuilder::new(url.clone())
+    let client = ClientBuilder::new(url)
         .configure_reqwest(move |r| {
             let mut headers = http::HeaderMap::new();
             headers.insert(
@@ -339,11 +365,4 @@ fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
             )
         }
     }
-}
-
-fn compute_sha256_hash(data: &[u8]) -> String {
-    let mut hasher = Sha256::new();
-    hasher.update(data);
-    let result = hasher.finalize();
-    format!("{result:x}")
 }
