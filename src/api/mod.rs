@@ -1796,8 +1796,8 @@ pub struct Organization {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
 pub struct OrganizationLinks {
-    #[serde(rename = "regionUrl")]
     pub region_url: String,
 }
 
