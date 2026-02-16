@@ -303,11 +303,12 @@ fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
     };
 
     let api = Api::current();
-    let retention = api.authenticated()?.fetch_preprod_retention(org)?;
+    let authenticated_api = api.authenticated()?;
+    let retention = authenticated_api.fetch_preprod_retention(org)?;
     let expiration =
         ExpirationPolicy::TimeToLive(Duration::from_secs(retention.snapshots * 24 * 60 * 60));
 
-    let url = get_objectstore_url(Api::current(), org)?;
+    let url = get_objectstore_url(&authenticated_api, org)?;
     let client = ClientBuilder::new(url)
         .configure_reqwest(move |r| {
             let mut headers = http::HeaderMap::new();
