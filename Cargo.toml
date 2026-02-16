@@ -42,7 +42,7 @@ java-properties = "2.0.0"
 lazy_static = "1.4.0"
 libc = "0.2.139"
 log = { version = "0.4.17", features = ["std"] }
-objectstore-client = { git =  "https://github.com/getsentry/objectstore.git", branch = "lcian/feat/rust-batch-client" }
+objectstore-client = { git =  "https://github.com/getsentry/objectstore.git", branch = "lcian/feat/rust-batch-client", default-features = false, features = ["native-tls"] }
 open = "3.2.0"
 parking_lot = "0.12.1"
 percent-encoding = "2.2.0"
