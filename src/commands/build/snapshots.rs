@@ -309,14 +309,12 @@ fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
         ExpirationPolicy::TimeToLive(Duration::from_secs(retention.snapshots * 24 * 60 * 60));
 
     let url = get_objectstore_url(&authenticated_api, org)?;
+    let header_value = HeaderValue::from_str(&format!("Bearer {token}"))
+        .context("Auth token contains invalid characters for HTTP header")?;
     let client = ClientBuilder::new(url)
         .configure_reqwest(move |r| {
             let mut headers = http::HeaderMap::new();
-            headers.insert(
-                AUTHORIZATION,
-                HeaderValue::from_str(&format!("Bearer {token}"))
-                    .expect("always a valid header value"),
-            );
+            headers.insert(AUTHORIZATION, header_value);
             r.default_headers(headers)
         })
         .build()?;
