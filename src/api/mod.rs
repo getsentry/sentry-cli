@@ -7,7 +7,7 @@ pub mod envelopes_api;
 
 mod connection_manager;
 mod data_types;
-mod encoding;
+pub mod encoding;
 mod errors;
 mod pagination;
 mod serialization;
@@ -969,6 +969,42 @@ impl AuthenticatedApi<'_> {
         }
         Ok(rv)
     }
+
+    /// Fetch organization details
+    pub fn fetch_organization_details(&self, org: &str) -> ApiResult<OrganizationDetails> {
+        let path = format!("/api/0/organizations/{}/", PathArg(org));
+        self.get(&path)?
+            .convert_rnf(ApiErrorKind::OrganizationNotFound)
+    }
+
+    /// Creates a preprod snapshot artifact for the given project.
+    pub fn create_preprod_snapshot<S: Serialize>(
+        &self,
+        org: &str,
+        project: &str,
+        body: &S,
+    ) -> ApiResult<ApiResponse> {
+        let path = format!(
+            "/projects/{}/{}/preprodartifacts/snapshots/",
+            PathArg(org),
+            PathArg(project)
+        );
+        self.post(&path, body)
+    }
+
+    /// Fetches upload options for snapshots.
+    pub fn fetch_snapshots_upload_options(
+        &self,
+        org: &str,
+        project: &str,
+    ) -> ApiResult<SnapshotsUploadOptions> {
+        let path = format!(
+            "/api/0/projects/{}/{}/preprodartifacts/snapshots/upload-options/",
+            PathArg(org),
+            PathArg(project)
+        );
+        self.get(&path)?.convert()
+    }
 }
 
 /// Available datasets for fetching organization events
@@ -1813,6 +1849,18 @@ pub struct Organization {
 }
 
 #[derive(Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct OrganizationLinks {
+    pub region_url: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub struct OrganizationDetails {
+    pub id: String,
+    pub links: OrganizationLinks,
+}
+
+#[derive(Deserialize, Debug)]
 pub struct Team {
     #[expect(dead_code)]
     pub id: String,
@@ -1983,4 +2031,20 @@ pub struct LogEntry {
     pub severity: Option<String>,
     pub timestamp: String,
     pub message: Option<String>,
+}
+
+/// Upload options returned by the snapshots upload-options endpoint.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SnapshotsUploadOptions {
+    pub objectstore: ObjectstoreUploadOptions,
+}
+
+/// Objectstore configuration for file uploads.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObjectstoreUploadOptions {
+    pub url: String,
+    pub scopes: Vec<(String, String)>,
+    pub expiration_policy: String,
 }
