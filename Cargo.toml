@@ -81,6 +81,7 @@ lru = "0.16.3"
 backon = { version = "1.5.2", features = ["std", "std-blocking-sleep"] }
 tokio = { version = "1.47", features = ["rt"] }
 http = "1.4.0"
+imagesize = "0.14.0"
 
 [dev-dependencies]
 assert_cmd = "2.0.11"

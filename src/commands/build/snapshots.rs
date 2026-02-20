@@ -197,10 +197,10 @@ fn collect_images(dir: &Path) -> Result<Vec<ImageInfo>> {
 /// errors reading the file.
 fn collect_image_info(dir: &Path, path: &Path) -> Result<Option<ImageInfo>> {
     let contents = fs::read(path).with_context(|| format!("Failed to read: {}", path.display()))?;
-    let (width, height) = match read_image_dimensions(&contents) {
-        Some(dims) => dims,
-        None => {
-            warn!("Could not read dimensions from: {}", path.display());
+    let (width, height) = match imagesize::size(path) {
+        Ok(dims) => (dims.width as u32, dims.height as u32),
+        Err(err) => {
+            warn!("Could not read dimensions from {}: {err}", path.display());
             return Ok(None);
         }
     };
@@ -241,55 +241,6 @@ fn is_image_file(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-/// Read image dimensions from file bytes. Supports PNG and JPEG.
-fn read_image_dimensions(data: &[u8]) -> Option<(u32, u32)> {
-    // PNG: signature followed by IHDR chunk with width/height
-    if data.len() >= 24 && data[0..8] == *b"\x89PNG\r\n\x1a\n" {
-        let width = u32::from_be_bytes([data[16], data[17], data[18], data[19]]);
-        let height = u32::from_be_bytes([data[20], data[21], data[22], data[23]]);
-        return Some((width, height));
-    }
-
-    // JPEG: starts with FF D8, scan for SOF marker
-    if data.len() >= 2 && data[0] == 0xFF && data[1] == 0xD8 {
-        return read_jpeg_dimensions(data);
-    }
-
-    None
-}
-
-fn read_jpeg_dimensions(data: &[u8]) -> Option<(u32, u32)> {
-    let mut i = 2;
-    while i + 1 < data.len() {
-        if data[i] != 0xFF {
-            i += 1;
-            continue;
-        }
-
-        let marker = data[i + 1];
-        i += 2;
-
-        // SOF markers: C0-CF except C4 (DHT), C8 (JPG extension), and CC (DAC)
-        if (0xC0..=0xCF).contains(&marker) && marker != 0xC4 && marker != 0xC8 && marker != 0xCC {
-            if i + 7 < data.len() {
-                let height = u16::from_be_bytes([data[i + 3], data[i + 4]]) as u32;
-                let width = u16::from_be_bytes([data[i + 5], data[i + 6]]) as u32;
-                return Some((width, height));
-            }
-            return None;
-        }
-
-        // Skip segment using its length field
-        if i + 1 < data.len() {
-            let length = u16::from_be_bytes([data[i], data[i + 1]]) as usize;
-            i += length;
-        } else {
-            break;
-        }
-    }
-
-    None
-}
 
 fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
     let api = Api::current();
