@@ -994,7 +994,7 @@ impl AuthenticatedApi<'_> {
         &self,
         org: &str,
         project: &str,
-    ) -> ApiResult<SnapshotUploadOptions> {
+    ) -> ApiResult<SnapshotsUploadOptions> {
         let path = format!(
             "/api/0/projects/{}/{}/preprodartifacts/snapshots/upload-options/",
             PathArg(org),
@@ -1990,7 +1990,7 @@ pub struct LogEntry {
 /// Upload options returned by the snapshots upload-options endpoint.
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
-pub struct SnapshotUploadOptions {
+pub struct SnapshotsUploadOptions {
     pub objectstore: ObjectstoreUploadOptions,
 }
 
