@@ -5,6 +5,7 @@
 ### Fixes
 
 - The `dart-symbol-map upload` command now correctly resolves the organization from the auth token payload ([#3065](https://github.com/getsentry/sentry-cli/pull/3065)).
+- Retry DNS resolution failures for `sentry.io` requests to reduce intermittent failures for some users ([#3085](https://github.com/getsentry/sentry-cli/pull/3085))
 
 ## 3.2.0
 

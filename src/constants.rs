@@ -8,6 +8,9 @@ pub const APP_NAME: &str = "sentrycli";
 /// The default API URL
 pub const DEFAULT_URL: &str = "https://sentry.io/";
 
+/// The default API host
+pub const DEFAULT_HOST: &str = "sentry.io";
+
 /// The version of the library
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 
