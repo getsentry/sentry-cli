@@ -989,11 +989,18 @@ impl AuthenticatedApi<'_> {
         self.post(&path, body)
     }
 
-    /// Fetches preprod retention settings for the given organization.
-    pub fn fetch_preprod_retention(&self, org: &str) -> ApiResult<PreprodRetention> {
-        let path = format!("/api/0/organizations/{}/preprod/retention/", PathArg(org));
-        self.get(&path)?
-            .convert_rnf(ApiErrorKind::OrganizationNotFound)
+    /// Fetches upload options for snapshots.
+    pub fn fetch_snapshots_upload_options(
+        &self,
+        org: &str,
+        project: &str,
+    ) -> ApiResult<SnapshotUploadOptions> {
+        let path = format!(
+            "/api/0/projects/{}/{}/preprodartifacts/snapshots/upload-options/",
+            PathArg(org),
+            PathArg(project)
+        );
+        self.get(&path)?.convert()
     }
 }
 
@@ -1980,9 +1987,18 @@ pub struct LogEntry {
     pub message: Option<String>,
 }
 
-/// Preprod retention settings for an organization.
+/// Upload options returned by the snapshots upload-options endpoint.
 #[derive(Debug, Deserialize)]
-pub struct PreprodRetention {
-    /// Retention period for snapshots, in days.
-    pub snapshots: u64,
+#[serde(rename_all = "camelCase")]
+pub struct SnapshotUploadOptions {
+    pub objectstore: ObjectstoreUploadOptions,
+}
+
+/// Objectstore configuration for file uploads.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObjectstoreUploadOptions {
+    pub url: String,
+    pub scopes: Vec<(String, String)>,
+    pub expiration_policy: String,
 }

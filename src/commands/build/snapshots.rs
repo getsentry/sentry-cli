@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::Path;
-use std::time::Duration;
+use std::str::FromStr as _;
 
 use anyhow::{Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
@@ -16,9 +16,7 @@ use walkdir::WalkDir;
 
 use crate::api::Api;
 use crate::config::{Auth, Config};
-use crate::utils::api::get_org_project_id;
 use crate::utils::args::ArgExt as _;
-use crate::utils::objectstore::get_objectstore_url;
 use http::{self, HeaderValue};
 
 const EXPERIMENTAL_WARNING: &str =
@@ -294,35 +292,26 @@ fn read_jpeg_dimensions(data: &[u8]) -> Option<(u32, u32)> {
 }
 
 fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
-    let config = Config::current();
-    let auth = config
-        .get_auth()
-        .ok_or_else(|| anyhow::anyhow!("Authentication required"))?;
-    let token = match auth {
-        Auth::Token(token) => token.raw().expose_secret(),
-    };
-
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
-    let retention = authenticated_api.fetch_preprod_retention(org)?;
-    let expiration =
-        ExpirationPolicy::TimeToLive(Duration::from_secs(retention.snapshots * 24 * 60 * 60));
+    let options = authenticated_api.fetch_snapshots_upload_options(org, project)?;
 
-    let url = get_objectstore_url(&authenticated_api, org)?;
-    let header_value = HeaderValue::from_str(&format!("Bearer {token}"))
-        .context("Auth token contains invalid characters for HTTP header")?;
-    let client = ClientBuilder::new(url)
+    let expiration = ExpirationPolicy::from_str(&options.objectstore.expiration_policy)
+        .context("Failed to parse expiration policy from upload options")?;
+
+    let client = ClientBuilder::new(options.objectstore.url)
         .configure_reqwest(move |r| {
             let mut headers = http::HeaderMap::new();
-            headers.insert(AUTHORIZATION, header_value);
+            headers.insert(AUTHORIZATION, HeaderValue::from_static("placeholder")); // TODO: get token from upload options endpoint
             r.default_headers(headers)
         })
         .build()?;
 
-    let (org_id, project_id) = get_org_project_id(Api::current(), org, project)?;
-    let session = Usecase::new("preprod")
-        .for_project(org_id, project_id)
-        .session(&client)?;
+    let mut scope = Usecase::new("preprod").scope();
+    for (key, value) in &options.objectstore.scopes {
+        scope = scope.push(key, value);
+    }
+    let session = scope.session(&client)?;
 
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
@@ -337,14 +326,12 @@ fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
         let contents = fs::read(&image.path)
             .with_context(|| format!("Failed to read image: {}", image.path.display()))?;
 
-        let obj_key = format!("{org_id}/{project_id}/{}", image.hash);
-
-        info!("Queueing {} as {obj_key}", image.path.display());
+        info!("Queueing {} as {}", image.path.display(), image.hash);
 
         many_builder = many_builder.push(
             session
                 .put(contents)
-                .key(&obj_key)
+                .key(&image.hash)
                 .expiration_policy(expiration),
         );
     }

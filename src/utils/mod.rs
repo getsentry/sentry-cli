@@ -1,6 +1,5 @@
 //! Various utility functionality.
 pub mod android;
-pub mod api;
 pub mod args;
 pub mod auth_token;
 pub mod build;
@@ -17,7 +16,6 @@ pub mod fs;
 pub mod http;
 pub mod logging;
 pub mod non_empty;
-pub mod objectstore;
 pub mod progress;
 pub mod proguard;
 pub mod releases;
