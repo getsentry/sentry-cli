@@ -9,8 +9,9 @@ on:
         description: Force a release even when there are release-blockers (optional)
         required: false
       merge_target:
-        description: Target branch to merge into. Uses the default branch as a fallback (optional)
+        description: Target branch to merge into. Defaults to v2 for this branch
         required: false
+        default: v2
 jobs:
   release:
     runs-on: ubuntu-24.04
@@ -33,4 +34,4 @@ jobs:
         with:
           version: ${{ github.event.inputs.version }}
           force: ${{ github.event.inputs.force }}
-          merge_target: ${{ github.event.inputs.merge_target }}
+          merge_target: ${{ github.event.inputs.merge_target || 'v2' }}
