@@ -47,7 +47,7 @@ jobs:
     if: ${{ github.event_name == 'pull_request' }}
     steps:
       - name: Run Danger
-        uses: getsentry/github-workflows/danger@95603f4efe938315ff0dd427a1f2bb40b1889a92 # 3.2.0
+        uses: getsentry/github-workflows/danger@26f565c05d0dd49f703d238706b775883037d76b # 3.3.0
 
   required:
     name: Check required jobs
