@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.2.2
 
 ### Fixes
 
