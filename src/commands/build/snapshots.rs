@@ -55,15 +55,17 @@ struct CreateSnapshotResponse {
     image_count: u64,
 }
 
+// Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py
 #[derive(Serialize)]
 struct SnapshotsManifest {
     app_id: String,
     images: HashMap<String, ImageMetadata>,
 }
 
+// Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py
 #[derive(Serialize)]
 struct ImageMetadata {
-    file_name: String,
+    image_file_name: String,
     width: u32,
     height: u32,
 }
@@ -78,7 +80,7 @@ struct ImageInfo {
 
 impl ImageInfo {
     fn into_manifest_entry(self) -> (String, ImageMetadata) {
-        let file_name = Path::new(&self.relative_path)
+        let image_file_name = Path::new(&self.relative_path)
             .file_name()
             .unwrap_or_default()
             .to_string_lossy()
@@ -86,7 +88,7 @@ impl ImageInfo {
         (
             self.hash,
             ImageMetadata {
-                file_name,
+                image_file_name,
                 width: self.width,
                 height: self.height,
             },
@@ -240,7 +242,6 @@ fn is_image_file(path: &Path) -> bool {
         .map(|ext| IMAGE_EXTENSIONS.iter().any(|e| ext.eq_ignore_ascii_case(e)))
         .unwrap_or(false)
 }
-
 
 fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
     let api = Api::current();
