@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Updated `minimatch` dependency to fix a vulnerability ([#3153](https://github.com/getsentry/sentry-cli/pull/3153))
+
 ## 3.2.1
 
 ### Fixes
