@@ -72,27 +72,8 @@ struct ImageMetadata {
 struct ImageInfo {
     path: std::path::PathBuf,
     relative_path: String,
-    hash: String,
     width: u32,
     height: u32,
-}
-
-impl ImageInfo {
-    fn into_manifest_entry(self) -> (String, ImageMetadata) {
-        let image_file_name = Path::new(&self.relative_path)
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .into_owned();
-        (
-            self.hash,
-            ImageMetadata {
-                image_file_name,
-                width: self.width,
-                height: self.height,
-            },
-        )
-    }
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -138,15 +119,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         style(images.len()).yellow(),
         if images.len() == 1 { "file" } else { "files" }
     );
-    upload_images(&images, &org, &project)?;
+    let manifest_entries = upload_images(images, &org, &project)?;
 
     // Build manifest from discovered images
     let manifest = SnapshotsManifest {
         app_id: app_id.clone(),
-        images: images
-            .into_iter()
-            .map(ImageInfo::into_manifest_entry)
-            .collect(),
+        images: manifest_entries,
     };
 
     // POST manifest to API
@@ -192,12 +170,10 @@ fn collect_images(dir: &Path) -> Result<Vec<ImageInfo>> {
 }
 /// Builds [`ImageInfo`] for a discovered image path during snapshot collection.
 ///
-/// Returns `Ok(Some(ImageInfo))` when the file is readable and its dimensions can
-/// be parsed, `Ok(None)` when the file should be skipped (currently when image
-/// dimensions cannot be determined), and `Err` for hard failures such as I/O
-/// errors reading the file.
+/// Returns `Ok(Some(ImageInfo))` when the image dimensions can be parsed,
+/// `Ok(None)` when the file should be skipped (e.g. when dimensions cannot be
+/// determined), and `Err` for hard failures.
 fn collect_image_info(dir: &Path, path: &Path) -> Result<Option<ImageInfo>> {
-    let contents = fs::read(path).with_context(|| format!("Failed to read: {}", path.display()))?;
     let (width, height) = match imagesize::size(path) {
         Ok(dims) => (dims.width as u32, dims.height as u32),
         Err(err) => {
@@ -211,11 +187,9 @@ fn collect_image_info(dir: &Path, path: &Path) -> Result<Option<ImageInfo>> {
         .to_string_lossy()
         .to_string();
 
-    let hash = compute_sha256_hash(&contents);
     Ok(Some(ImageInfo {
         path: path.to_path_buf(),
         relative_path: relative,
-        hash,
         width,
         height,
     }))
@@ -242,7 +216,11 @@ fn is_image_file(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
-fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
+fn upload_images(
+    images: Vec<ImageInfo>,
+    org: &str,
+    project: &str,
+) -> Result<HashMap<String, ImageMetadata>> {
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
     let options = authenticated_api.fetch_snapshots_upload_options(org, project)?;
@@ -270,21 +248,35 @@ fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
         .context("Failed to create tokio runtime")?;
 
     let mut many_builder = session.many();
+    let mut manifest_entries = HashMap::new();
+    let image_count = images.len();
 
     for image in images {
         debug!("Processing image: {}", image.path.display());
 
         let contents = fs::read(&image.path)
             .with_context(|| format!("Failed to read image: {}", image.path.display()))?;
+        let hash = compute_sha256_hash(&contents);
 
-        info!("Queueing {} as {}", image.path.display(), image.hash);
+        info!("Queueing {} as {}", image.relative_path, hash);
 
         many_builder = many_builder.push(
             session
                 .put(contents)
-                .key(&image.hash)
+                .key(&hash)
                 .expiration_policy(expiration),
         );
+
+        let image_file_name = Path::new(&image.relative_path)
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .into_owned();
+        manifest_entries.insert(hash, ImageMetadata {
+            image_file_name,
+            width: image.width,
+            height: image.height,
+        });
     }
 
     let upload = runtime
@@ -296,10 +288,10 @@ fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
             println!(
                 "{} Uploaded {} image {}",
                 style(">").dim(),
-                style(images.len()).yellow(),
-                if images.len() == 1 { "file" } else { "files" }
+                style(image_count).yellow(),
+                if image_count == 1 { "file" } else { "files" }
             );
-            Ok(())
+            Ok(manifest_entries)
         }
         Err(errors) => {
             eprintln!("There were errors uploading images:");
@@ -309,7 +301,7 @@ fn upload_images(images: &[ImageInfo], org: &str, project: &str) -> Result<()> {
             anyhow::bail!(
                 "Failed to upload {} out of {} images",
                 errors.len(),
-                images.len()
+                image_count
             )
         }
     }
