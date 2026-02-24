@@ -7,7 +7,7 @@ pub mod envelopes_api;
 
 mod connection_manager;
 mod data_types;
-pub mod encoding;
+mod encoding;
 mod errors;
 mod pagination;
 mod serialization;
