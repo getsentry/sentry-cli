@@ -99,7 +99,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     debug!("Project: {project}");
 
     // Collect image files and read their dimensions
-    let images = collect_images(dir_path)?;
+    let images = collect_images(dir_path);
     if images.is_empty() {
         println!("{} No image files found", style("!").yellow());
         return Ok(());
@@ -150,7 +150,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-fn collect_images(dir: &Path) -> Result<Vec<ImageInfo>> {
+fn collect_images(dir: &Path) -> Vec<ImageInfo> {
     WalkDir::new(dir)
         .follow_links(true)
         .into_iter()
@@ -164,21 +164,20 @@ fn collect_images(dir: &Path) -> Result<Vec<ImageInfo>> {
         })
         .filter(|entry| entry.file_type().is_file())
         .filter(|entry| is_image_file(entry.path()))
-        .map(|entry| collect_image_info(dir, entry.path()))
-        .filter_map(|result| result.transpose())
+        .filter_map(|entry| collect_image_info(dir, entry.path()))
         .collect()
 }
+
 /// Builds [`ImageInfo`] for a discovered image path during snapshot collection.
 ///
-/// Returns `Ok(Some(ImageInfo))` when the image dimensions can be parsed,
-/// `Ok(None)` when the file should be skipped (e.g. when dimensions cannot be
-/// determined), and `Err` for hard failures.
-fn collect_image_info(dir: &Path, path: &Path) -> Result<Option<ImageInfo>> {
+/// Returns `Some(ImageInfo)` when the image dimensions can be parsed, or `None`
+/// when the file should be skipped (e.g. when dimensions cannot be determined).
+fn collect_image_info(dir: &Path, path: &Path) -> Option<ImageInfo> {
     let (width, height) = match imagesize::size(path) {
         Ok(dims) => (dims.width as u32, dims.height as u32),
         Err(err) => {
             warn!("Could not read dimensions from {}: {err}", path.display());
-            return Ok(None);
+            return None;
         }
     };
     let relative = path
@@ -187,12 +186,12 @@ fn collect_image_info(dir: &Path, path: &Path) -> Result<Option<ImageInfo>> {
         .to_string_lossy()
         .to_string();
 
-    Ok(Some(ImageInfo {
+    Some(ImageInfo {
         path: path.to_path_buf(),
         relative_path: relative,
         width,
         height,
-    }))
+    })
 }
 
 fn compute_sha256_hash(data: &[u8]) -> String {
@@ -258,7 +257,7 @@ fn upload_images(
             .with_context(|| format!("Failed to read image: {}", image.path.display()))?;
         let hash = compute_sha256_hash(&contents);
 
-        info!("Queueing {} as {}", image.relative_path, hash);
+        info!("Queueing {} as {hash}", image.relative_path);
 
         many_builder = many_builder.push(
             session
@@ -301,11 +300,8 @@ fn upload_images(
             for error in &errors {
                 eprintln!("  {}", style(error).red());
             }
-            anyhow::bail!(
-                "Failed to upload {} out of {} images",
-                errors.len(),
-                image_count
-            )
+            let error_count = errors.len();
+            anyhow::bail!("Failed to upload {error_count} out of {image_count} images")
         }
     }
 }
