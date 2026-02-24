@@ -9,13 +9,12 @@ use console::style;
 use http::header::AUTHORIZATION;
 use log::{debug, info, warn};
 use objectstore_client::{ClientBuilder, ExpirationPolicy, Usecase};
-use secrecy::ExposeSecret as _;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use walkdir::WalkDir;
 
 use crate::api::Api;
-use crate::config::{Auth, Config};
+use crate::config::Config;
 use crate::utils::args::ArgExt as _;
 use http::{self, HeaderValue};
 

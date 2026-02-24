@@ -967,13 +967,6 @@ impl AuthenticatedApi<'_> {
         Ok(rv)
     }
 
-    /// Fetch organization details
-    pub fn fetch_organization_details(&self, org: &str) -> ApiResult<OrganizationDetails> {
-        let path = format!("/api/0/organizations/{}/", PathArg(org));
-        self.get(&path)?
-            .convert_rnf(ApiErrorKind::OrganizationNotFound)
-    }
-
     /// Creates a preprod snapshot artifact for the given project.
     pub fn create_preprod_snapshot<S: Serialize>(
         &self,
@@ -1800,18 +1793,6 @@ pub struct Organization {
     pub require_email_verification: bool,
     #[expect(dead_code)]
     pub features: Vec<String>,
-}
-
-#[derive(Deserialize, Debug)]
-#[serde(rename_all = "camelCase")]
-pub struct OrganizationLinks {
-    pub region_url: String,
-}
-
-#[derive(Deserialize, Debug)]
-pub struct OrganizationDetails {
-    pub id: String,
-    pub links: OrganizationLinks,
 }
 
 #[derive(Deserialize, Debug)]
