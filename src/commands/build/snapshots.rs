@@ -272,11 +272,14 @@ fn upload_images(
             .unwrap_or_default()
             .to_string_lossy()
             .into_owned();
-        manifest_entries.insert(hash, ImageMetadata {
-            image_file_name,
-            width: image.width,
-            height: image.height,
-        });
+        manifest_entries.insert(
+            hash,
+            ImageMetadata {
+                image_file_name,
+                width: image.width,
+                height: image.height,
+            },
+        );
     }
 
     let upload = runtime
