@@ -448,6 +448,14 @@ impl AuthenticatedApi<'_> {
         self.api.request(method, url, None)
     }
 
+    /// Returns the auth info for use in external service authorization.
+    pub fn get_auth(&self) -> &Auth {
+        self.api
+            .config
+            .get_auth()
+            .expect("AuthenticatedApi can only be constructed when auth exists")
+    }
+
     // High-level method implementations
 
     /// Performs an API request to verify the authentication status of the

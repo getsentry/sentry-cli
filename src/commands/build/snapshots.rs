@@ -13,8 +13,10 @@ use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use walkdir::WalkDir;
 
+use secrecy::ExposeSecret as _;
+
 use crate::api::Api;
-use crate::config::Config;
+use crate::config::{Auth, Config};
 use crate::utils::args::ArgExt as _;
 use http::{self, HeaderValue};
 
@@ -227,10 +229,18 @@ fn upload_images(
     let expiration = ExpirationPolicy::from_str(&options.objectstore.expiration_policy)
         .context("Failed to parse expiration policy from upload options")?;
 
+    // TODO: replace with auth from `ObjectstoreUploadOptions` when available
+    let auth = match *authenticated_api.get_auth() {
+        Auth::Token(ref token) => {
+            format!("Bearer {}", token.raw().expose_secret())
+        }
+    };
+    let auth = HeaderValue::from_str(&auth).context("Invalid auth token")?;
+
     let client = ClientBuilder::new(options.objectstore.url)
         .configure_reqwest(move |r| {
             let mut headers = http::HeaderMap::new();
-            headers.insert(AUTHORIZATION, HeaderValue::from_static("placeholder")); // TODO: get token from upload options endpoint
+            headers.insert(AUTHORIZATION, auth);
             r.default_headers(headers)
         })
         .build()?;
