@@ -6,7 +6,6 @@ use std::str::FromStr as _;
 use anyhow::{Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use console::style;
-use http::header::AUTHORIZATION;
 use log::{debug, info, warn};
 use objectstore_client::{ClientBuilder, ExpirationPolicy, Usecase};
 use serde::{Deserialize, Serialize};
@@ -18,7 +17,6 @@ use secrecy::ExposeSecret as _;
 use crate::api::Api;
 use crate::config::{Auth, Config};
 use crate::utils::args::ArgExt as _;
-use http::{self, HeaderValue};
 
 const EXPERIMENTAL_WARNING: &str =
     "[EXPERIMENTAL] The \"build snapshots\" command is experimental. \
@@ -229,19 +227,13 @@ fn upload_images(
     let expiration = ExpirationPolicy::from_str(&options.objectstore.expiration_policy)
         .context("Failed to parse expiration policy from upload options")?;
 
-    // TODO: replace with auth from `ObjectstoreUploadOptions` when available
-    let auth = match *authenticated_api.get_auth() {
-        Auth::Token(ref token) => {
-            format!("Bearer {}", token.raw().expose_secret())
-        }
-    };
-    let auth = HeaderValue::from_str(&auth).context("Invalid auth token")?;
-
     let client = ClientBuilder::new(options.objectstore.url)
-        .configure_reqwest(move |r| {
-            let mut headers = http::HeaderMap::new();
-            headers.insert(AUTHORIZATION, auth);
-            r.default_headers(headers)
+        .token({
+            // TODO: replace with auth from `ObjectstoreUploadOptions` when appropriate
+            let auth = match authenticated_api.get_auth() {
+                Auth::Token(token) => token.raw().expose_secret().to_owned(),
+            };
+            auth
         })
         .build()?;
 
@@ -291,11 +283,9 @@ fn upload_images(
         );
     }
 
-    let upload = runtime
-        .block_on(async { many_builder.send().await })
-        .context("Failed to upload image files")?;
+    let result = runtime.block_on(async { many_builder.send().error_for_failures().await });
 
-    match upload.error_for_failures() {
+    match result {
         Ok(()) => {
             println!(
                 "{} Uploaded {} image {}",
@@ -307,10 +297,11 @@ fn upload_images(
         }
         Err(errors) => {
             eprintln!("There were errors uploading images:");
-            for error in &errors {
+            let mut error_count = 0;
+            for error in errors {
                 eprintln!("  {}", style(error).red());
+                error_count += 1;
             }
-            let error_count = errors.len();
             anyhow::bail!("Failed to upload {error_count} out of {image_count} images")
         }
     }
