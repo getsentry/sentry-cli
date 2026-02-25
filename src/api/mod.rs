@@ -449,7 +449,7 @@ impl AuthenticatedApi<'_> {
     }
 
     /// Returns the auth info for use in external service authorization.
-    pub fn get_auth(&self) -> &Auth {
+    pub fn auth(&self) -> &Auth {
         self.api
             .config
             .get_auth()

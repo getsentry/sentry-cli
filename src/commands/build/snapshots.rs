@@ -207,7 +207,7 @@ fn upload_images(
     let client = ClientBuilder::new(options.objectstore.url)
         .token({
             // TODO: replace with auth from `ObjectstoreUploadOptions` when appropriate
-            let auth = match authenticated_api.get_auth() {
+            let auth = match authenticated_api.auth() {
                 Auth::Token(token) => token.raw().expose_secret().to_owned(),
             };
             auth
