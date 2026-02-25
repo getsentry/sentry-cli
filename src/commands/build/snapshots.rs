@@ -9,9 +9,8 @@ use console::style;
 use log::{debug, info, warn};
 use objectstore_client::{ClientBuilder, ExpirationPolicy, Usecase};
 use sha2::{Digest as _, Sha256};
-use walkdir::WalkDir;
-
 use secrecy::ExposeSecret as _;
+use walkdir::WalkDir;
 
 use crate::api::{Api, CreateSnapshotResponse, ImageMetadata, SnapshotsManifest};
 use crate::config::{Auth, Config};
