@@ -8,8 +8,8 @@ use clap::{Arg, ArgMatches, Command};
 use console::style;
 use log::{debug, info, warn};
 use objectstore_client::{ClientBuilder, ExpirationPolicy, Usecase};
-use sha2::{Digest as _, Sha256};
 use secrecy::ExposeSecret as _;
+use sha2::{Digest as _, Sha256};
 use walkdir::WalkDir;
 
 use crate::api::{Api, CreateSnapshotResponse, ImageMetadata, SnapshotsManifest};
@@ -47,7 +47,7 @@ pub fn make_command(command: Command) -> Command {
 
 struct ImageInfo {
     path: std::path::PathBuf,
-    relative_path: String,
+    relative_path: std::path::PathBuf,
     width: u32,
     height: u32,
 }
@@ -156,11 +156,7 @@ fn collect_image_info(dir: &Path, path: &Path) -> Option<ImageInfo> {
             return None;
         }
     };
-    let relative = path
-        .strip_prefix(dir)
-        .unwrap_or(path)
-        .to_string_lossy()
-        .to_string();
+    let relative = path.strip_prefix(dir).unwrap_or(path).to_path_buf();
 
     Some(ImageInfo {
         path: path.to_path_buf(),
@@ -235,7 +231,7 @@ fn upload_images(
             .with_context(|| format!("Failed to read image: {}", image.path.display()))?;
         let hash = compute_sha256_hash(&contents);
 
-        info!("Queueing {} as {hash}", image.relative_path);
+        info!("Queueing {} as {hash}", image.relative_path.display());
 
         many_builder = many_builder.push(
             session
@@ -244,7 +240,8 @@ fn upload_images(
                 .expiration_policy(expiration),
         );
 
-        let image_file_name = Path::new(&image.relative_path)
+        let image_file_name = image
+            .relative_path
             .file_name()
             .unwrap_or_default()
             .to_string_lossy()
