@@ -8,13 +8,12 @@ use clap::{Arg, ArgMatches, Command};
 use console::style;
 use log::{debug, info, warn};
 use objectstore_client::{ClientBuilder, ExpirationPolicy, Usecase};
-use serde::{Deserialize, Serialize};
 use sha2::{Digest as _, Sha256};
 use walkdir::WalkDir;
 
 use secrecy::ExposeSecret as _;
 
-use crate::api::Api;
+use crate::api::{Api, CreateSnapshotResponse, ImageMetadata, SnapshotsManifest};
 use crate::config::{Auth, Config};
 use crate::utils::args::ArgExt as _;
 
@@ -45,28 +44,6 @@ pub fn make_command(command: Command) -> Command {
                 .help("The application identifier.")
                 .required(true),
         )
-}
-
-#[derive(Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct CreateSnapshotResponse {
-    artifact_id: String,
-    image_count: u64,
-}
-
-// Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py
-#[derive(Serialize)]
-struct SnapshotsManifest {
-    app_id: String,
-    images: HashMap<String, ImageMetadata>,
-}
-
-// Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py
-#[derive(Serialize)]
-struct ImageMetadata {
-    image_file_name: String,
-    width: u32,
-    height: u32,
 }
 
 struct ImageInfo {
