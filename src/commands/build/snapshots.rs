@@ -130,7 +130,7 @@ fn collect_images(dir: &Path) -> Vec<ImageInfo> {
     WalkDir::new(dir)
         .follow_links(true)
         .into_iter()
-        .filter_entry(|e| !is_hidden(e.path()))
+        .filter_entry(|e| !is_hidden(dir, e.path()))
         .filter_map(|res| match res {
             Ok(entry) => Some(entry),
             Err(err) => {
@@ -173,10 +173,12 @@ fn compute_sha256_hash(data: &[u8]) -> String {
     format!("{result:x}")
 }
 
-fn is_hidden(path: &Path) -> bool {
-    path.file_name()
-        .map(|name| name.to_string_lossy().starts_with('.'))
-        .unwrap_or(false)
+fn is_hidden(root: &Path, path: &Path) -> bool {
+    path != root
+        && path
+            .file_name()
+            .map(|name| name.to_string_lossy().starts_with('.'))
+            .unwrap_or(false)
 }
 
 fn is_image_file(path: &Path) -> bool {
