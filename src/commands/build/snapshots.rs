@@ -175,8 +175,7 @@ fn compute_sha256_hash(data: &[u8]) -> String {
 
 fn is_hidden(path: &Path) -> bool {
     path.file_name()
-        .and_then(|name| name.to_str())
-        .map(|name| name.starts_with('.'))
+        .map(|name| name.to_string_lossy().starts_with('.'))
         .unwrap_or(false)
 }
 
