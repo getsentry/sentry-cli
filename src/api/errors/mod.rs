@@ -14,17 +14,12 @@ pub(super) struct ProjectRenamedError(pub(super) String);
 pub(super) type ApiResult<T> = Result<T, ApiError>;
 
 #[derive(Debug, thiserror::Error)]
-#[error("request failed with retryable status code {}", .body.status)]
-pub(super) struct RetryError {
-    body: ApiResponse,
-}
-
-impl RetryError {
-    pub fn new(body: ApiResponse) -> Self {
-        Self { body }
-    }
-
-    pub fn into_body(self) -> ApiResponse {
-        self.body
-    }
+pub(super) enum RetryError {
+    #[error("request failed with retryable status code {}", body.status)]
+    Status { body: ApiResponse },
+    #[error("request failed with retryable error: {source}")]
+    ApiError {
+        #[from]
+        source: ApiError,
+    },
 }

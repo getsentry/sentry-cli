@@ -4,7 +4,7 @@ use std::fmt::{Display, Formatter, Result as FmtResult};
 use std::path::Path;
 
 use anyhow::{bail, Context as _, Result};
-use clap::Args;
+use clap::{Arg, ArgMatches, Command};
 
 use crate::api::Api;
 use crate::config::Config;
@@ -42,32 +42,37 @@ impl Assemblable for DartSymbolMapObject<'_> {
     }
 }
 
-#[derive(Args, Clone)]
-pub(crate) struct DartSymbolMapUploadArgs {
-    #[arg(short = 'o', long = "org")]
-    #[arg(help = "The organization ID or slug.")]
-    pub(super) org: Option<String>,
+const MAPPING_ARG: &str = "mapping";
+const DEBUG_FILE_ARG: &str = "debug_file";
 
-    #[arg(short = 'p', long = "project")]
-    #[arg(help = "The project ID or slug.")]
-    pub(super) project: Option<String>,
-
-    #[arg(value_name = "MAPPING")]
-    #[arg(
-        help = "Path to the dartsymbolmap JSON file (e.g. dartsymbolmap.json). Must be a JSON array of strings with an even number of entries (pairs)."
-    )]
-    pub(super) mapping: String,
-
-    #[arg(value_name = "DEBUG_FILE")]
-    #[arg(
-        help = "Path to the corresponding debug file to extract the Debug ID from. The file must contain exactly one Debug ID."
-    )]
-    pub(super) debug_file: String,
+pub(super) fn make_command(command: Command) -> Command {
+    command
+        .about("Upload a Dart/Flutter symbol map (dartsymbolmap) for deobfuscating Dart exception types.")
+        .long_about(
+            "Upload a Dart/Flutter symbol map (dartsymbolmap) for deobfuscating Dart exception types.{n}{n}Examples:{n}  sentry-cli dart-symbol-map upload --org my-org --project my-proj path/to/dartsymbolmap.json path/to/debug/file{n}{n}The mapping must be a JSON array of strings with an even number of entries (pairs).{n}The debug file must contain exactly one Debug ID. {n}{n}\
+    This command is supported on Sentry SaaS and self-hosted versions ≥25.8.0.",
+        )
+        .arg(
+            Arg::new(MAPPING_ARG)
+                .value_name("MAPPING")
+                .required(true)
+                .help("Path to the dartsymbolmap JSON file (e.g. dartsymbolmap.json). Must be a JSON array of strings with an even number of entries (pairs)."),
+        )
+        .arg(
+            Arg::new(DEBUG_FILE_ARG)
+                .value_name("DEBUG_FILE")
+                .required(true)
+                .help("Path to the corresponding debug file to extract the Debug ID from. The file must contain exactly one Debug ID."),
+        )
 }
 
-pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
-    let mapping_path = &args.mapping;
-    let debug_file_path = &args.debug_file;
+pub(super) fn execute(matches: &ArgMatches) -> Result<()> {
+    let mapping_path = matches
+        .get_one::<String>(MAPPING_ARG)
+        .expect("required by clap");
+    let debug_file_path = matches
+        .get_one::<String>(DEBUG_FILE_ARG)
+        .expect("required by clap");
 
     // Extract Debug ID(s) from the provided debug file
     let dif = DifFile::open_path(debug_file_path, None)?;
@@ -101,8 +106,7 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
             let file_name = Path::new(mapping_path)
                 .file_name()
                 .and_then(OsStr::to_str)
-                .unwrap_or(mapping_path)
-                ;
+                .unwrap_or(mapping_path);
 
             let mapping_len = mapping_file_bytes.len();
             let object = DartSymbolMapObject {
@@ -113,27 +117,12 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
 
             // Prepare chunked upload
             let api = Api::current();
-            // Resolve org and project like logs: prefer args, fallback to defaults
             let config = Config::current();
-            let (default_org, default_project) = config.get_org_and_project_defaults();
-            let org = args
-                .org
-                .as_ref()
-                .or(default_org.as_ref())
-                .ok_or_else(|| anyhow::anyhow!(
-                    "No organization specified. Please specify an organization using the --org argument."
-                ))?;
-            let project = args
-                .project
-                .as_ref()
-                .or(default_project.as_ref())
-                .ok_or_else(|| anyhow::anyhow!(
-                    "No project specified. Use --project or set a default in config."
-                ))?;
+            let org = config.get_org(matches)?;
+            let project = config.get_project(matches)?;
             let chunk_upload_options = api
                 .authenticated()?
-                .get_chunk_upload_options(org)?;
-
+                .get_chunk_upload_options(&org)?;
 
             // Early file size check against server or default limits (same as debug files)
             let effective_max_file_size = if chunk_upload_options.max_file_size > 0 {
@@ -148,7 +137,7 @@ pub(super) fn execute(args: DartSymbolMapUploadArgs) -> Result<()> {
                 );
             }
 
-            let options = ChunkOptions::new(chunk_upload_options, org, project)
+            let options = ChunkOptions::new(chunk_upload_options, &org, &project)
                 .with_max_wait(DEFAULT_MAX_WAIT);
 
             let chunked = Chunked::from(object, options.server_options().chunk_size);

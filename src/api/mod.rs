@@ -15,11 +15,12 @@ mod serialization;
 use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
+use std::error::Error as _;
 #[cfg(any(target_os = "macos", not(feature = "managed")))]
 use std::fs::File;
 use std::io::{self, Read as _, Write};
 use std::rc::Rc;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use std::{fmt, thread};
 
 use anyhow::{Context as _, Result};
@@ -39,11 +40,12 @@ use serde::{Deserialize, Serialize};
 use sha1_smol::Digest;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::ObjectKind;
+use url::Url;
 use uuid::Uuid;
 
 use crate::api::errors::{ProjectRenamedError, RetryError};
 use crate::config::{Auth, Config};
-use crate::constants::{ARCH, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
+use crate::constants::{ARCH, DEFAULT_HOST, EXT, PLATFORM, RELEASE_REGISTRY_LATEST_URL, VERSION};
 use crate::utils::http::{self, is_absolute_url};
 use crate::utils::non_empty::NonEmptySlice;
 use crate::utils::progress::{ProgressBar, ProgressBarMode};
@@ -111,6 +113,7 @@ pub struct ApiRequest {
     is_authenticated: bool,
     body: Option<Vec<u8>>,
     progress_bar_mode: ProgressBarMode,
+    url: String,
 }
 
 /// Represents an API response.
@@ -180,7 +183,7 @@ impl Api {
         region_url: Option<&str>,
     ) -> ApiResult<ApiRequest> {
         let (url, auth) = self.resolve_base_url_and_auth(url, region_url)?;
-        self.construct_api_request(method, &url, auth)
+        self.construct_api_request(method, url, auth)
     }
 
     fn resolve_base_url_and_auth(
@@ -210,7 +213,7 @@ impl Api {
     fn construct_api_request(
         &self,
         method: Method,
-        url: &str,
+        url: String,
         auth: Option<&Auth>,
     ) -> ApiResult<ApiRequest> {
         let mut handle = self
@@ -1198,7 +1201,7 @@ impl ApiRequest {
     fn create(
         mut handle: r2d2::PooledConnection<CurlConnectionManager>,
         method: &Method,
-        url: &str,
+        url: String,
         auth: Option<&Auth>,
         pipeline_env: Option<String>,
         global_headers: Option<Vec<String>>,
@@ -1233,7 +1236,7 @@ impl ApiRequest {
             Method::Delete => handle.custom_request("DELETE")?,
         }
 
-        handle.url(url)?;
+        handle.url(&url)?;
 
         let request = ApiRequest {
             handle,
@@ -1241,6 +1244,7 @@ impl ApiRequest {
             is_authenticated: false,
             body: None,
             progress_bar_mode: ProgressBarMode::Disabled,
+            url,
         };
 
         let request = match auth {
@@ -1350,11 +1354,22 @@ impl ApiRequest {
             debug!("retry number {retry_number}, max retries: {max_retries}");
             *retry_number += 1;
 
-            let mut rv = self.send_into(&mut out)?;
+            let mut rv = self.send_into(&mut out).map_err(|err| {
+                // Retry DNS failures for sentry.io, as these likely indicate
+                // a network issue. DNS failures for other domains should not
+                // be retried, to avoid masking configuration problems (e.g.
+                // if the user has mistyped their self-hosted URL).
+                if is_dns_error(&err) && self.is_sentry_io_host() {
+                    anyhow::anyhow!(RetryError::from(err))
+                } else {
+                    anyhow::anyhow!(err)
+                }
+            })?;
+
             rv.body = Some(out);
 
             if RETRY_STATUS_CODES.contains(&rv.status) {
-                anyhow::bail!(RetryError::new(rv));
+                anyhow::bail!(RetryError::Status { body: rv });
             }
 
             Ok(rv)
@@ -1373,10 +1388,41 @@ impl ApiRequest {
             })
             .call()
             .or_else(|err| match err.downcast::<RetryError>() {
-                Ok(err) => Ok(err.into_body()),
+                Ok(RetryError::Status { body }) => Ok(body),
+                Ok(RetryError::ApiError { source }) => Err(source),
                 Err(err) => Err(ApiError::with_source(ApiErrorKind::RequestFailed, err)),
             })
     }
+
+    /// Determines whether a URL has a sentry.io host (including subdomains).
+    fn is_sentry_io_host(&self) -> bool {
+        /// A regex which matches exactly "sentry.io" and hostnames ending in
+        /// ".sentry.io".
+        static SENTRY_IO_HOST_RE: LazyLock<Regex> = LazyLock::new(|| {
+            Regex::new(&format!(r"^(\S*\.)?{}$", regex::escape(DEFAULT_HOST)))
+                .expect("regex is valid")
+        });
+
+        Url::parse(&self.url)
+            .ok()
+            .map(|url| {
+                url.host_str()
+                    .is_some_and(|host| SENTRY_IO_HOST_RE.is_match(host))
+            })
+            .unwrap_or(false)
+    }
+}
+
+/// Returns true if the error source chain contains a curl DNS resolution error.
+fn is_dns_error(err: &ApiError) -> bool {
+    let mut current = err.source();
+    while let Some(error) = current {
+        if let Some(curl_err) = error.downcast_ref::<curl::Error>() {
+            return curl_err.is_couldnt_resolve_host();
+        }
+        current = error.source();
+    }
+    false
 }
 
 impl ApiResponse {

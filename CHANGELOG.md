@@ -1,6 +1,19 @@
 # Changelog
 
-## Unreleased
+## 3.2.2
+
+### Fixes
+
+- Updated `minimatch` dependency to fix a vulnerability ([#3153](https://github.com/getsentry/sentry-cli/pull/3153))
+
+## 3.2.1
+
+### Fixes
+
+- The `dart-symbol-map upload` command now correctly resolves the organization from the auth token payload ([#3065](https://github.com/getsentry/sentry-cli/pull/3065)).
+- Retry DNS resolution failures for `sentry.io` requests to reduce intermittent failures for some users ([#3085](https://github.com/getsentry/sentry-cli/pull/3085))
+
+## 3.2.0
 
 ### Features
 

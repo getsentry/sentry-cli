@@ -1,4 +1,7 @@
 use std::sync::atomic::{AtomicU8, Ordering};
+use std::sync::LazyLock;
+
+use serde_json::Value;
 
 use crate::integration::test_utils::AssertCommand;
 use crate::integration::{MockEndpointBuilder, TestManager};
@@ -173,5 +176,105 @@ fn command_upload_dart_symbol_map_with_custom_url() {
             "tests/integration/_fixtures/Sentry.Samples.Console.Basic.pdb",
         ])
         .with_default_token()
+        .run_and_assert(AssertCommand::Success);
+}
+
+/// A test to ensure that the command can resolve an organization from an
+/// org auth token.
+#[test]
+fn command_upload_dart_symbol_map_org_from_token() {
+    /// Path to the mapping file
+    const MAPPING_PATH: &str = "tests/integration/_fixtures/dart_symbol_map/dartsymbolmap.json";
+
+    /// A test org auth token with org="wat-org" and empty URL.
+    /// Format: sntrys_{base64_payload}_{base64_secret}
+    /// Payload: {"iat":1704374159.069583,"url":"","region_url":"","org":"wat-org"}
+    const ORG_AUTH_TOKEN_WAT_ORG: &str = "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";
+
+    /// Checksum of the mapping file
+    const EXPECTED_CHECKSUM: &str = "6aa44eb08e4a72d1cf32fe7c2504216fb1a3e862";
+
+    /// Expected request body for uploading the Dart symbol map
+    static EXPECTED_REQUEST: LazyLock<Value> = LazyLock::new(|| {
+        serde_json::json!({
+            EXPECTED_CHECKSUM: {
+                "chunks": [EXPECTED_CHECKSUM],
+                "debug_id": "54fdf14a-41a1-426a-a073-8185e11a89d6-83920e6f",
+                "name": "dartsymbolmap.json",
+            }
+        })
+    });
+
+    // When no --org is provided and SENTRY_ORG is not set, the org should be resolved
+    // from the org auth token.
+    let call_count = AtomicU8::new(0);
+
+    TestManager::new()
+        // This endpoint uses "wat-org" in the path - if org resolution fails,
+        // the request would go to a different path and not match.
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
+                .with_response_file("dart_symbol_map/get-chunk-upload.json"),
+        )
+        .mock_endpoint(MockEndpointBuilder::new(
+            "POST",
+            "/api/0/organizations/wat-org/chunk-upload/",
+        ))
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/difs/assemble/",
+            )
+            .with_header_matcher("content-type", "application/json")
+            .with_response_fn(move |request| {
+                let body = request.body().expect("body should be readable");
+                let body_json: serde_json::Value =
+                    serde_json::from_slice(body).expect("request body should be valid JSON");
+
+                assert_eq!(
+                    body_json, *EXPECTED_REQUEST,
+                    "assemble request should match expected checksum payload"
+                );
+
+                let response = match call_count.fetch_add(1, Ordering::Relaxed) {
+                    0 => serde_json::json!({
+                        EXPECTED_CHECKSUM: {
+                            "state": "not_found",
+                            "missingChunks": [EXPECTED_CHECKSUM],
+                        }
+                    }),
+                    1 => serde_json::json!({
+                        EXPECTED_CHECKSUM: {
+                            "state": "created",
+                            "missingChunks": [],
+                        }
+                    }),
+                    2 => serde_json::json!({
+                        EXPECTED_CHECKSUM: {
+                            "state": "ok",
+                            "missingChunks": [],
+                        }
+                    }),
+                    n => panic!(
+                        "Only 3 calls to the assemble endpoint expected, but there were {}.",
+                        n + 1
+                    ),
+                };
+
+                serde_json::to_vec(&response).expect("assemble response should be valid JSON")
+            })
+            .expect(3),
+        )
+        .assert_cmd([
+            "dart-symbol-map",
+            "upload",
+            // No --org flag provided!
+            MAPPING_PATH,
+            "tests/integration/_fixtures/Sentry.Samples.Console.Basic.pdb",
+        ])
+        // Use org auth token with embedded org="wat-org" instead of default token
+        .env("SENTRY_AUTH_TOKEN", ORG_AUTH_TOKEN_WAT_ORG)
+        // Explicitly unset SENTRY_ORG to ensure org comes from token
+        .env("SENTRY_ORG", "")
         .run_and_assert(AssertCommand::Success);
 }
