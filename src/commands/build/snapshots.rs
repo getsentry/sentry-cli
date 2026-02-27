@@ -12,6 +12,8 @@ use secrecy::ExposeSecret as _;
 use sha2::{Digest as _, Sha256};
 use walkdir::WalkDir;
 
+use serde::Deserialize;
+
 use crate::api::{Api, CreateSnapshotResponse, ImageMetadata, SnapshotsManifest};
 use crate::config::{Auth, Config};
 use crate::utils::args::ArgExt as _;
@@ -95,7 +97,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         style(images.len()).yellow(),
         if images.len() == 1 { "file" } else { "files" }
     );
-    let manifest_entries = upload_images(images, &org, &project)?;
+    let display_names = collect_display_names(dir_path);
+    let manifest_entries = upload_images(images, &display_names, &org, &project)?;
 
     // Build manifest from discovered images
     let manifest = SnapshotsManifest {
@@ -190,6 +193,7 @@ fn is_image_file(path: &Path) -> bool {
 
 fn upload_images(
     images: Vec<ImageInfo>,
+    display_names: &HashMap<String, String>,
     org: &str,
     project: &str,
 ) -> Result<HashMap<String, ImageMetadata>> {
@@ -247,12 +251,14 @@ fn upload_images(
             .unwrap_or_default()
             .to_string_lossy()
             .into_owned();
+        let display_name = display_names.get(&image_file_name).cloned();
         manifest_entries.insert(
             hash,
             ImageMetadata {
                 image_file_name,
                 width: image.width,
                 height: image.height,
+                display_name,
             },
         );
     }
@@ -279,4 +285,63 @@ fn upload_images(
             anyhow::bail!("Failed to upload {error_count} out of {image_count} images")
         }
     }
+}
+
+/// Input format for user-provided JSON manifest files.
+#[derive(Deserialize)]
+struct ManifestFile {
+    images: HashMap<String, ManifestFileEntry>,
+}
+
+#[derive(Deserialize)]
+struct ManifestFileEntry {
+    image_file_name: String,
+    display_name: Option<String>,
+}
+
+/// Collects `image_file_name -> display_name` mappings from JSON manifest files in a directory.
+fn collect_display_names(dir: &Path) -> HashMap<String, String> {
+    let mut display_names = HashMap::new();
+    let entries = WalkDir::new(dir)
+        .follow_links(true)
+        .into_iter()
+        .filter_entry(|e| !is_hidden(dir, e.path()));
+
+    for entry in entries.flatten() {
+        if !entry.file_type().is_file() {
+            continue;
+        }
+        let path = entry.path();
+        let is_json = path
+            .extension()
+            .and_then(|ext| ext.to_str())
+            .map(|ext| ext.eq_ignore_ascii_case("json"))
+            .unwrap_or(false);
+        if !is_json {
+            continue;
+        }
+
+        debug!("Reading manifest file: {}", path.display());
+        let contents = match fs::read_to_string(path) {
+            Ok(c) => c,
+            Err(err) => {
+                warn!("Failed to read manifest file {}: {err}", path.display());
+                continue;
+            }
+        };
+        let manifest: ManifestFile = match serde_json::from_str(&contents) {
+            Ok(m) => m,
+            Err(err) => {
+                warn!("Failed to parse manifest file {}: {err}", path.display());
+                continue;
+            }
+        };
+
+        for entry in manifest.images.into_values() {
+            if let Some(display_name) = entry.display_name {
+                display_names.insert(entry.image_file_name, display_name);
+            }
+        }
+    }
+    display_names
 }

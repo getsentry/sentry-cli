@@ -27,4 +27,6 @@ pub struct ImageMetadata {
     pub image_file_name: String,
     pub width: u32,
     pub height: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
 }
