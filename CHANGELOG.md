@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- Added experimental `sentry-cli build snapshots` command to upload build snapshots to a project ([#3110](https://github.com/getsentry/sentry-cli/pull/3110)).
+  - This command uploads files from a specified directory to Sentry's Objectstore, associating them with a snapshot identifier.
+  - The command is experimental and subject to breaking changes or removal in future releases.
+
 ## 3.2.2
 
 ### Fixes
@@ -17,9 +25,6 @@
 
 ### Features
 
-- Added experimental `sentry-cli build snapshots` command to upload build snapshots to a project ([#3110](https://github.com/getsentry/sentry-cli/pull/3110)). 
-  - This command uploads files from a specified directory to Sentry's Objectstore, associating them with a snapshot identifier.
-  - The command is experimental and subject to breaking changes or removal in future releases.
 - Add `sourceMaps.inject()` for injecting debug IDs ([#3088](https://github.com/getsentry/sentry-cli/pull/3088))
 - Add `--install-group` parameter to `sentry-cli build upload` for controlling update visibility between builds ([#3094](https://github.com/getsentry/sentry-cli/pull/3094))
 
