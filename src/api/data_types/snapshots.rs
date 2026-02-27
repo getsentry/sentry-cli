@@ -22,9 +22,18 @@ pub struct SnapshotsManifest {
 
 // Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py
 /// Metadata for a single image in a snapshot manifest.
-#[derive(Debug, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 pub struct ImageMetadata {
     pub image_file_name: String,
     pub width: u32,
     pub height: u32,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub display_name: Option<String>,
+}
+
+// Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py
+/// A JSON manifest file that users can drop alongside images to provide additional metadata.
+#[derive(Debug, Deserialize)]
+pub struct SnapshotManifestFile {
+    pub images: HashMap<String, ImageMetadata>,
 }
