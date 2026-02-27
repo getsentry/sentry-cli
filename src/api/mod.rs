@@ -451,6 +451,14 @@ impl AuthenticatedApi<'_> {
         self.api.request(method, url, None)
     }
 
+    /// Returns the auth info for use in external service authorization.
+    pub fn auth(&self) -> &Auth {
+        self.api
+            .config
+            .get_auth()
+            .expect("AuthenticatedApi can only be constructed when auth exists")
+    }
+
     // High-level method implementations
 
     /// Performs an API request to verify the authentication status of the
@@ -968,6 +976,35 @@ impl AuthenticatedApi<'_> {
             }
         }
         Ok(rv)
+    }
+
+    /// Creates a preprod snapshot artifact for the given project.
+    pub fn create_preprod_snapshot<S: Serialize>(
+        &self,
+        org: &str,
+        project: &str,
+        body: &S,
+    ) -> ApiResult<ApiResponse> {
+        let path = format!(
+            "/projects/{}/{}/preprodartifacts/snapshots/",
+            PathArg(org),
+            PathArg(project)
+        );
+        self.post(&path, body)
+    }
+
+    /// Fetches upload options for snapshots.
+    pub fn fetch_snapshots_upload_options(
+        &self,
+        org: &str,
+        project: &str,
+    ) -> ApiResult<SnapshotsUploadOptions> {
+        let path = format!(
+            "/projects/{}/{}/preprodartifacts/snapshots/upload-options/",
+            PathArg(org),
+            PathArg(project)
+        );
+        self.get(&path)?.convert()
     }
 }
 
@@ -1983,4 +2020,20 @@ pub struct LogEntry {
     pub severity: Option<String>,
     pub timestamp: String,
     pub message: Option<String>,
+}
+
+/// Upload options returned by the snapshots upload-options endpoint.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SnapshotsUploadOptions {
+    pub objectstore: ObjectstoreUploadOptions,
+}
+
+/// Objectstore configuration for file uploads.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObjectstoreUploadOptions {
+    pub url: String,
+    pub scopes: Vec<(String, String)>,
+    pub expiration_policy: String,
 }
