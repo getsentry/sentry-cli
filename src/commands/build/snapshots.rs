@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str::FromStr as _;
 
 use anyhow::{Context as _, Result};
@@ -46,8 +46,8 @@ pub fn make_command(command: Command) -> Command {
 }
 
 struct ImageInfo {
-    path: std::path::PathBuf,
-    relative_path: std::path::PathBuf,
+    path: PathBuf,
+    relative_path: PathBuf,
     width: u32,
     height: u32,
 }
