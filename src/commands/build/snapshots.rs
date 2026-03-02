@@ -216,6 +216,21 @@ fn upload_images(
     }
     let session = scope.session(&client)?;
 
+    let org_id = options
+        .objectstore
+        .scopes
+        .iter()
+        .find(|(k, _)| k == "org")
+        .map(|(_, v)| v.as_str())
+        .context("Missing 'org' scope in upload options")?;
+    let project_id = options
+        .objectstore
+        .scopes
+        .iter()
+        .find(|(k, _)| k == "project")
+        .map(|(_, v)| v.as_str())
+        .context("Missing 'project' scope in upload options")?;
+
     let runtime = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()
@@ -231,13 +246,14 @@ fn upload_images(
         let contents = fs::read(&image.path)
             .with_context(|| format!("Failed to read image: {}", image.path.display()))?;
         let hash = compute_sha256_hash(&contents);
+        let object_key = format!("{org_id}/{project_id}/{hash}");
 
-        info!("Queueing {} as {hash}", image.relative_path.display());
+        info!("Queueing {} as {object_key}", image.relative_path.display());
 
         many_builder = many_builder.push(
             session
                 .put(contents)
-                .key(&hash)
+                .key(&object_key)
                 .expiration_policy(expiration),
         );
 
