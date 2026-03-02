@@ -36,19 +36,28 @@ pub struct ImageMetadata {
     pub extra: HashMap<String, serde_json::Value>,
 }
 
+const RESERVED_KEYS: &[&str] = &["image_file_name", "width", "height"];
+
 impl Serialize for ImageMetadata {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let mut map = serializer.serialize_map(Some(self.extra.len() + 3))?;
+        let extra_count = self
+            .extra
+            .keys()
+            .filter(|k| !RESERVED_KEYS.contains(&k.as_str()))
+            .count();
+        let mut map = serializer.serialize_map(Some(extra_count + 3))?;
 
-        // Sidecar fields first (user-provided extras)
-        for (key, value) in &self.extra {
-            map.serialize_entry(key, value)?;
-        }
-
-        // CLI-managed fields last — these always win
+        // CLI-managed fields first
         map.serialize_entry("image_file_name", &self.image_file_name)?;
         map.serialize_entry("width", &self.width)?;
         map.serialize_entry("height", &self.height)?;
+
+        // User-provided sidecar fields, skipping any that conflict with CLI fields
+        for (key, value) in &self.extra {
+            if !RESERVED_KEYS.contains(&key.as_str()) {
+                map.serialize_entry(key, value)?;
+            }
+        }
 
         map.end()
     }
