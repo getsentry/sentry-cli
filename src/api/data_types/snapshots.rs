@@ -26,8 +26,7 @@ pub struct SnapshotsManifest {
 ///
 /// Serializes as a flat JSON object. User-provided sidecar fields are included
 /// first, then CLI-managed fields (`image_file_name`, `width`, `height`) are
-/// written last so they always take precedence — similar to TypeScript's
-/// `{ ...extras, image_file_name, width, height }`.
+/// written last so they always take precedence.
 #[derive(Debug)]
 pub struct ImageMetadata {
     pub image_file_name: String,
