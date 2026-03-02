@@ -22,11 +22,15 @@ pub struct SnapshotsManifest {
 
 // Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py
 /// Metadata for a single image in a snapshot manifest.
+///
+/// The `image_file_name`, `width`, and `height` fields are set by the CLI.
+/// Any additional fields from a companion JSON sidecar file are included
+/// via `extra` and flattened into the serialized output.
 #[derive(Debug, Serialize)]
 pub struct ImageMetadata {
     pub image_file_name: String,
     pub width: u32,
     pub height: u32,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub display_name: Option<String>,
+    #[serde(flatten)]
+    pub extra: HashMap<String, serde_json::Value>,
 }
