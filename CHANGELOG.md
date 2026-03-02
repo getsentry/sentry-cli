@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-### Features
+### Experimental Feature 🧑‍🔬 (internal-only)
 
 - Added experimental `sentry-cli build snapshots` command to upload build snapshots to a project ([#3110](https://github.com/getsentry/sentry-cli/pull/3110)).
   - This command uploads files from a specified directory to Sentry's Objectstore, associating them with a snapshot identifier.
