@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 2.58.5
 
 ### Fixes
 
