@@ -2,7 +2,7 @@
 
 use std::collections::HashMap;
 
-use serde::ser::{SerializeMap, Serializer};
+use serde::ser::{SerializeMap as _, Serializer};
 use serde::{Deserialize, Serialize};
 
 /// Response from the create snapshot endpoint.
