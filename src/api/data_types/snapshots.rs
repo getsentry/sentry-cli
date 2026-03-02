@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 
+use serde::ser::{SerializeMap, Serializer};
 use serde::{Deserialize, Serialize};
 
 /// Response from the create snapshot endpoint.
@@ -23,14 +24,32 @@ pub struct SnapshotsManifest {
 // Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py
 /// Metadata for a single image in a snapshot manifest.
 ///
-/// The `image_file_name`, `width`, and `height` fields are set by the CLI.
-/// Any additional fields from a companion JSON sidecar file are included
-/// via `extra` and flattened into the serialized output.
-#[derive(Debug, Serialize)]
+/// Serializes as a flat JSON object. User-provided sidecar fields are included
+/// first, then CLI-managed fields (`image_file_name`, `width`, `height`) are
+/// written last so they always take precedence — similar to TypeScript's
+/// `{ ...extras, image_file_name, width, height }`.
+#[derive(Debug)]
 pub struct ImageMetadata {
     pub image_file_name: String,
     pub width: u32,
     pub height: u32,
-    #[serde(flatten)]
     pub extra: HashMap<String, serde_json::Value>,
+}
+
+impl Serialize for ImageMetadata {
+    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
+        let mut map = serializer.serialize_map(Some(self.extra.len() + 3))?;
+
+        // Sidecar fields first (user-provided extras)
+        for (key, value) in &self.extra {
+            map.serialize_entry(key, value)?;
+        }
+
+        // CLI-managed fields last — these always win
+        map.serialize_entry("image_file_name", &self.image_file_name)?;
+        map.serialize_entry("width", &self.width)?;
+        map.serialize_entry("height", &self.height)?;
+
+        map.end()
+    }
 }
