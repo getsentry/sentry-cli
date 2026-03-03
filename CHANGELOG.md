@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Improvements
+
+- Moved `sentry-cli upload-proguard` to `sentry-cli proguard upload`, aligning the API with similar upload commands like `debug-files upload` and `sourcemaps upload` ([#3174](https://github.com/getsentry/sentry-cli/pull/3174)). `sentry-cli upload-proguard` remains supported as an alias, so no migration is required.
+
 ### Experimental Feature 🧑‍🔬 (internal-only)
 
 - Print snapshot URL after successful upload ([#3167](https://github.com/getsentry/sentry-cli/pull/3167)).

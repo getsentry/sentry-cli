@@ -1,0 +1,7 @@
+```
+$ sentry-cli proguard upload tests/integration/_fixtures/proguard.txt --no-upload
+? success
+warning: ignoring proguard mapping 'tests/integration/_fixtures/proguard.txt': Proguard mapping does not contain line information
+> skipping upload.
+
+```

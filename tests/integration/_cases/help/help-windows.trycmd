@@ -21,6 +21,7 @@ Commands:
   logs             [BETA] Manage logs in Sentry
   monitors         Manage cron monitors on Sentry.
   organizations    Manage organizations on Sentry.
+  proguard         Manage ProGuard mapping files.
   projects         Manage projects on Sentry.
   react-native     Upload build artifacts for react-native projects.
   releases         Manage releases on Sentry.

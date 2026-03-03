@@ -32,6 +32,7 @@ mod login;
 mod logs;
 mod monitors;
 mod organizations;
+mod proguard;
 mod projects;
 mod react_native;
 mod releases;
@@ -60,6 +61,7 @@ macro_rules! each_subcommand {
         $mac!(logs);
         $mac!(monitors);
         $mac!(organizations);
+        $mac!(proguard);
         $mac!(projects);
         $mac!(react_native);
         $mac!(releases);

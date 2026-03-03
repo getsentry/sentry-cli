@@ -12,6 +12,7 @@ mod logs;
 mod monitors;
 mod org_tokens;
 mod organizations;
+mod proguard;
 mod projects;
 #[cfg(target_os = "macos")]
 mod react_native;

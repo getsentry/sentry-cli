@@ -1,0 +1,37 @@
+```
+$ sentry-cli proguard upload --help
+? success
+Upload ProGuard mapping files to a project.
+
+Usage: sentry-cli[EXE] proguard upload [OPTIONS] [PATH]...
+
+Arguments:
+  [PATH]...  The path to the mapping files.
+
+Options:
+  -o, --org <ORG>                The organization ID or slug.
+      --header <KEY:VALUE>       Custom headers that should be attached to all requests
+                                 in key:value format.
+  -p, --project <PROJECT>        The project ID or slug.
+      --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
+      --no-upload                Disable the actual upload.
+                                 This runs all steps for the processing but does not trigger the
+                                 upload.  This is useful if you just want to verify the mapping
+                                 files and write the proguard UUIDs into a properties file.
+      --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
+                                 warn, error]
+      --write-properties <PATH>  Write the UUIDs for the processed mapping files into the given
+                                 properties file.
+      --quiet                    Do not print any output while preserving correct exit code. This
+                                 flag is currently implemented only for selected subcommands.
+                                 [aliases: --silent]
+      --require-one              Requires at least one file to upload or the command will error.
+  -u, --uuid <UUID>              Explicitly override the UUID of the mapping file with another one.
+                                 This should be used with caution as it means that you can upload
+                                 multiple mapping files if you don't take care.  This however can be
+                                 useful if you have a build process in which you need to know the
+                                 UUID of the proguard file before it was created.  If you upload a
+                                 file with a forced UUID you can only upload a single proguard file.
+  -h, --help                     Print help
+
+```
