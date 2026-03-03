@@ -1,11 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Experimental Feature 🧑‍🔬 (internal-only)
+
+- Print snapshot URL after successful upload ([#3167](https://github.com/getsentry/sentry-cli/pull/3167)).
+
 ## 3.2.3
 
 ### Experimental Feature 🧑‍🔬 (internal-only)
 
 - Added experimental `sentry-cli build snapshots` command to upload build snapshots to a project ([#3110](https://github.com/getsentry/sentry-cli/pull/3110)).
-- Print snapshot URL after successful upload ([#3167](https://github.com/getsentry/sentry-cli/pull/3167)).
   - This command uploads files from a specified directory to Sentry's Objectstore, associating them with a snapshot identifier.
   - The command is experimental and subject to breaking changes or removal in future releases.
 
