@@ -1,0 +1,36 @@
+```
+$ sentry-cli proguard uuid --help
+? success
+Compute the UUID for a ProGuard mapping file.
+
+This command computes and prints to stdout the UUID of the ProGuard mapping at the specified path.
+This is the UUID that will be set by the `proguard upload` command. The UUID is deterministicly
+computed based on the file contents.
+
+Usage: sentry-cli[EXE] proguard uuid [OPTIONS] <PATH>
+
+Arguments:
+  <PATH>
+          The path to the mapping file.
+
+Options:
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
+
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
+
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands.
+          
+          [aliases: --silent]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+```
