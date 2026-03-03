@@ -124,7 +124,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     );
 
     if let Some(url) = &response.snapshot_url {
-        println!("{} View snapshot at {}", style(">").dim(), style(url).cyan());
+        println!(
+            "{} View snapshot at {}",
+            style(">").dim(),
+            style(url).cyan()
+        );
     }
 
     Ok(())
