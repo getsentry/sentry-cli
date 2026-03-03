@@ -12,6 +12,13 @@ pub struct CreateSnapshotResponse {
     pub image_count: u64,
 }
 
+/// Response from the preprod retention endpoint.
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreprodRetentionResponse {
+    pub snapshots: u64,
+}
+
 // Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py
 /// Manifest describing a set of snapshot images for an app.
 #[derive(Debug, Serialize)]

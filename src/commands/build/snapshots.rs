@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 use std::path::{Path, PathBuf};
-use std::str::FromStr as _;
+use std::time::Duration;
 
 use anyhow::{Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
@@ -88,6 +88,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         if images.len() == 1 { "file" } else { "files" }
     );
 
+    // Fetch retention policy for snapshot uploads
+    let api = Api::current();
+    let authenticated_api = api.authenticated()?;
+    let retention = authenticated_api.fetch_preprod_retention(&org)?;
+    debug!("Snapshot retention: {} days", retention.snapshots);
+
     // Upload image files to objectstore
     println!(
         "{} Uploading {} image {}",
@@ -95,7 +101,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         style(images.len()).yellow(),
         if images.len() == 1 { "file" } else { "files" }
     );
-    let manifest_entries = upload_images(images, &org, &project)?;
+    let manifest_entries = upload_images(images, &org, &project, retention.snapshots)?;
 
     // Build manifest from discovered images
     let manifest = SnapshotsManifest {
@@ -192,13 +198,14 @@ fn upload_images(
     images: Vec<ImageInfo>,
     org: &str,
     project: &str,
+    retention_days: u64,
 ) -> Result<HashMap<String, ImageMetadata>> {
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
     let options = authenticated_api.fetch_snapshots_upload_options(org, project)?;
 
-    let expiration = ExpirationPolicy::from_str(&options.objectstore.expiration_policy)
-        .context("Failed to parse expiration policy from upload options")?;
+    let expiration =
+        ExpirationPolicy::TimeToLive(Duration::from_secs(retention_days * 24 * 60 * 60));
 
     let client = ClientBuilder::new(options.objectstore.url)
         .token({

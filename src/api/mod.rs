@@ -1006,6 +1006,12 @@ impl AuthenticatedApi<'_> {
         );
         self.get(&path)?.convert()
     }
+
+    /// Fetches the preprod retention policy for an organization.
+    pub fn fetch_preprod_retention(&self, org: &str) -> ApiResult<PreprodRetentionResponse> {
+        let path = format!("/organizations/{}/preprod/retention/", PathArg(org),);
+        self.get(&path)?.convert()
+    }
 }
 
 /// Available datasets for fetching organization events
@@ -2035,5 +2041,4 @@ pub struct SnapshotsUploadOptions {
 pub struct ObjectstoreUploadOptions {
     pub url: String,
     pub scopes: Vec<(String, String)>,
-    pub expiration_policy: String,
 }
