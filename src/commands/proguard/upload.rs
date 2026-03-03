@@ -59,13 +59,15 @@ pub fn make_command(command: Command) -> Command {
                 .short('u')
                 .value_name("UUID")
                 .value_parser(Uuid::parse_str)
+                .hide(true)
                 .help(
-                    "Explicitly override the UUID of the mapping file with another one.{n}\
-                     This should be used with caution as it means that you can upload \
-                     multiple mapping files if you don't take care.  This however can \
-                     be useful if you have a build process in which you need to know \
-                     the UUID of the proguard file before it was created.  If you upload \
-                     a file with a forced UUID you can only upload a single proguard file.",
+                    "[DEPRECATED] Manually override the UUID for the uploaded mapping.\n\
+                    We no longer recommend using this option. \
+                    If you use this option, you must use it consistently, and you must \
+                    ensure the UUID is generated deterministically based on the ProGuard \
+                    mapping. \n\
+                    If you need to know the UUID before upload, we recommend using the \
+                    `proguard uuid` command.",
                 ),
         )
 }
