@@ -21,6 +21,7 @@ const EXPERIMENTAL_WARNING: &str =
     The command is subject to breaking changes, including removal, in any Sentry CLI release.";
 
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg"];
+const MAX_PIXELS_PER_IMAGE: u64 = 40_000_000;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -87,6 +88,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         style(images.len()).yellow(),
         if images.len() == 1 { "file" } else { "files" }
     );
+
+    validate_image_sizes(&images)?;
 
     // Upload image files to objectstore
     println!(
@@ -164,6 +167,37 @@ fn collect_image_info(dir: &Path, path: &Path) -> Option<ImageInfo> {
         width,
         height,
     })
+}
+
+fn validate_image_sizes(images: &[ImageInfo]) -> Result<()> {
+    let violations: Vec<_> = images
+        .iter()
+        .filter_map(|img| {
+            let pixels = img.width as u64 * img.height as u64;
+            if pixels > MAX_PIXELS_PER_IMAGE {
+                Some((img, pixels))
+            } else {
+                None
+            }
+        })
+        .collect();
+
+    if !violations.is_empty() {
+        eprintln!("error: The following images exceed the maximum pixel limit of 40,000,000:");
+        for (img, pixels) in &violations {
+            let path = img.relative_path.display();
+            let width = img.width;
+            let height = img.height;
+            eprintln!("  {path} ({width}x{height} = {pixels} pixels)");
+        }
+        anyhow::bail!(
+            "{} image{} exceeded the maximum pixel limit of 40,000,000",
+            violations.len(),
+            if violations.len() == 1 { "" } else { "s" }
+        );
+    }
+
+    Ok(())
 }
 
 fn compute_sha256_hash(data: &[u8]) -> String {
