@@ -287,12 +287,7 @@ fn upload_images(
 
         manifest_entries.insert(
             hash,
-            ImageMetadata {
-                extra,
-                image_file_name,
-                width: image.width,
-                height: image.height,
-            },
+            ImageMetadata::new(image_file_name, image.width, image.height, extra),
         );
     }
 

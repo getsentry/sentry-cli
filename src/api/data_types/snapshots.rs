@@ -2,8 +2,12 @@
 
 use std::collections::HashMap;
 
-use serde::ser::{SerializeMap as _, Serializer};
 use serde::{Deserialize, Serialize};
+use serde_json::Value;
+
+const IMAGE_FILE_NAME_FIELD: &str = "image_file_name";
+const WIDTH_FIELD: &str = "width";
+const HEIGHT_FIELD: &str = "height";
 
 /// Response from the create snapshot endpoint.
 #[derive(Debug, Deserialize)]
@@ -24,40 +28,60 @@ pub struct SnapshotsManifest {
 // Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py
 /// Metadata for a single image in a snapshot manifest.
 ///
-/// Serializes as a flat JSON object. User-provided sidecar fields are included
-/// first, then CLI-managed fields (`image_file_name`, `width`, `height`) are
-/// written last so they always take precedence.
-#[derive(Debug)]
+/// Serializes as a flat JSON object.
+///
+/// CLI-managed fields (`image_file_name`, `width`, `height`) override any
+/// identically named fields provided by user sidecar metadata.
+#[derive(Debug, Serialize)]
 pub struct ImageMetadata {
-    pub image_file_name: String,
-    pub width: u32,
-    pub height: u32,
-    pub extra: HashMap<String, serde_json::Value>,
+    #[serde(flatten)]
+    data: HashMap<String, Value>,
 }
 
-const RESERVED_KEYS: &[&str] = &["image_file_name", "width", "height"];
+impl ImageMetadata {
+    pub fn new(
+        image_file_name: String,
+        width: u32,
+        height: u32,
+        mut extra: HashMap<String, Value>,
+    ) -> Self {
+        extra.insert(
+            IMAGE_FILE_NAME_FIELD.to_owned(),
+            Value::String(image_file_name),
+        );
+        extra.insert(WIDTH_FIELD.to_owned(), Value::from(width));
+        extra.insert(HEIGHT_FIELD.to_owned(), Value::from(height));
 
-impl Serialize for ImageMetadata {
-    fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
-        let extra_count = self
-            .extra
-            .keys()
-            .filter(|k| !RESERVED_KEYS.contains(&k.as_str()))
-            .count();
-        let mut map = serializer.serialize_map(Some(extra_count + 3))?;
+        Self { data: extra }
+    }
+}
 
-        // CLI-managed fields first
-        map.serialize_entry("image_file_name", &self.image_file_name)?;
-        map.serialize_entry("width", &self.width)?;
-        map.serialize_entry("height", &self.height)?;
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-        // User-provided sidecar fields, skipping any that conflict with CLI fields
-        for (key, value) in &self.extra {
-            if !RESERVED_KEYS.contains(&key.as_str()) {
-                map.serialize_entry(key, value)?;
-            }
-        }
+    use serde_json::json;
 
-        map.end()
+    #[test]
+    fn cli_managed_fields_override_sidecar_fields() {
+        let extra = serde_json::from_value(json!({
+            (IMAGE_FILE_NAME_FIELD): "from-sidecar.png",
+            (WIDTH_FIELD): 1,
+            (HEIGHT_FIELD): 2,
+            "custom": "keep-me"
+        }))
+        .unwrap();
+
+        let metadata = ImageMetadata::new("from-cli.png".to_owned(), 100, 200, extra);
+        let serialized = serde_json::to_value(metadata).unwrap();
+
+        let expected = json!({
+            (IMAGE_FILE_NAME_FIELD): "from-cli.png",
+            (WIDTH_FIELD): 100,
+            (HEIGHT_FIELD): 200,
+            "custom": "keep-me"
+        });
+
+        assert_eq!(serialized, expected);
     }
 }
