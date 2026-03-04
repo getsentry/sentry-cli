@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Experimental Feature 🧑‍🔬 (internal-only)
+
+- Pipe snapshot sidecar metadata into upload as part of `sentry-cli build snapshots` command ([#3163](https://github.com/getsentry/sentry-cli/pull/3163)).
+
 ## 3.3.0
 
 ### New Features
@@ -120,6 +126,7 @@ The following changes only apply when using `sentry-cli` via the npm package [`@
 - Drop support for Node.js <18. The minimum required Node.js version is now 18.0.0 ([#2985](https://github.com/getsentry/sentry-cli/issues/2985)).
 - The type export `SentryCliReleases` has been removed.
 - The JavaScript wrapper now uses named exports instead of default exports ([#2989](https://github.com/getsentry/sentry-cli/pull/2989)). You need to update your imports:
+
   ```js
   // Old (default import)
   const SentryCli = require('@sentry/cli');
@@ -129,6 +136,7 @@ The following changes only apply when using `sentry-cli` via the npm package [`@
   ```
 
   For ESM imports:
+
   ```js
   // Old
   import SentryCli from '@sentry/cli';
@@ -136,7 +144,6 @@ The following changes only apply when using `sentry-cli` via the npm package [`@
   // New
   import { SentryCli } from '@sentry/cli';
   ```
-
 
 ### Improvements
 
@@ -164,6 +171,7 @@ The following changes only apply when using `sentry-cli` via the npm package [`@
 - The `sentry-cli build upload` command now automatically detects the correct branch or tag reference in non-PR GitHub Actions workflows ([#2976](https://github.com/getsentry/sentry-cli/pull/2976)). Previously, `--head-ref` was only auto-detected for pull request workflows. Now it works for push, release, and other workflow types by using the `GITHUB_REF_NAME` environment variable.
 
 ### Fixes
+
 - Fixed a bug where the `sentry-cli sourcemaps inject` command could inject JavaScript code into certain incorrectly formatted source map files, corrupting their JSON structure ([#3003](https://github.com/getsentry/sentry-cli/pull/3003)).
 
 ## 2.58.2
