@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### New Features
+
+- Added `sentry-cli proguard uuid <PATH>` to compute and print the UUID for a ProGuard mapping file ([#3176](https://github.com/getsentry/sentry-cli/pull/3176)).
+
 ### Improvements
 
 - Moved `sentry-cli upload-proguard` to `sentry-cli proguard upload`, aligning the API with similar upload commands like `debug-files upload` and `sourcemaps upload` ([#3174](https://github.com/getsentry/sentry-cli/pull/3174)). `sentry-cli upload-proguard` remains supported as an alias, so no migration is required.
