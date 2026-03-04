@@ -1,4 +1,6 @@
 use std::collections::HashMap;
+use std::fs::{self, File};
+use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::str::FromStr as _;
 
@@ -9,6 +11,7 @@ use itertools::Itertools as _;
 use log::{debug, info, warn};
 use objectstore_client::{ClientBuilder, ExpirationPolicy, Usecase};
 use secrecy::ExposeSecret as _;
+use serde_json::Value;
 use sha2::{Digest as _, Sha256};
 use tokio::fs::File;
 use walkdir::WalkDir;
@@ -105,6 +108,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         style(images.len()).yellow(),
         if images.len() == 1 { "file" } else { "files" }
     );
+
     let manifest_entries = upload_images(images, &org, &project)?;
 
     // Build manifest from discovered images
@@ -244,6 +248,29 @@ fn is_image_file(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+/// Reads the companion JSON sidecar for an image, if it exists.
+///
+/// For an image at `path/to/button.png`, looks for `path/to/button.json`.
+/// Returns a map of all key-value pairs from the JSON file.
+fn read_sidecar_metadata(image_path: &Path) -> Result<HashMap<String, Value>> {
+    let sidecar_path = image_path.with_extension("json");
+    if !sidecar_path.is_file() {
+        return Ok(HashMap::new());
+    }
+
+    debug!("Reading sidecar metadata: {}", sidecar_path.display());
+
+    let sidecar_file = File::open(&sidecar_path)
+        .with_context(|| format!("Failed to open sidecar file {}", sidecar_path.display()))?;
+
+    serde_json::from_reader(BufReader::new(sidecar_file)).with_context(|| {
+        format!(
+            "Failed to read sidecar file {} as JSON",
+            sidecar_path.display()
+        )
+    })
+}
+
 fn upload_images(
     images: Vec<ImageInfo>,
     org: &str,
@@ -304,13 +331,15 @@ fn upload_images(
             .unwrap_or_default()
             .to_string_lossy()
             .into_owned();
+
+        let extra = read_sidecar_metadata(&image.path).unwrap_or_else(|err| {
+            warn!("Error reading sidecar metadata, ignoring it instead: {err:#}");
+            HashMap::new()
+        });
+
         manifest_entries.insert(
             hash,
-            ImageMetadata {
-                image_file_name,
-                width: image.width,
-                height: image.height,
-            },
+            ImageMetadata::new(image_file_name, image.width, image.height, extra),
         );
     }
 
