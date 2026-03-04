@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
 use std::str::FromStr as _;
+use std::sync::Arc;
 
 use anyhow::{Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
@@ -10,7 +11,8 @@ use log::{debug, info, warn};
 use objectstore_client::{ClientBuilder, ExpirationPolicy, Usecase};
 use secrecy::ExposeSecret as _;
 use sha2::{Digest as _, Sha256};
-use tokio::fs::File;
+use tokio::io::AsyncReadExt as _;
+use tokio::sync::Mutex;
 use walkdir::WalkDir;
 
 use crate::api::{Api, CreateSnapshotResponse, ImageMetadata, SnapshotsManifest};
@@ -209,16 +211,16 @@ fn validate_image_sizes(images: &[ImageInfo]) -> Result<()> {
     Ok(())
 }
 
-fn compute_sha256_hash(path: &Path) -> Result<String> {
-    use std::io::Read as _;
-
-    let mut file = std::fs::File::open(path)
+async fn compute_sha256_hash(path: &Path) -> Result<String> {
+    let mut file = tokio::fs::File::open(path)
+        .await
         .with_context(|| format!("Failed to open image for hashing: {}", path.display()))?;
     let mut hasher = Sha256::new();
     let mut buffer = [0u8; 8192];
     loop {
         let bytes_read = file
             .read(&mut buffer)
+            .await
             .with_context(|| format!("Failed to read image for hashing: {}", path.display()))?;
         if bytes_read == 0 {
             break;
@@ -290,66 +292,72 @@ fn upload_images(
         .build()
         .context("Failed to create tokio runtime")?;
 
-    let mut many_builder = session.many();
-    let mut manifest_entries = HashMap::new();
     let image_count = images.len();
+    let manifest_entries = Arc::new(Mutex::new(HashMap::new()));
 
-    for image in images {
-        debug!("Processing image: {}", image.path.display());
+    runtime.block_on(async {
+        let mut many_builder = session.many();
 
-        let hash = compute_sha256_hash(&image.path)?;
-        let file = runtime.block_on(File::open(&image.path)).with_context(|| {
-            format!("Failed to open image for upload: {}", image.path.display())
-        })?;
+        for image in images {
+            debug!("Processing image: {}", image.path.display());
 
-        let key = format!("{org_id}/{project_id}/{hash}");
-        info!("Queueing {} as {key}", image.relative_path.display());
+            let hash = compute_sha256_hash(&image.path).await?;
+            let file = tokio::fs::File::open(&image.path).await.with_context(|| {
+                format!("Failed to open image for upload: {}", image.path.display())
+            })?;
 
-        many_builder = many_builder.push(
-            session
-                .put_file(file)
-                .key(&key)
-                .expiration_policy(expiration),
-        );
+            let key = format!("{org_id}/{project_id}/{hash}");
+            info!("Queueing {} as {key}", image.relative_path.display());
 
-        let image_file_name = image
-            .relative_path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .into_owned();
-        manifest_entries.insert(
-            hash,
-            ImageMetadata {
-                image_file_name,
-                width: image.width,
-                height: image.height,
-            },
-        );
-    }
-
-    let result = runtime.block_on(async { many_builder.send().error_for_failures().await });
-
-    match result {
-        Ok(()) => {
-            println!(
-                "{} Uploaded {} image {}",
-                style(">").dim(),
-                style(image_count).yellow(),
-                if image_count == 1 { "file" } else { "files" }
+            many_builder = many_builder.push(
+                session
+                    .put_file(file)
+                    .key(&key)
+                    .expiration_policy(expiration),
             );
-            Ok(manifest_entries)
+
+            let image_file_name = image
+                .relative_path
+                .file_name()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .into_owned();
+            manifest_entries.lock().await.insert(
+                hash,
+                ImageMetadata {
+                    image_file_name,
+                    width: image.width,
+                    height: image.height,
+                },
+            );
         }
-        Err(errors) => {
-            eprintln!("There were errors uploading images:");
-            let mut error_count = 0;
-            for error in errors {
-                eprintln!("  {}", style(error).red());
-                error_count += 1;
+
+        let result = many_builder.send().error_for_failures().await;
+        match result {
+            Ok(()) => {
+                println!(
+                    "{} Uploaded {} image {}",
+                    style(">").dim(),
+                    style(image_count).yellow(),
+                    if image_count == 1 { "file" } else { "files" }
+                );
+                Ok(())
             }
-            anyhow::bail!("Failed to upload {error_count} out of {image_count} images")
+            Err(errors) => {
+                eprintln!("There were errors uploading images:");
+                let mut error_count = 0;
+                for error in errors {
+                    eprintln!("  {}", style(error).red());
+                    error_count += 1;
+                }
+                anyhow::bail!("Failed to upload {error_count} out of {image_count} images")
+            }
         }
-    }
+    })?;
+
+    Ok(Arc::try_unwrap(manifest_entries)
+        .expect("all references should be dropped after runtime completes")
+        .into_inner())
 }
 
 #[cfg(test)]
