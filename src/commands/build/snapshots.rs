@@ -6,6 +6,7 @@ use std::str::FromStr as _;
 use anyhow::{Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use console::style;
+use itertools::Itertools as _;
 use log::{debug, info, warn};
 use objectstore_client::{ClientBuilder, ExpirationPolicy, Usecase};
 use secrecy::ExposeSecret as _;
@@ -51,6 +52,12 @@ struct ImageInfo {
     relative_path: PathBuf,
     width: u32,
     height: u32,
+}
+
+impl ImageInfo {
+    fn pixels(&self) -> u64 {
+        u64::from(self.width) * u64::from(self.height)
+    }
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -330,6 +337,6 @@ mod tests {
     #[test]
     fn test_validate_image_sizes_over_limit_fails() {
         let err = validate_image_sizes(&[make_image(8001, 5000)]).unwrap_err();
-        assert!(err.to_string().contains("exceeded the maximum pixel limit"));
+        assert!(err.to_string().contains("exceed the maximum pixel limit"));
     }
 }
