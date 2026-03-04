@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Experimental Feature 🧑‍🔬 (internal-only)
+
+- Pipe snapshot sidecar metadata into upload as part of `sentry-cli build snapshots` command ([#3163](https://github.com/getsentry/sentry-cli/pull/3163)).
+
 ## 3.3.0
 
 ### New Features
@@ -13,7 +19,6 @@
 ### Experimental Feature 🧑‍🔬 (internal-only)
 
 - Print snapshot URL after successful upload ([#3167](https://github.com/getsentry/sentry-cli/pull/3167)).
-- Pipe snapshot sidecar metadata into upload as part of `sentry-cli build snapshots` command ([#3163](https://github.com/getsentry/sentry-cli/pull/3163)).
 
 ## 3.2.3
 

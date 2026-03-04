@@ -351,3 +351,28 @@ fn upload_images(
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_image(width: u32, height: u32) -> ImageInfo {
+        ImageInfo {
+            path: PathBuf::from("img.png"),
+            relative_path: PathBuf::from("img.png"),
+            width,
+            height,
+        }
+    }
+
+    #[test]
+    fn test_validate_image_sizes_at_limit_passes() {
+        assert!(validate_image_sizes(&[make_image(8000, 5000)]).is_ok());
+    }
+
+    #[test]
+    fn test_validate_image_sizes_over_limit_fails() {
+        let err = validate_image_sizes(&[make_image(8001, 5000)]).unwrap_err();
+        assert!(err.to_string().contains("exceed the maximum pixel limit"));
+    }
+}
