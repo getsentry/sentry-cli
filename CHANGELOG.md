@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Experimental Feature 🧑‍🔬 (internal-only)
+
+- Print snapshot URL after successful upload ([#3167](https://github.com/getsentry/sentry-cli/pull/3167)).
+
 ## 3.2.3
 
 ### Experimental Feature 🧑‍🔬 (internal-only)

@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 pub struct CreateSnapshotResponse {
     pub artifact_id: String,
     pub image_count: u64,
+    pub snapshot_url: Option<String>,
 }
 
 // Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py
