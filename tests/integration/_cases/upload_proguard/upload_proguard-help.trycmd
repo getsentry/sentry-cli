@@ -26,12 +26,6 @@ Options:
                                  flag is currently implemented only for selected subcommands.
                                  [aliases: --silent]
       --require-one              Requires at least one file to upload or the command will error.
-  -u, --uuid <UUID>              Explicitly override the UUID of the mapping file with another one.
-                                 This should be used with caution as it means that you can upload
-                                 multiple mapping files if you don't take care.  This however can be
-                                 useful if you have a build process in which you need to know the
-                                 UUID of the proguard file before it was created.  If you upload a
-                                 file with a forced UUID you can only upload a single proguard file.
   -h, --help                     Print help
 
 ```

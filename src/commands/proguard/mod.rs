@@ -2,10 +2,12 @@ use anyhow::Result;
 use clap::{ArgMatches, Command};
 
 pub mod upload;
+pub mod uuid;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(upload);
+        $mac!(uuid);
     };
 }
 

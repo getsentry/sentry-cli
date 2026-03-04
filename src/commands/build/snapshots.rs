@@ -5,6 +5,7 @@ use std::str::FromStr as _;
 use anyhow::{Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use console::style;
+use itertools::Itertools as _;
 use log::{debug, info, warn};
 use objectstore_client::{ClientBuilder, ExpirationPolicy, Usecase};
 use secrecy::ExposeSecret as _;
@@ -21,6 +22,7 @@ const EXPERIMENTAL_WARNING: &str =
     The command is subject to breaking changes, including removal, in any Sentry CLI release.";
 
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg"];
+const MAX_PIXELS_PER_IMAGE: u64 = 40_000_000;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -50,6 +52,12 @@ struct ImageInfo {
     relative_path: PathBuf,
     width: u32,
     height: u32,
+}
+
+impl ImageInfo {
+    fn pixels(&self) -> u64 {
+        u64::from(self.width) * u64::from(self.height)
+    }
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -87,6 +95,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         style(images.len()).yellow(),
         if images.len() == 1 { "file" } else { "files" }
     );
+
+    validate_image_sizes(&images)?;
 
     // Upload image files to objectstore
     println!(
@@ -172,6 +182,31 @@ fn collect_image_info(dir: &Path, path: &Path) -> Option<ImageInfo> {
         width,
         height,
     })
+}
+
+fn validate_image_sizes(images: &[ImageInfo]) -> Result<()> {
+    let mut violations = images
+        .iter()
+        .filter(|img| img.pixels() > MAX_PIXELS_PER_IMAGE)
+        .map(|img| {
+            let path = img.relative_path.display();
+            let width = img.width;
+            let height = img.height;
+            let pixels = img.pixels();
+
+            format!("  {path} ({width}x{height} = {pixels} pixels)")
+        })
+        .peekable();
+
+    if violations.peek().is_some() {
+        let violation_messages = violations.join("\n");
+
+        anyhow::bail!(
+            "The following images exceed the maximum pixel limit of {MAX_PIXELS_PER_IMAGE}:\n{violation_messages}",
+        );
+    }
+
+    Ok(())
 }
 
 fn compute_sha256_hash(path: &Path) -> Result<String> {
@@ -300,5 +335,30 @@ fn upload_images(
             }
             anyhow::bail!("Failed to upload {error_count} out of {image_count} images")
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn make_image(width: u32, height: u32) -> ImageInfo {
+        ImageInfo {
+            path: PathBuf::from("img.png"),
+            relative_path: PathBuf::from("img.png"),
+            width,
+            height,
+        }
+    }
+
+    #[test]
+    fn test_validate_image_sizes_at_limit_passes() {
+        assert!(validate_image_sizes(&[make_image(8000, 5000)]).is_ok());
+    }
+
+    #[test]
+    fn test_validate_image_sizes_over_limit_fails() {
+        let err = validate_image_sizes(&[make_image(8001, 5000)]).unwrap_err();
+        assert!(err.to_string().contains("exceed the maximum pixel limit"));
     }
 }

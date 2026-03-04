@@ -1,6 +1,10 @@
 # Changelog
 
-## Unreleased
+## 3.3.0
+
+### New Features
+
+- Added `sentry-cli proguard uuid <PATH>` to compute and print the UUID for a ProGuard mapping file ([#3176](https://github.com/getsentry/sentry-cli/pull/3176)).
 
 ### Improvements
 
