@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr as _;
 
@@ -10,6 +9,7 @@ use log::{debug, info, warn};
 use objectstore_client::{ClientBuilder, ExpirationPolicy, Usecase};
 use secrecy::ExposeSecret as _;
 use sha2::{Digest as _, Sha256};
+use tokio::fs::File;
 use walkdir::WalkDir;
 
 use crate::api::{Api, CreateSnapshotResponse, ImageMetadata, SnapshotsManifest};
@@ -174,11 +174,24 @@ fn collect_image_info(dir: &Path, path: &Path) -> Option<ImageInfo> {
     })
 }
 
-fn compute_sha256_hash(data: &[u8]) -> String {
+fn compute_sha256_hash(path: &Path) -> Result<String> {
+    use std::io::Read as _;
+
+    let mut file = std::fs::File::open(path)
+        .with_context(|| format!("Failed to open image for hashing: {}", path.display()))?;
     let mut hasher = Sha256::new();
-    hasher.update(data);
+    let mut buffer = [0u8; 8192];
+    loop {
+        let bytes_read = file
+            .read(&mut buffer)
+            .with_context(|| format!("Failed to read image for hashing: {}", path.display()))?;
+        if bytes_read == 0 {
+            break;
+        }
+        hasher.update(&buffer[..bytes_read]);
+    }
     let result = hasher.finalize();
-    format!("{result:x}")
+    Ok(format!("{result:x}"))
 }
 
 fn is_hidden(root: &Path, path: &Path) -> bool {
@@ -236,15 +249,16 @@ fn upload_images(
     for image in images {
         debug!("Processing image: {}", image.path.display());
 
-        let contents = fs::read(&image.path)
-            .with_context(|| format!("Failed to read image: {}", image.path.display()))?;
-        let hash = compute_sha256_hash(&contents);
+        let hash = compute_sha256_hash(&image.path)?;
+        let file = runtime.block_on(File::open(&image.path)).with_context(|| {
+            format!("Failed to open image for upload: {}", image.path.display())
+        })?;
 
         info!("Queueing {} as {hash}", image.relative_path.display());
 
         many_builder = many_builder.push(
             session
-                .put(contents)
+                .put_file(file)
                 .key(&hash)
                 .expiration_policy(expiration),
         );
