@@ -170,30 +170,24 @@ fn collect_image_info(dir: &Path, path: &Path) -> Option<ImageInfo> {
 }
 
 fn validate_image_sizes(images: &[ImageInfo]) -> Result<()> {
-    let violations: Vec<_> = images
+    let mut violations = images
         .iter()
-        .filter_map(|img| {
-            let pixels = img.width as u64 * img.height as u64;
-            if pixels > MAX_PIXELS_PER_IMAGE {
-                Some((img, pixels))
-            } else {
-                None
-            }
-        })
-        .collect();
-
-    if !violations.is_empty() {
-        eprintln!("error: The following images exceed the maximum pixel limit of 40,000,000:");
-        for (img, pixels) in &violations {
+        .filter(|img| img.pixels() > MAX_PIXELS_PER_IMAGE)
+        .map(|img| {
             let path = img.relative_path.display();
             let width = img.width;
             let height = img.height;
-            eprintln!("  {path} ({width}x{height} = {pixels} pixels)");
-        }
+            let pixels = img.pixels();
+
+            format!("  {path} ({width}x{height} = {pixels} pixels)")
+        })
+        .peekable();
+
+    if violations.peek().is_some() {
+        let violation_messages = violations.join("\n");
+
         anyhow::bail!(
-            "{} image{} exceeded the maximum pixel limit of 40,000,000",
-            violations.len(),
-            if violations.len() == 1 { "" } else { "s" }
+            "The following images exceed the maximum pixel limit of {MAX_PIXELS_PER_IMAGE}:\n{violation_messages}",
         );
     }
 
