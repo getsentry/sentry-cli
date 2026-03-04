@@ -267,9 +267,22 @@ fn upload_images(
         .build()?;
 
     let mut scope = Usecase::new("preprod").scope();
-    for (key, value) in &options.objectstore.scopes {
-        scope = scope.push(key, value);
+    let (mut org_id, mut project_id): (Option<String>, Option<String>) = (None, None);
+    for (key, value) in options.objectstore.scopes.into_iter() {
+        scope = scope.push(&key, value.clone());
+        if key == "org" {
+            org_id = Some(value);
+        } else if key == "project" {
+            project_id = Some(value);
+        }
     }
+    let Some(org_id) = org_id else {
+        anyhow::bail!("Missing org in UploadOptions scope");
+    };
+    let Some(project_id) = project_id else {
+        anyhow::bail!("Missing project in UploadOptions scope");
+    };
+
     let session = scope.session(&client)?;
 
     let runtime = tokio::runtime::Builder::new_current_thread()
@@ -289,12 +302,13 @@ fn upload_images(
             format!("Failed to open image for upload: {}", image.path.display())
         })?;
 
-        info!("Queueing {} as {hash}", image.relative_path.display());
+        let key = format!("{org_id}/{project_id}/{hash}");
+        info!("Queueing {} as {key}", image.relative_path.display());
 
         many_builder = many_builder.push(
             session
                 .put_file(file)
-                .key(&hash)
+                .key(&key)
                 .expiration_policy(expiration),
         );
 
