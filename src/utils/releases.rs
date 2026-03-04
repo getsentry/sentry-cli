@@ -107,6 +107,13 @@ pub fn detect_release_name() -> Result<String> {
     }
 
     // try Heroku #2: https://docs.sentry.io/product/integrations/deployment/heroku/#configure-releases
+    if let Ok(release) = env::var("HEROKU_BUILD_COMMIT") {
+        if !release.is_empty() {
+            return Ok(release);
+        }
+    }
+
+    // Try Heroku #3: Deprecated env var (now, HEROKU_BUILD_COMMIT is preferred)
     if let Ok(release) = env::var("HEROKU_SLUG_COMMIT") {
         if !release.is_empty() {
             return Ok(release);

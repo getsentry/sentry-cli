@@ -47,7 +47,7 @@ jobs:
       - name: Rename Binary
         run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Linux-${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
         with:
           name: artifact-bin-linux-${{ matrix.arch }}
           path: sentry-cli-Linux-${{ matrix.arch }}
@@ -109,7 +109,7 @@ jobs:
       - name: Rename Binary
         run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Darwin-${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
         with:
           name: unsigned-bin-macos-${{ matrix.arch }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
@@ -121,7 +121,7 @@ jobs:
     runs-on: macos-14
 
     steps:
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # 7.0.0
+      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # 8.0.0
         with:
           pattern: unsigned-bin-macos-*
           merge-multiple: true
@@ -129,7 +129,7 @@ jobs:
       - name: Link universal binary
         run: lipo -create -output sentry-cli-Darwin-universal sentry-cli-Darwin-x86_64 sentry-cli-Darwin-arm64
 
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
         with:
           name: unsigned-bin-macos-universal
           path: sentry-cli-Darwin-universal
@@ -174,7 +174,7 @@ jobs:
           echo "$APPLE_API_KEY" | base64 --decode > ${{ env.APPLE_API_KEY_PATH }}
 
       - name: Download unsigned binary
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # 7.0.0
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # 8.0.0
         with:
           name: unsigned-bin-macos-${{ matrix.arch }}
 
@@ -199,7 +199,7 @@ jobs:
             sentry-cli-Darwin-${{ matrix.arch }}.zip
 
       - name: Upload signed binary
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
         with:
           name: artifact-bin-macos-${{ matrix.arch }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
@@ -238,7 +238,7 @@ jobs:
       - name: Rename Binary
         run: mv target/${{ env.TARGET }}/release/sentry-cli.exe sentry-cli-Windows-${{ matrix.arch }}.exe
 
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
         with:
           name: artifact-bin-windows-${{ matrix.arch }}
           path: sentry-cli-Windows-${{ matrix.arch }}.exe
@@ -260,7 +260,7 @@ jobs:
         run: npm ci --ignore-scripts
 
       - name: Download compiled binaries
-        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # 7.0.0
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # 8.0.0
         with:
           pattern: artifact-bin-*
           merge-multiple: true
@@ -273,7 +273,7 @@ jobs:
 
       - run: npm pack
 
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
         with:
           name: artifact-pkg-node
           path: '*.tgz'
@@ -290,7 +290,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: python3 -m pip install build && python3 -m build
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
         with:
           name: python-base
           path: dist/*
@@ -305,18 +305,18 @@ jobs:
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # 6.2.0
         with:
           python-version: '3.11'
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # 7.0.0
+      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # 8.0.0
         with:
           pattern: artifact-bin-*
           merge-multiple: true
           path: binaries
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # 7.0.0
+      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # 8.0.0
         with:
           name: python-base
           merge-multiple: true
           path: python-base
       - run: scripts/wheels --binaries binaries --base python-base --dest dist
-      - uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
+      - uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
         with:
           name: artifact-pkg-python
           path: dist/*
@@ -331,7 +331,7 @@ jobs:
       - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # 6.2.0
         with:
           node-version: '20.10.0'
-      - uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # 7.0.0
+      - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # 8.0.0
         with:
           pattern: artifact-bin-*
           merge-multiple: true
@@ -359,7 +359,7 @@ jobs:
           done
 
       - name: Upload packaged npm binary distributions
-        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
         with:
           name: artifact-npm-binary-distributions
           path: npm-binary-distributions/*/*.tgz
@@ -426,7 +426,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows, npm-distributions, node, python]
     steps:
-      - uses: actions/upload-artifact/merge@b7c566a772e6b6bfb58ed0dc250532a479d7789f # 6.0.0
+      - uses: actions/upload-artifact/merge@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
         with:
           # Craft expects release assets to be a single artifact named after the sha.
           name: ${{ github.sha }}
