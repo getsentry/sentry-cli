@@ -1,5 +1,5 @@
 use std::collections::HashMap;
-use std::fs::{self, File};
+use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::str::FromStr as _;
@@ -13,7 +13,6 @@ use objectstore_client::{ClientBuilder, ExpirationPolicy, Usecase};
 use secrecy::ExposeSecret as _;
 use serde_json::Value;
 use sha2::{Digest as _, Sha256};
-use tokio::fs::File;
 use walkdir::WalkDir;
 
 use crate::api::{Api, CreateSnapshotResponse, ImageMetadata, SnapshotsManifest};
@@ -312,9 +311,11 @@ fn upload_images(
         debug!("Processing image: {}", image.path.display());
 
         let hash = compute_sha256_hash(&image.path)?;
-        let file = runtime.block_on(File::open(&image.path)).with_context(|| {
-            format!("Failed to open image for upload: {}", image.path.display())
-        })?;
+        let file = runtime
+            .block_on(tokio::fs::File::open(&image.path))
+            .with_context(|| {
+                format!("Failed to open image for upload: {}", image.path.display())
+            })?;
 
         info!("Queueing {} as {hash}", image.relative_path.display());
 
