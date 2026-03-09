@@ -385,13 +385,17 @@ impl<'a> DifFile<'a> {
     }
 
     pub fn get_problem(&self) -> Option<&'static str> {
+        if self.is_usable() {
+            return None;
+        }
+
         match self {
-            DifFile::Archive(..) if !self.is_usable() => Some(if !self.has_ids() {
+            DifFile::Archive(..) => Some(if !self.has_ids() {
                 "missing debug identifier, likely stripped"
             } else {
                 "missing debug or unwind information"
             }),
-            DifFile::Archive(..) | DifFile::Proguard(..) => None,
+            DifFile::Proguard(..) => None,
         }
     }
 
