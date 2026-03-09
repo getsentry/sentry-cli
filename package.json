@@ -25,10 +25,10 @@
     "@vercel/nft": "^1.2.0",
     "eslint": "^7.32.0",
     "eslint-config-prettier": "^8.5.0",
-    "jest": "^27.5.1",
+    "jest": "^30.2.0",
     "npm-run-all": "^4.1.5",
     "prettier": "2.8.8",
-    "ts-jest": "^27.1.5",
+    "ts-jest": "^29.4.6",
     "typescript": "5.8.3"
   },
   "optionalDependencies": {
@@ -55,13 +55,6 @@
     "test:prettier": "prettier --check  bin/* scripts/**/*.js lib/**/*.js",
     "check:types": "tsc --noEmit",
     "test:vercel-nft": "node scripts/test-vercel-nft.js"
-  },
-  "jest": {
-    "collectCoverage": true,
-    "testEnvironment": "node",
-    "testPathIgnorePatterns": [
-      "<rootDir>/src"
-    ]
   },
   "volta": {
     "node": "24.8.0",
