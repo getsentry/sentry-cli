@@ -380,24 +380,22 @@ impl<'a> DifFile<'a> {
     pub fn is_usable(&self) -> bool {
         match self {
             DifFile::Archive(_) => self.has_ids() && self.features().has_some(),
-            DifFile::Proguard(pg) => pg.get().has_line_info(),
+            DifFile::Proguard(..) => true,
         }
     }
 
     pub fn get_problem(&self) -> Option<&'static str> {
         if self.is_usable() {
-            None
-        } else {
-            Some(match self {
-                DifFile::Archive(..) => {
-                    if !self.has_ids() {
-                        "missing debug identifier, likely stripped"
-                    } else {
-                        "missing debug or unwind information"
-                    }
-                }
-                DifFile::Proguard(..) => "missing line information",
-            })
+            return None;
+        }
+
+        match self {
+            DifFile::Archive(..) => Some(if !self.has_ids() {
+                "missing debug identifier, likely stripped"
+            } else {
+                "missing debug or unwind information"
+            }),
+            DifFile::Proguard(..) => None,
         }
     }
 

@@ -95,10 +95,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // them all up.
     for path in &paths {
         match ByteView::open(path) {
-            Ok(byteview) => match ProguardMapping::try_from(byteview) {
-                Ok(mapping) => mappings.push(mapping),
-                Err(e) => eprintln!("warning: ignoring proguard mapping '{path}': {e}"),
-            },
+            Ok(byteview) => mappings.push(ProguardMapping::from(byteview)),
             Err(ref err) if err.kind() == io::ErrorKind::NotFound => {
                 eprintln!(
                     "warning: proguard mapping '{path}' does not exist. This \

@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Fixes
+
+- Accept ProGuard mapping files without line information instead of rejecting them ([#3192](https://github.com/getsentry/sentry-cli/pull/3192)).
+
 ### Experimental Feature 🧑‍🔬 (internal-only)
 
 - Pipe snapshot sidecar metadata into upload as part of `sentry-cli build snapshots` command ([#3163](https://github.com/getsentry/sentry-cli/pull/3163)).
