@@ -29,8 +29,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let byteview = ByteView::open(path)
         .with_context(|| format!("failed to open proguard mapping '{path}'"))?;
-    let mapping = ProguardMapping::try_from(byteview)
-        .with_context(|| format!("failed to parse proguard mapping '{path}'"))?;
+    let mapping = ProguardMapping::from(byteview);
 
     println!("{}", mapping.uuid());
     Ok(())

@@ -380,7 +380,7 @@ impl<'a> DifFile<'a> {
     pub fn is_usable(&self) -> bool {
         match self {
             DifFile::Archive(_) => self.has_ids() && self.features().has_some(),
-            DifFile::Proguard(pg) => pg.get().has_line_info(),
+            DifFile::Proguard(..) => true,
         }
     }
 
