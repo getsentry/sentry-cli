@@ -380,7 +380,7 @@ impl<'a> DifFile<'a> {
     pub fn is_usable(&self) -> bool {
         match self {
             DifFile::Archive(_) => self.has_ids() && self.features().has_some(),
-            _ => true,
+            DifFile::Proguard(..) => true,
         }
     }
 
@@ -391,7 +391,7 @@ impl<'a> DifFile<'a> {
             } else {
                 "missing debug or unwind information"
             }),
-            _ => None,
+            DifFile::Archive(..) | DifFile::Proguard(..) => None,
         }
     }
 

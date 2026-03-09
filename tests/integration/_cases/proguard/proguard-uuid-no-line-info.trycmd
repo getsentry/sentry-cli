@@ -1,0 +1,6 @@
+```
+$ sentry-cli proguard uuid tests/integration/_fixtures/proguard.txt
+? success
+5db7294d-87fc-5726-a5c0-4a90679657a5
+
+```
