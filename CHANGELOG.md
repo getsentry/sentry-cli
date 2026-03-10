@@ -1,5 +1,15 @@
 # Changelog
 
+## 3.3.2
+
+### New Features ✨
+
+- (preprod) Add VCS parameters to snapshots upload command by @rbro112 in [#3200](https://github.com/getsentry/sentry-cli/pull/3200)
+
+### Internal Changes 🔧
+
+- (npm) 🤖 Bump optional dependencies to 3.3.1 in [3200dfb9](https://github.com/getsentry/sentry-cli/commit/3200dfb9a6c3c2b3946c5e78b57b9376eed7250e)
+
 ## 3.3.1
 
 ### Fixes
