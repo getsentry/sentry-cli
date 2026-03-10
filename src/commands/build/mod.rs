@@ -5,6 +5,7 @@ use crate::utils::args::ArgExt as _;
 
 pub mod snapshots;
 pub mod upload;
+pub mod vcs;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
