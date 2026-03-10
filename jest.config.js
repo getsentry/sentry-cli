@@ -1,8 +1,6 @@
 module.exports = {
-  collectCoverage: true,
-  testEnvironment: 'node',
   setupFiles: ['<rootDir>/setupTests.js'],
-  testPathIgnorePatterns: ['<rootDir>/src/', '<rootDir>/tests/integration/'],
+  testPathIgnorePatterns: ['<rootDir>/src/'],
   transform: {
     '^.+\\.ts$': 'ts-jest',
   },
