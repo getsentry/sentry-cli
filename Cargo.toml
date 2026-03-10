@@ -1,7 +1,7 @@
 [package]
 build = "build.rs"
 name = "sentry-cli"
-version = "3.3.0"
+version = "3.3.1"
 edition = "2021"
 rust-version = "1.91"
 
