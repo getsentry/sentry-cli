@@ -5,6 +5,7 @@
 ### Experimental Feature 🧑‍🔬 (internal-only)
 
 - Pipe snapshot sidecar metadata into upload as part of `sentry-cli build snapshots` command ([#3163](https://github.com/getsentry/sentry-cli/pull/3163)).
+- Add VCS metadata parameters to `sentry-cli build snapshots` command ([#3200](https://github.com/getsentry/sentry-cli/pull/3200)).
 
 ## 3.3.0
 
