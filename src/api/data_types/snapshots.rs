@@ -1,10 +1,11 @@
 //! Data types for the snapshots API.
 
-use std::{borrow::Cow, collections::HashMap};
+use std::collections::HashMap;
 
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use sha1_smol::Digest;
+
+use super::VcsInfo;
 
 const IMAGE_FILE_NAME_FIELD: &str = "image_file_name";
 const WIDTH_FIELD: &str = "width";
@@ -25,23 +26,8 @@ pub struct CreateSnapshotResponse {
 pub struct SnapshotsManifest<'a> {
     pub app_id: String,
     pub images: HashMap<String, ImageMetadata>,
-    // VCS info
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub head_sha: Option<Digest>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub base_sha: Option<Digest>,
-    #[serde(skip_serializing_if = "str::is_empty", rename = "provider")]
-    pub vcs_provider: Cow<'a, str>,
-    #[serde(skip_serializing_if = "str::is_empty")]
-    pub head_repo_name: Cow<'a, str>,
-    #[serde(skip_serializing_if = "str::is_empty")]
-    pub base_repo_name: Cow<'a, str>,
-    #[serde(skip_serializing_if = "str::is_empty")]
-    pub head_ref: Cow<'a, str>,
-    #[serde(skip_serializing_if = "str::is_empty")]
-    pub base_ref: Cow<'a, str>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub pr_number: Option<u32>,
+    #[serde(flatten)]
+    pub vcs_info: VcsInfo<'a>,
 }
 
 // Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py

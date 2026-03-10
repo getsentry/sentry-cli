@@ -86,6 +86,7 @@ pub trait ArgExt: Sized {
     fn project_arg(self, multiple: bool) -> Self;
     fn release_arg(self) -> Self;
     fn version_arg(self, global: bool) -> Self;
+    fn git_metadata_args(self) -> Self;
 }
 
 impl ArgExt for Command {
@@ -141,5 +142,71 @@ impl ArgExt for Command {
                 .value_parser(parse_release)
                 .help("The version of the release"),
         )
+    }
+
+    fn git_metadata_args(self) -> Command {
+        use crate::utils::build_vcs::parse_sha_allow_empty;
+
+        self.arg(
+                Arg::new("head_sha")
+                    .long("head-sha")
+                    .value_parser(parse_sha_allow_empty)
+                    .help("The VCS commit sha to use for the upload. If not provided, the current commit sha will be used.")
+            )
+            .arg(
+                Arg::new("base_sha")
+                    .long("base-sha")
+                    .value_parser(parse_sha_allow_empty)
+                    .help("The VCS commit's base sha to use for the upload. If not provided, the merge-base of the current and remote branch will be used.")
+            )
+            .arg(
+                Arg::new("vcs_provider")
+                    .long("vcs-provider")
+                    .help("The VCS provider to use for the upload. If not provided, the current provider will be used.")
+            )
+            .arg(
+                Arg::new("head_repo_name")
+                    .long("head-repo-name")
+                    .help("The name of the git repository to use for the upload (e.g. organization/repository). If not provided, the current repository will be used.")
+            )
+            .arg(
+                Arg::new("base_repo_name")
+                    .long("base-repo-name")
+                    .help("The name of the git repository to use for the upload (e.g. organization/repository). If not provided, the current repository will be used.")
+            )
+            .arg(
+                Arg::new("head_ref")
+                    .long("head-ref")
+                    .help("The reference (branch) to use for the upload. If not provided, the current reference will be used.")
+            )
+            .arg(
+                Arg::new("base_ref")
+                    .long("base-ref")
+                    .help("The base reference (branch) to use for the upload. If not provided, the merge-base with the remote tracking branch will be used.")
+            )
+            .arg(
+                Arg::new("pr_number")
+                    .long("pr-number")
+                    .value_parser(clap::value_parser!(u32))
+                    .help("The pull request number to use for the upload. If not provided and running \
+                        in a pull_request-triggered GitHub Actions workflow, the PR number will be automatically \
+                        detected from GitHub Actions environment variables.")
+            )
+            .arg(
+                Arg::new("force_git_metadata")
+                    .long("force-git-metadata")
+                    .action(ArgAction::SetTrue)
+                    .conflicts_with("no_git_metadata")
+                    .help("Force collection and sending of git metadata (branch, commit, etc.). \
+                        If neither this nor --no-git-metadata is specified, git metadata is \
+                        automatically collected when running in most CI environments.")
+            )
+            .arg(
+                Arg::new("no_git_metadata")
+                    .long("no-git-metadata")
+                    .action(ArgAction::SetTrue)
+                    .conflicts_with("force_git_metadata")
+                    .help("Disable collection and sending of git metadata.")
+            )
     }
 }

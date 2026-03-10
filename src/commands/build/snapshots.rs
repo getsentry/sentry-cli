@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::str::FromStr as _;
 
 use anyhow::{Context as _, Result};
-use clap::{Arg, ArgAction, ArgMatches, Command};
+use clap::{Arg, ArgMatches, Command};
 use console::style;
 use itertools::Itertools as _;
 use log::{debug, info, warn};
@@ -15,10 +15,10 @@ use serde_json::Value;
 use sha2::{Digest as _, Sha256};
 use walkdir::WalkDir;
 
-use super::vcs::{collect_git_metadata, parse_sha_allow_empty};
 use crate::api::{Api, CreateSnapshotResponse, ImageMetadata, SnapshotsManifest};
 use crate::config::{Auth, Config};
 use crate::utils::args::ArgExt as _;
+use crate::utils::build_vcs::collect_git_metadata;
 use crate::utils::ci::is_ci;
 
 const EXPERIMENTAL_WARNING: &str =
@@ -49,68 +49,7 @@ pub fn make_command(command: Command) -> Command {
                 .help("The application identifier.")
                 .required(true),
         )
-
-        .arg(
-            Arg::new("head_sha")
-                .long("head-sha")
-                .value_parser(parse_sha_allow_empty)
-                .help("The VCS commit sha to use for the upload. If not provided, the current commit sha will be used.")
-        )
-        .arg(
-            Arg::new("base_sha")
-                .long("base-sha")
-                .value_parser(parse_sha_allow_empty)
-                .help("The VCS commit's base sha to use for the upload. If not provided, the merge-base of the current and remote branch will be used.")
-        )
-        .arg(
-            Arg::new("vcs_provider")
-                .long("vcs-provider")
-                .help("The VCS provider to use for the upload. If not provided, the current provider will be used.")
-        )
-        .arg(
-            Arg::new("head_repo_name")
-                .long("head-repo-name")
-                .help("The name of the git repository to use for the upload (e.g. organization/repository). If not provided, the current repository will be used.")
-        )
-        .arg(
-            Arg::new("base_repo_name")
-                .long("base-repo-name")
-                .help("The name of the git repository to use for the upload (e.g. organization/repository). If not provided, the current repository will be used.")
-        )
-        .arg(
-            Arg::new("head_ref")
-                .long("head-ref")
-                .help("The reference (branch) to use for the upload. If not provided, the current reference will be used.")
-        )
-        .arg(
-            Arg::new("base_ref")
-                .long("base-ref")
-                .help("The base reference (branch) to use for the upload. If not provided, the merge-base with the remote tracking branch will be used.")
-        )
-        .arg(
-            Arg::new("pr_number")
-                .long("pr-number")
-                .value_parser(clap::value_parser!(u32))
-                .help("The pull request number to use for the upload. If not provided and running \
-                    in a pull_request-triggered GitHub Actions workflow, the PR number will be automatically \
-                    detected from GitHub Actions environment variables.")
-        )
-        .arg(
-            Arg::new("force_git_metadata")
-                .long("force-git-metadata")
-                .action(ArgAction::SetTrue)
-                .conflicts_with("no_git_metadata")
-                .help("Force collection and sending of git metadata (branch, commit, etc.). \
-                    If neither this nor --no-git-metadata is specified, git metadata is \
-                    automatically collected when running in most CI environments.")
-        )
-        .arg(
-            Arg::new("no_git_metadata")
-                .long("no-git-metadata")
-                .action(ArgAction::SetTrue)
-                .conflicts_with("force_git_metadata")
-                .help("Disable collection and sending of git metadata.")
-        )
+        .git_metadata_args()
 }
 
 struct ImageInfo {
@@ -185,14 +124,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let manifest = SnapshotsManifest {
         app_id: app_id.clone(),
         images: manifest_entries,
-        head_sha: vcs_info.head_sha,
-        base_sha: vcs_info.base_sha,
-        vcs_provider: vcs_info.vcs_provider,
-        head_repo_name: vcs_info.head_repo_name,
-        base_repo_name: vcs_info.base_repo_name,
-        head_ref: vcs_info.head_ref,
-        base_ref: vcs_info.base_ref,
-        pr_number: vcs_info.pr_number,
+        vcs_info,
     };
 
     // POST manifest to API

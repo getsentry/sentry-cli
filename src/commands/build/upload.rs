@@ -11,7 +11,6 @@ use symbolic::common::ByteView;
 use zip::write::SimpleFileOptions;
 use zip::{DateTime, ZipWriter};
 
-use super::vcs::{collect_git_metadata, parse_sha_allow_empty};
 use crate::api::{Api, AuthenticatedApi, ChunkedBuildRequest, ChunkedFileState, VcsInfo};
 use crate::config::Config;
 use crate::constants::DEFAULT_MAX_WAIT;
@@ -21,6 +20,7 @@ use crate::utils::build::{handle_asset_catalogs, ipa_to_xcarchive, is_apple_app,
 use crate::utils::build::{
     is_aab_file, is_apk_file, is_zip_file, normalize_directory, write_version_metadata,
 };
+use crate::utils::build_vcs::collect_git_metadata;
 use crate::utils::chunks::{upload_chunks, Chunk, ASSEMBLE_POLL_INTERVAL};
 use crate::utils::ci::is_ci;
 use crate::utils::fs::get_sha1_checksums;
@@ -48,51 +48,7 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::Append)
                 .required(true),
         )
-        .arg(
-            Arg::new("head_sha")
-                .long("head-sha")
-                .value_parser(parse_sha_allow_empty)
-                .help("The VCS commit sha to use for the upload. If not provided, the current commit sha will be used.")
-        )
-        .arg(
-            Arg::new("base_sha")
-                .long("base-sha")
-                .value_parser(parse_sha_allow_empty)
-                .help("The VCS commit's base sha to use for the upload. If not provided, the merge-base of the current and remote branch will be used.")
-        )
-        .arg(
-            Arg::new("vcs_provider")
-                .long("vcs-provider")
-                .help("The VCS provider to use for the upload. If not provided, the current provider will be used.")
-        )
-        .arg(
-            Arg::new("head_repo_name")
-                .long("head-repo-name")
-                .help("The name of the git repository to use for the upload (e.g. organization/repository). If not provided, the current repository will be used.")
-        )
-        .arg(
-            Arg::new("base_repo_name")
-                .long("base-repo-name")
-                .help("The name of the git repository to use for the upload (e.g. organization/repository). If not provided, the current repository will be used.")
-        )
-        .arg(
-            Arg::new("head_ref")
-                .long("head-ref")
-                .help("The reference (branch) to use for the upload. If not provided, the current reference will be used.")
-        )
-        .arg(
-            Arg::new("base_ref")
-                .long("base-ref")
-                .help("The base reference (branch) to use for the upload. If not provided, the merge-base with the remote tracking branch will be used.")
-        )
-        .arg(
-            Arg::new("pr_number")
-                .long("pr-number")
-                .value_parser(clap::value_parser!(u32))
-                .help("The pull request number to use for the upload. If not provided and running \
-                    in a pull_request-triggered GitHub Actions workflow, the PR number will be automatically \
-                    detected from GitHub Actions environment variables.")
-        )
+        .git_metadata_args()
         .arg(
             Arg::new("build_configuration")
                 .long("build-configuration")
@@ -112,22 +68,6 @@ pub fn make_command(command: Command) -> Command {
                     Builds with at least one matching install group will be shown updates \
                     for each other.",
                 )
-        )
-        .arg(
-            Arg::new("force_git_metadata")
-                .long("force-git-metadata")
-                .action(ArgAction::SetTrue)
-                .conflicts_with("no_git_metadata")
-                .help("Force collection and sending of git metadata (branch, commit, etc.). \
-                    If neither this nor --no-git-metadata is specified, git metadata is \
-                    automatically collected when running in most CI environments.")
-        )
-        .arg(
-            Arg::new("no_git_metadata")
-                .long("no-git-metadata")
-                .action(ArgAction::SetTrue)
-                .conflicts_with("force_git_metadata")
-                .help("Disable collection and sending of git metadata.")
         )
 }
 
