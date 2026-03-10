@@ -5,6 +5,8 @@ use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
+use super::VcsInfo;
+
 const IMAGE_FILE_NAME_FIELD: &str = "image_file_name";
 const WIDTH_FIELD: &str = "width";
 const HEIGHT_FIELD: &str = "height";
@@ -21,9 +23,11 @@ pub struct CreateSnapshotResponse {
 // Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py
 /// Manifest describing a set of snapshot images for an app.
 #[derive(Debug, Serialize)]
-pub struct SnapshotsManifest {
+pub struct SnapshotsManifest<'a> {
     pub app_id: String,
     pub images: HashMap<String, ImageMetadata>,
+    #[serde(flatten)]
+    pub vcs_info: VcsInfo<'a>,
 }
 
 // Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py

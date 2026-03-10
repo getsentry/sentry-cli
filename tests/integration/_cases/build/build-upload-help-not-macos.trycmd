@@ -1,5 +1,6 @@
 ```
 $ sentry-cli build upload --help
+? success
 Upload builds to a project.
 
 This feature only works with Sentry SaaS.
@@ -66,6 +67,14 @@ Options:
           pull_request-triggered GitHub Actions workflow, the PR number will be automatically
           detected from GitHub Actions environment variables.
 
+      --force-git-metadata
+          Force collection and sending of git metadata (branch, commit, etc.). If neither this nor
+          --no-git-metadata is specified, git metadata is automatically collected when running in
+          most CI environments.
+
+      --no-git-metadata
+          Disable collection and sending of git metadata.
+
       --build-configuration <build_configuration>
           The build configuration to use for the upload. If not provided, the current version will
           be used.
@@ -76,14 +85,6 @@ Options:
       --install-group <install_group>
           The install group(s) for this build. Can be specified multiple times. Builds with at least
           one matching install group will be shown updates for each other.
-
-      --force-git-metadata
-          Force collection and sending of git metadata (branch, commit, etc.). If neither this nor
-          --no-git-metadata is specified, git metadata is automatically collected when running in
-          most CI environments.
-
-      --no-git-metadata
-          Disable collection and sending of git metadata.
 
   -h, --help
           Print help (see a summary with '-h')

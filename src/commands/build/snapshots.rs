@@ -18,6 +18,8 @@ use walkdir::WalkDir;
 use crate::api::{Api, CreateSnapshotResponse, ImageMetadata, SnapshotsManifest};
 use crate::config::{Auth, Config};
 use crate::utils::args::ArgExt as _;
+use crate::utils::build_vcs::collect_git_metadata;
+use crate::utils::ci::is_ci;
 
 const EXPERIMENTAL_WARNING: &str =
     "[EXPERIMENTAL] The \"build snapshots\" command is experimental. \
@@ -47,6 +49,7 @@ pub fn make_command(command: Command) -> Command {
                 .help("The application identifier.")
                 .required(true),
         )
+        .git_metadata_args()
 }
 
 struct ImageInfo {
@@ -79,6 +82,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     if !dir_path.is_dir() {
         anyhow::bail!("Path is not a directory: {}", dir_path.display());
     }
+
+    // Collect git metadata if running in CI, unless explicitly enabled or disabled.
+    let should_collect_git_metadata =
+        matches.get_flag("force_git_metadata") || (!matches.get_flag("no_git_metadata") && is_ci());
+
+    // Always collect git metadata, but only perform automatic inference when enabled
+    let vcs_info = collect_git_metadata(matches, &config, should_collect_git_metadata);
 
     debug!("Scanning for images in: {}", dir_path.display());
     debug!("Organization: {org}");
@@ -114,6 +124,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let manifest = SnapshotsManifest {
         app_id: app_id.clone(),
         images: manifest_entries,
+        vcs_info,
     };
 
     // POST manifest to API
