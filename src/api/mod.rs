@@ -978,6 +978,17 @@ impl AuthenticatedApi<'_> {
         Ok(rv)
     }
 
+    /// Bulk uploads code mappings for an organization.
+    pub fn bulk_upload_code_mappings(
+        &self,
+        org: &str,
+        body: &BulkCodeMappingsRequest,
+    ) -> ApiResult<BulkCodeMappingsResponse> {
+        let path = format!("/organizations/{}/code-mappings/bulk/", PathArg(org));
+        self.post(&path, body)?
+            .convert_rnf(ApiErrorKind::ResourceNotFound)
+    }
+
     /// Creates a preprod snapshot artifact for the given project.
     pub fn create_preprod_snapshot<S: Serialize>(
         &self,

@@ -3,17 +3,11 @@ use std::fs;
 use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use log::debug;
-use serde::{Deserialize, Serialize};
 
+use crate::api::{Api, BulkCodeMapping, BulkCodeMappingsRequest};
 use crate::config::Config;
+use crate::utils::formatting::Table;
 use crate::utils::vcs;
-
-#[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
-struct CodeMapping {
-    stack_root: String,
-    source_root: String,
-}
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -39,12 +33,16 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let config = Config::current();
+    let org = config.get_org(matches)?;
+    let project = config.get_project(matches)?;
+
     let path = matches
         .get_one::<String>("path")
         .expect("path is a required argument");
     let data = fs::read(path).with_context(|| format!("Failed to read mappings file '{path}'"))?;
 
-    let mappings: Vec<CodeMapping> =
+    let mappings: Vec<BulkCodeMapping> =
         serde_json::from_slice(&data).context("Failed to parse mappings JSON")?;
 
     if mappings.is_empty() {
@@ -73,7 +71,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             // Prefer explicit config (SENTRY_VCS_REMOTE / ini), then inspect
             // the repo for the best remote (upstream > origin > first).
             let remote_name = git_repo.as_ref().ok().and_then(|repo| {
-                let config = Config::current();
                 let configured_remote = config.get_cached_vcs_remote();
                 if vcs::git_repo_remote_url(repo, &configured_remote).is_ok() {
                     debug!("Using configured VCS remote: {configured_remote}");
@@ -146,9 +143,57 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     };
 
-    println!("Found {} code mapping(s) in {path}", mappings.len());
-    println!("Repository: {repo_name}");
-    println!("Default branch: {default_branch}");
+    let mapping_count = mappings.len();
+    let request = BulkCodeMappingsRequest {
+        project,
+        repository: repo_name,
+        default_branch,
+        mappings,
+    };
+
+    println!("Uploading {mapping_count} code mapping(s)...");
+
+    let api = Api::current();
+    let response = api
+        .authenticated()?
+        .bulk_upload_code_mappings(&org, &request)?;
+
+    // Display results
+    let mut table = Table::new();
+    table
+        .title_row()
+        .add("Stack Root")
+        .add("Source Root")
+        .add("Status");
+
+    for result in &response.mappings {
+        let status = match result.status.as_str() {
+            "error" => match &result.detail {
+                Some(detail) => format!("error: {detail}"),
+                None => "error".to_owned(),
+            },
+            s => s.to_owned(),
+        };
+        table
+            .add_row()
+            .add(&result.stack_root)
+            .add(&result.source_root)
+            .add(&status);
+    }
+
+    table.print();
+    println!();
+    println!(
+        "Created: {}, Updated: {}, Errors: {}",
+        response.created, response.updated, response.errors
+    );
+
+    if response.errors > 0 {
+        bail!(
+            "{} mapping(s) failed to upload. See errors above.",
+            response.errors
+        );
+    }
 
     Ok(())
 }
