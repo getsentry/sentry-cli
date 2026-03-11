@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::str::FromStr as _;
+use std::time::Duration;
 
 use anyhow::{Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
@@ -301,6 +302,7 @@ fn upload_images(
             };
             auth
         })
+        .configure_reqwest(|r| r.connect_timeout(Duration::from_secs(10)))
         .build()?;
 
     let mut scope = Usecase::new("preprod").scope();
@@ -385,7 +387,8 @@ fn upload_images(
             eprintln!("There were errors uploading images:");
             let mut error_count = 0;
             for error in errors {
-                eprintln!("  {}", style(error).red());
+                let error = anyhow::Error::new(error);
+                eprintln!("  {}", style(format!("{:#}", error)).red());
                 error_count += 1;
             }
             anyhow::bail!("Failed to upload {error_count} out of {image_count} images")
