@@ -1,5 +1,11 @@
 # Changelog
 
+## 3.3.3
+
+### Internal Changes 🔧
+
+- (npm) 🤖 Bump optional dependencies to 3.3.2 in [afdef906](https://github.com/getsentry/sentry-cli/commit/afdef906ba225132f138469afd0d63df859ce0b4)
+
 ## 3.3.2
 
 ### New Features ✨
