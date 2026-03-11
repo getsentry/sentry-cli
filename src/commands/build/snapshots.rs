@@ -388,7 +388,7 @@ fn upload_images(
             let mut error_count = 0;
             for error in errors {
                 let error = anyhow::Error::new(error);
-                eprintln!("  {}", style(format!("{:#}", error)).red());
+                eprintln!("  {}", style(format!("{error:#}")).red());
                 error_count += 1;
             }
             anyhow::bail!("Failed to upload {error_count} out of {image_count} images")
