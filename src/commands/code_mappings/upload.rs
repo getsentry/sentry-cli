@@ -2,9 +2,9 @@ use std::fs;
 
 use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Deserialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 struct CodeMapping {
     stack_root: String,
@@ -13,7 +13,7 @@ struct CodeMapping {
 
 pub fn make_command(command: Command) -> Command {
     command
-        .about("Upload code mappings for a project from a JSON file. Each mapping pairs a stack trace root (e.g. com/example/module) with the corresponding source path in your repository (e.g. modules/module/src/main/java/com/example/module).")
+        .about("Upload code mappings for a project from a JSON file.")
         .arg(
             Arg::new("path")
                 .value_name("PATH")
@@ -36,9 +36,8 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    let path = matches
-        .get_one::<String>("path")
-        .expect("path is a required argument");
+    #[expect(clippy::unwrap_used, reason = "path is a required argument")]
+    let path = matches.get_one::<String>("path").unwrap();
     let data = fs::read(path).with_context(|| format!("Failed to read mappings file '{path}'"))?;
 
     let mappings: Vec<CodeMapping> =
