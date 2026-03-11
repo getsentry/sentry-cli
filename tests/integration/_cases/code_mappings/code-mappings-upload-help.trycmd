@@ -11,7 +11,7 @@ Arguments:
 Options:
   -o, --org <ORG>                The organization ID or slug.
       --repo <REPO>              The repository name (e.g. owner/repo). Defaults to the git remote.
-      --default-branch <BRANCH>  The default branch name. [default: main]
+      --default-branch <BRANCH>  The default branch name. Defaults to the git remote HEAD or 'main'.
       --header <KEY:VALUE>       Custom headers that should be attached to all requests
                                  in key:value format.
   -p, --project <PROJECT>        The project ID or slug.
