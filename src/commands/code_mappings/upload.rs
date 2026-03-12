@@ -153,28 +153,28 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    // Display results
-    if !merged.mappings.is_empty() {
+    // Display error details (successful mappings are summarized in counts only).
+    let error_mappings: Vec<_> = merged
+        .mappings
+        .iter()
+        .filter(|r| r.status == "error")
+        .collect();
+
+    if !error_mappings.is_empty() {
         let mut table = Table::new();
         table
             .title_row()
             .add("Stack Root")
             .add("Source Root")
-            .add("Status");
+            .add("Detail");
 
-        for result in &merged.mappings {
-            let status = match result.status.as_str() {
-                "error" => match &result.detail {
-                    Some(detail) => format!("error: {detail}"),
-                    None => "error".to_owned(),
-                },
-                s => s.to_owned(),
-            };
+        for result in &error_mappings {
+            let detail = result.detail.as_deref().unwrap_or("unknown error");
             table
                 .add_row()
                 .add(&result.stack_root)
                 .add(&result.source_root)
-                .add(&status);
+                .add(detail);
         }
 
         table.print();
