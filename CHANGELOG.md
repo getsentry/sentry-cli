@@ -21,6 +21,7 @@
 ### Fixes
 
 - Accept ProGuard mapping files without line information instead of rejecting them ([#3192](https://github.com/getsentry/sentry-cli/pull/3192)).
+- Improve error message when uploading `.xcarchive` or `.ipa` files on non-Apple Silicon Macs ([#3211](https://github.com/getsentry/sentry-cli/pull/3211)).
 
 ### Experimental Feature 🧑‍🔬 (internal-only)
 

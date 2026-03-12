@@ -1,0 +1,9 @@
+```
+$ sentry-cli build upload tests/integration/_fixtures/build/ipa.ipa
+? failed
+error: Uploading XCArchive and IPA files requires an Apple Silicon Mac: tests/integration/_fixtures/build/ipa.ipa
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```
