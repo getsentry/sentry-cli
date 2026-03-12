@@ -1,0 +1,72 @@
+name: Snapshot Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  compute-version:
+    name: Compute Snapshot Version
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+
+      - name: Compute snapshot version
+        id: version
+        run: |
+          CURRENT=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+          MINOR=$(echo "$CURRENT" | cut -d. -f2)
+          NEXT_MINOR=$((MINOR + 1))
+          DATE=$(date -u +%Y%m%d)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          VERSION="${MAJOR}.${NEXT_MINOR}.0-snapshot.${DATE}.${SHORT_SHA}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "Snapshot version: $VERSION"
+
+  build:
+    name: Build
+    needs: compute-version
+    uses: ./.github/workflows/build.yml
+    with:
+      skip-signing: true
+      snapshot-version: ${{ needs.compute-version.outputs.version }}
+    secrets: inherit
+
+  publish-npm:
+    name: Publish to npm
+    needs: [compute-version, build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # 6.2.0
+        with:
+          node-version: '20.10.0'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download npm binary distributions
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # 8.0.0
+        with:
+          name: artifact-npm-binary-distributions
+          path: npm-distributions
+
+      - name: Download node package
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # 8.0.0
+        with:
+          name: artifact-pkg-node
+          path: node-package
+
+      - name: Publish platform packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for pkg in npm-distributions/*.tgz; do
+            echo "Publishing $pkg"
+            npm publish "$pkg" --tag snapshot
+          done
+
+      - name: Publish main package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm publish node-package/*.tgz --tag snapshot
