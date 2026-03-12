@@ -90,7 +90,7 @@ jobs:
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
         run: |
-          for pkg in npm-distributions/*.tgz; do
+          for pkg in npm-distributions/*/*.tgz; do
             echo "Publishing $pkg"
             npm publish "$pkg" --tag snapshot
           done
