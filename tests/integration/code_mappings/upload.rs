@@ -14,6 +14,17 @@ fn command_code_mappings_upload() {
 }
 
 #[test]
+fn command_code_mappings_upload_partial_error() {
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/code-mappings/bulk/")
+                .with_response_file("code_mappings/post-bulk-partial-error.json"),
+        )
+        .register_trycmd_test("code_mappings/code-mappings-upload-partial-error.trycmd")
+        .with_default_token();
+}
+
+#[test]
 fn command_code_mappings_upload_batches() {
     // Generate a fixture with 301 mappings to force 2 batches (300 + 1).
     let mut mappings = Vec::with_capacity(301);

@@ -179,10 +179,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    // Display results
-    if !merged.mappings.is_empty() {
-        print_results_table(merged.mappings);
-    }
+    // Display error details (successful mappings are summarized in counts only).
+    print_error_table(&merged.mappings);
 
     for err in &merged.batch_errors {
         println!("{err}");
@@ -201,24 +199,27 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-fn print_results_table(mappings: Vec<BulkCodeMappingResult>) {
+fn print_error_table(mappings: &[BulkCodeMappingResult]) {
+    let error_mappings: Vec<_> = mappings.iter().filter(|r| r.status == "error").collect();
+
+    if error_mappings.is_empty() {
+        return;
+    }
+
     let mut table = Table::new();
     table
         .title_row()
         .add("Stack Root")
         .add("Source Root")
-        .add("Status");
+        .add("Detail");
 
-    for result in mappings {
-        let status = match result.detail {
-            Some(detail) if result.status == "error" => format!("error: {detail}"),
-            _ => result.status,
-        };
+    for result in &error_mappings {
+        let detail = result.detail.as_deref().unwrap_or("unknown error");
         table
             .add_row()
             .add(&result.stack_root)
             .add(&result.source_root)
-            .add(&status);
+            .add(detail);
     }
 
     table.print();
