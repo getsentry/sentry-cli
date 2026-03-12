@@ -4,6 +4,17 @@ on:
   push:
     branches:
       - release/**
+  workflow_call:
+    inputs:
+      skip-signing:
+        type: boolean
+        default: false
+      is-snapshot:
+        type: boolean
+        default: false
+      checkout-ref:
+        type: string
+        default: ''
 
 jobs:
   linux:
@@ -32,6 +43,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Add Rustup Target
         run: |
@@ -68,6 +81,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Add Rustup Target
         run: rustup target add ${{ matrix.target }}
@@ -154,9 +169,13 @@ jobs:
 
     steps:
       - name: Checkout repository
+        if: ${{ !inputs.skip-signing }}
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Install `rcodesign`
+        if: ${{ !inputs.skip-signing }}
         run: |
           curl -L https://github.com/indygreg/apple-platform-rs/releases/download/apple-codesign%2F0.29.0/apple-codesign-0.29.0-x86_64-unknown-linux-musl.tar.gz \
             -o rcodesign.tar.gz
@@ -166,6 +185,7 @@ jobs:
           rm rcodesign.tar.gz
 
       - name: Decode Apple signing certificate and API key
+        if: ${{ !inputs.skip-signing }}
         env:
           APPLE_CERT_DATA: ${{ secrets.APPLE_CERT_DATA }}
           APPLE_API_KEY: ${{ secrets.APPLE_API_KEY }}
@@ -179,6 +199,7 @@ jobs:
           name: unsigned-bin-macos-${{ matrix.arch }}
 
       - name: Sign binary
+        if: ${{ !inputs.skip-signing }}
         run: |
           rcodesign sign \
             --for-notarization \
@@ -188,17 +209,19 @@ jobs:
             sentry-cli-Darwin-${{ matrix.arch }}
 
       - name: Zip signed binary
+        if: ${{ !inputs.skip-signing }}
         run: |
           zip sentry-cli-Darwin-${{ matrix.arch }}.zip sentry-cli-Darwin-${{ matrix.arch }}
 
       - name: Notarize binary
+        if: ${{ !inputs.skip-signing }}
         run: |
           rcodesign notary-submit \
             --api-key-file ${{ env.APPLE_API_KEY_PATH }} \
             --wait \
             sentry-cli-Darwin-${{ matrix.arch }}.zip
 
-      - name: Upload signed binary
+      - name: Upload binary
         uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # 7.0.0
         with:
           name: artifact-bin-macos-${{ matrix.arch }}
@@ -219,6 +242,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       # When rustup is updated, it tries to replace its binary, which on Windows is somehow locked.
       # This can result in the CI failure, see: https://github.com/rust-lang/rustup/issues/3029
@@ -247,10 +272,12 @@ jobs:
   node:
     name: NPM Package
     runs-on: ubuntu-24.04
-    needs: [linux, macos, macos_universal, windows]
+    needs: [linux, sign-macos-binaries, windows]
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # 6.2.0
         with:
@@ -280,10 +307,13 @@ jobs:
           if-no-files-found: 'error'
 
   python-base:
+    if: ${{ !inputs.is-snapshot }}
     name: python (base)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - name: Add Rustup Target
         run: rustup target add x86_64-unknown-linux-musl
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # 6.2.0
@@ -297,11 +327,14 @@ jobs:
           if-no-files-found: 'error'
 
   python:
+    if: ${{ !inputs.is-snapshot }}
     name: python
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows, python-base]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # 6.2.0
         with:
           python-version: '3.11'
@@ -328,6 +361,8 @@ jobs:
     needs: [linux, sign-macos-binaries, windows]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # 6.2.0
         with:
           node-version: '20.10.0'
@@ -366,6 +401,7 @@ jobs:
           if-no-files-found: 'error'
 
   platform-specific-docker:
+    if: ${{ !inputs.is-snapshot }}
     name: Build Docker Image (${{ matrix.platform }})
     strategy:
       matrix:
@@ -380,6 +416,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # 3.12.0
@@ -402,6 +440,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
 
   multiarch-docker:
+    if: ${{ !inputs.is-snapshot }}
     name: Create Multi-Architecture Docker Image
     needs: platform-specific-docker
     runs-on: ubuntu-24.04
@@ -422,6 +461,7 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ github.sha }}-arm64
 
   merge:
+    if: ${{ !inputs.is-snapshot }}
     name: Create Release Artifact
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows, npm-distributions, node, python]

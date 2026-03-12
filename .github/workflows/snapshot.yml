@@ -1,0 +1,114 @@
+name: Snapshot Release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  prepare:
+    name: Prepare Snapshot
+    runs-on: ubuntu-24.04
+    outputs:
+      version: ${{ steps.version.outputs.version }}
+      ref: ${{ steps.push.outputs.ref }}
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+
+      # Computes a semver-compliant snapshot version based on the current
+      # version in Cargo.toml. The minor version is bumped so that the
+      # snapshot sorts higher than the current release but lower than the
+      # next real release. For example, if Cargo.toml has 3.3.1, the
+      # snapshot version will be 3.4.0-snapshot.20260312.abc1234.
+      - name: Compute snapshot version
+        id: version
+        run: |
+          CURRENT=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          MAJOR=$(echo "$CURRENT" | cut -d. -f1)
+          MINOR=$(echo "$CURRENT" | cut -d. -f2)
+          NEXT_MINOR=$((MINOR + 1))
+          DATE=$(date -u +%Y%m%d)
+          SHORT_SHA=$(git rev-parse --short HEAD)
+          VERSION="${MAJOR}.${NEXT_MINOR}.0-snapshot.${DATE}.${SHORT_SHA}"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "Snapshot version: $VERSION"
+
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # 6.2.0
+        with:
+          node-version: '20.10.0'
+
+      - name: Bump versions
+        run: scripts/bump-version.sh "${{ steps.version.outputs.current }}" "${{ steps.version.outputs.version }}"
+
+      - name: Push snapshot branch
+        id: push
+        run: |
+          BRANCH="snapshot/${{ steps.version.outputs.version }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git checkout -b "$BRANCH"
+          git add -A
+          git commit -m "snapshot: ${{ steps.version.outputs.version }}"
+          git push origin "$BRANCH"
+          echo "ref=$BRANCH" >> "$GITHUB_OUTPUT"
+
+  build:
+    name: Build
+    needs: prepare
+    uses: ./.github/workflows/build.yml
+    with:
+      skip-signing: true
+      is-snapshot: true
+      checkout-ref: ${{ needs.prepare.outputs.ref }}
+    secrets: inherit
+
+  publish-npm:
+    name: Publish to npm
+    needs: [prepare, build]
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # 6.2.0
+        with:
+          node-version: '20.10.0'
+          registry-url: 'https://registry.npmjs.org'
+
+      - name: Download npm binary distributions
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # 8.0.0
+        with:
+          name: artifact-npm-binary-distributions
+          path: npm-distributions
+
+      - name: Download node package
+        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # 8.0.0
+        with:
+          name: artifact-pkg-node
+          path: node-package
+
+      - name: Publish platform packages
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          for pkg in npm-distributions/*/*.tgz; do
+            echo "Publishing $pkg"
+            npm publish "$pkg" --tag snapshot
+          done
+
+      - name: Publish main package
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+        run: |
+          npm publish node-package/*.tgz --tag snapshot
+
+  cleanup:
+    name: Cleanup
+    needs: [prepare, publish-npm]
+    if: always()
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Delete snapshot branch
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/${{ needs.prepare.outputs.ref }}" || true
