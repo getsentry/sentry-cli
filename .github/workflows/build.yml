@@ -9,7 +9,10 @@ on:
       skip-signing:
         type: boolean
         default: false
-      snapshot-version:
+      is-snapshot:
+        type: boolean
+        default: false
+      checkout-ref:
         type: string
         default: ''
 
@@ -40,13 +43,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
-
-      - name: Override version
-        if: ${{ inputs.snapshot-version != '' }}
-        uses: ./.github/actions/override-version
         with:
-          version: ${{ inputs.snapshot-version }}
-          target: cargo
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Add Rustup Target
         run: |
@@ -83,13 +81,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
-
-      - name: Override version
-        if: ${{ inputs.snapshot-version != '' }}
-        uses: ./.github/actions/override-version
         with:
-          version: ${{ inputs.snapshot-version }}
-          target: cargo
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Add Rustup Target
         run: rustup target add ${{ matrix.target }}
@@ -178,6 +171,8 @@ jobs:
       - name: Checkout repository
         if: ${{ !inputs.skip-signing }}
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Install `rcodesign`
         if: ${{ !inputs.skip-signing }}
@@ -247,13 +242,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
-
-      - name: Override version
-        if: ${{ inputs.snapshot-version != '' }}
-        uses: ./.github/actions/override-version
         with:
-          version: ${{ inputs.snapshot-version }}
-          target: cargo
+          ref: ${{ inputs.checkout-ref }}
 
       # When rustup is updated, it tries to replace its binary, which on Windows is somehow locked.
       # This can result in the CI failure, see: https://github.com/rust-lang/rustup/issues/3029
@@ -286,6 +276,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # 6.2.0
         with:
@@ -293,13 +285,6 @@ jobs:
 
       - name: Install dependencies
         run: npm ci --ignore-scripts
-
-      - name: Override version
-        if: ${{ inputs.snapshot-version != '' }}
-        uses: ./.github/actions/override-version
-        with:
-          version: ${{ inputs.snapshot-version }}
-          target: npm
 
       - name: Download compiled binaries
         uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # 8.0.0
@@ -322,11 +307,13 @@ jobs:
           if-no-files-found: 'error'
 
   python-base:
-    if: ${{ !inputs.snapshot-version }}
+    if: ${{ !inputs.is-snapshot }}
     name: python (base)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - name: Add Rustup Target
         run: rustup target add x86_64-unknown-linux-musl
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # 6.2.0
@@ -340,12 +327,14 @@ jobs:
           if-no-files-found: 'error'
 
   python:
-    if: ${{ !inputs.snapshot-version }}
+    if: ${{ !inputs.is-snapshot }}
     name: python
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows, python-base]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # 6.2.0
         with:
           python-version: '3.11'
@@ -372,15 +361,11 @@ jobs:
     needs: [linux, sign-macos-binaries, windows]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # 6.2.0
         with:
           node-version: '20.10.0'
-      - name: Override version
-        if: ${{ inputs.snapshot-version != '' }}
-        uses: ./.github/actions/override-version
-        with:
-          version: ${{ inputs.snapshot-version }}
-          target: npm-distributions
       - uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # 8.0.0
         with:
           pattern: artifact-bin-*
@@ -416,7 +401,7 @@ jobs:
           if-no-files-found: 'error'
 
   platform-specific-docker:
-    if: ${{ !inputs.snapshot-version }}
+    if: ${{ !inputs.is-snapshot }}
     name: Build Docker Image (${{ matrix.platform }})
     strategy:
       matrix:
@@ -431,6 +416,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # 3.12.0
@@ -453,7 +440,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
 
   multiarch-docker:
-    if: ${{ !inputs.snapshot-version }}
+    if: ${{ !inputs.is-snapshot }}
     name: Create Multi-Architecture Docker Image
     needs: platform-specific-docker
     runs-on: ubuntu-24.04
@@ -474,7 +461,7 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ github.sha }}-arm64
 
   merge:
-    if: ${{ !inputs.snapshot-version }}
+    if: ${{ !inputs.is-snapshot }}
     name: Create Release Artifact
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows, npm-distributions, node, python]
