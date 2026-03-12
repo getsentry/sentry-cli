@@ -542,6 +542,18 @@ fn validate_is_supported_build(path: &Path, bytes: &[u8]) -> Result<()> {
     }
 
     debug!("File format validation failed");
+
+    #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+    {
+        let ext = path.extension().and_then(|e| e.to_str()).unwrap_or("");
+        if ext.eq_ignore_ascii_case("xcarchive") || ext.eq_ignore_ascii_case("ipa") {
+            return Err(anyhow!(
+                "Uploading XCArchive and IPA files requires an Apple Silicon Mac: {}",
+                path.display()
+            ));
+        }
+    }
+
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
     let format_list = "APK, AAB, XCArchive, or IPA";
     #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]

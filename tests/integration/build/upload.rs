@@ -26,6 +26,14 @@ fn command_build_upload_no_path() {
     TestManager::new().register_trycmd_test("build/build-upload-no-path.trycmd");
 }
 
+#[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
+#[test]
+fn command_build_upload_ipa_not_arm64() {
+    TestManager::new()
+        .register_trycmd_test("build/build-upload-ipa-not-arm64.trycmd")
+        .with_default_token();
+}
+
 #[test]
 fn command_build_upload_invalid_aab() {
     TestManager::new()
