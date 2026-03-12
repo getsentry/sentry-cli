@@ -12,6 +12,7 @@ Usage: sentry-cli[EXE] [OPTIONS] <COMMAND>
 Commands:
   completions      Generate completions for the specified shell.
   build            Manage builds.
+  code-mappings    Manage code mappings for Sentry.
   debug-files      Locate, analyze or upload debug information files. [aliases: dif]
   deploys          Manage deployments for Sentry releases.
   events           Manage events on Sentry.
