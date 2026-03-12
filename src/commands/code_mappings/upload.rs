@@ -76,19 +76,18 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             // the repo for the best remote (upstream > origin > first).
             let config = Config::current();
             let configured_remote = config.get_cached_vcs_remote();
-            let remote_name =
-                if vcs::git_repo_remote_url(&git_repo, &configured_remote).is_ok() {
-                    debug!("Using configured VCS remote: {configured_remote}");
-                    configured_remote
-                } else if let Some(best) = vcs::find_best_remote(&git_repo)? {
-                    debug!("Configured remote '{configured_remote}' not found, using: {best}");
-                    best
-                } else {
-                    bail!(
-                        "No remotes found in the git repository. \
+            let remote_name = if vcs::git_repo_remote_url(&git_repo, &configured_remote).is_ok() {
+                debug!("Using configured VCS remote: {configured_remote}");
+                configured_remote
+            } else if let Some(best) = vcs::find_best_remote(&git_repo)? {
+                debug!("Configured remote '{configured_remote}' not found, using: {best}");
+                best
+            } else {
+                bail!(
+                    "No remotes found in the git repository. \
                          Use --repo and --default-branch to specify manually."
-                    );
-                };
+                );
+            };
 
             let repo_name = match explicit_repo {
                 Some(r) => r.to_owned(),
