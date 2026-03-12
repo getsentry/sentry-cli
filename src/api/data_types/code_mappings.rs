@@ -11,7 +11,7 @@ pub struct BulkCodeMappingsRequest {
     pub mappings: Vec<BulkCodeMapping>,
 }
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BulkCodeMapping {
     pub stack_root: String,
