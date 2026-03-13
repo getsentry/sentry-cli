@@ -75,6 +75,7 @@ Commands for inspecting or sending events, managing issues, and working with log
 - `events` — Manage events on Sentry.
 - `events list` — List all events in your organization.
 - `issues` — Manage issues in Sentry.
+- `issues events` — Fetch the latest event for an issue.
 - `issues list` — List all issues in your organization.
 - `issues mute` — Bulk mute all selected issues.
 - `issues resolve` — Bulk resolve all selected issues.
