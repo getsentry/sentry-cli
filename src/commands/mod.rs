@@ -25,6 +25,7 @@ mod dart_symbol_map;
 mod debug_files;
 mod deploys;
 mod derive_parser;
+mod environments;
 mod events;
 mod info;
 mod issues;
@@ -54,6 +55,7 @@ macro_rules! each_subcommand {
         $mac!(build);
         $mac!(debug_files);
         $mac!(deploys);
+        $mac!(environments);
         $mac!(events);
         $mac!(info);
         $mac!(issues);

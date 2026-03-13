@@ -630,6 +630,20 @@ impl AuthenticatedApi<'_> {
         self.get(&path)?.convert_rnf(ApiErrorKind::ReleaseNotFound)
     }
 
+    /// Lists all environments for a project
+    pub fn list_project_environments(
+        &self,
+        org: &str,
+        project: &str,
+    ) -> ApiResult<Vec<Environment>> {
+        let path = format!(
+            "/projects/{}/{}/environments/",
+            PathArg(org),
+            PathArg(project),
+        );
+        self.get(&path)?.convert_rnf(ApiErrorKind::ProjectNotFound)
+    }
+
     /// Updates a bunch of issues within a project that match a provided filter
     /// and performs `changes` changes.
     pub fn bulk_update_issue(
@@ -1871,6 +1885,13 @@ pub struct Project {
     pub slug: String,
     pub name: String,
     pub team: Option<Team>,
+}
+
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Environment {
+    pub name: String,
+    pub is_hidden: bool,
 }
 
 #[derive(Debug, Deserialize)]
