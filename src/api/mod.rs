@@ -549,6 +549,18 @@ impl AuthenticatedApi<'_> {
         }
     }
 
+    /// Looks up an issue and returns it.  If it does not exist `None`
+    /// will be returned.
+    pub fn get_issue(&self, issue_id: &str) -> ApiResult<Option<IssueDetails>> {
+        let path = format!("/issues/{}/", PathArg(issue_id));
+        let resp = self.get(&path)?;
+        if resp.status() == 404 {
+            Ok(None)
+        } else {
+            resp.convert()
+        }
+    }
+
     /// Returns a list of releases for a given project.  This is currently a
     /// capped list by what the server deems an acceptable default limit.
     pub fn list_releases(&self, org: &str, project: Option<&str>) -> ApiResult<Vec<ReleaseInfo>> {
@@ -1763,6 +1775,23 @@ pub struct Issue {
     pub last_seen: String,
     pub status: String,
     pub level: String,
+}
+
+/// Detailed information about a single issue (from GET /issues/{id}/).
+#[derive(Clone, Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueDetails {
+    pub id: String,
+    pub short_id: String,
+    pub title: String,
+    pub status: String,
+    pub level: String,
+    pub first_seen: String,
+    pub last_seen: String,
+    pub count: String,
+    pub user_count: u64,
+    pub culprit: Option<String>,
+    pub permalink: Option<String>,
 }
 
 /// Change information for issue bulk updates.
