@@ -1,0 +1,9 @@
+```
+$ sentry-cli issues show --all 123
+? failed
+error: --id, --all, and --status are not supported by 'issues show'; pass the issue ID directly as the ISSUE_ID argument
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```

@@ -1,0 +1,5 @@
+```
+$ sentry-cli issues show 4242424243 --quiet
+? success
+
+```

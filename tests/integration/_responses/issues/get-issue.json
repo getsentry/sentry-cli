@@ -1,0 +1,13 @@
+{
+  "id": "4242424243",
+  "shortId": "SEN-CLI-L",
+  "title": "ProgrammingError: column users_user.role does not exist",
+  "firstSeen": "2023-01-10T08:00:00.000000Z",
+  "lastSeen": "2023-07-18T00:12:01.222387Z",
+  "status": "unresolved",
+  "level": "error",
+  "count": "42",
+  "userCount": 7,
+  "culprit": "sentry.db.query in execute",
+  "permalink": "https://sentry.example.com/organizations/testorg/issues/4242424243/"
+}

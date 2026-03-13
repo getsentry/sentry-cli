@@ -1,0 +1,5 @@
+```
+$ sentry-cli issues show 9999999999 --quiet
+? failed
+
+```

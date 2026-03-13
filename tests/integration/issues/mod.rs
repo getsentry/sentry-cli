@@ -1,6 +1,7 @@
 use crate::integration::TestManager;
 
 mod list;
+mod show;
 
 #[test]
 fn command_issues_help() {

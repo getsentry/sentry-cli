@@ -1,0 +1,9 @@
+```
+$ sentry-cli issues show 9999999999
+? failed
+error: Issue 9999999999 not found
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```

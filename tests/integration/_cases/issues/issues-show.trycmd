@@ -1,0 +1,18 @@
+```
+$ sentry-cli issues show 4242424243
+? success
++[..]+
+| Issue ID[..]   | 4242424243[..] |
+| Short ID[..]   | SEN-CLI-L[..] |
+| Title[..]      | ProgrammingError: column users_user.role does not exist[..] |
+| Status[..]     | unresolved[..] |
+| Level[..]      | error[..] |
+| First Seen[..] | 2023-01-10T08:00:00.000000Z[..] |
+| Last Seen[..]  | 2023-07-18T00:12:01.222387Z[..] |
+| Events[..]     | 42[..] |
+| Users[..]      | 7[..] |
+| Culprit[..]    | sentry.db.query in execute[..] |
+| Link[..]       | https://sentry.example.com/organizations/testorg/issues/4242424243/[..] |
++[..]+
+
+```
