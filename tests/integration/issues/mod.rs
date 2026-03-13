@@ -1,5 +1,6 @@
 use crate::integration::TestManager;
 
+mod events;
 mod list;
 
 #[test]

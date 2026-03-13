@@ -1,0 +1,10 @@
+```
+$ sentry-cli issues events 9999999999
+? failed
+error: No event found for issue '9999999999'
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```
+

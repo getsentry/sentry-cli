@@ -1,0 +1,45 @@
+{
+  "eventID": "a1b2c3d4e5f64a5b8c9d0e1f2a3b4c5d",
+  "dateCreated": "2023-07-18T00:12:01.222387Z",
+  "title": "ProgrammingError: column users_user.role does not exist",
+  "tags": [
+    {"key": "environment", "value": "production"},
+    {"key": "level", "value": "error"},
+    {"key": "server_name", "value": "web-1.example.com"}
+  ],
+  "entries": [
+    {
+      "type": "exception",
+      "data": {
+        "values": [
+          {
+            "type": "ProgrammingError",
+            "value": "column users_user.role does not exist",
+            "stacktrace": {
+              "frames": [
+                {
+                  "filename": "django/db/backends/utils.py",
+                  "lineno": 84,
+                  "function": "execute",
+                  "inApp": false
+                },
+                {
+                  "filename": "app/models/user.py",
+                  "lineno": 42,
+                  "function": "get_user_role",
+                  "inApp": true
+                },
+                {
+                  "filename": "app/views/profile.py",
+                  "lineno": 17,
+                  "function": "profile_view",
+                  "inApp": true
+                }
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

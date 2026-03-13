@@ -1,0 +1,20 @@
+```
+$ sentry-cli issues events 4242424243
+? success
+Event ID:  a1b2c3d4e5f64a5b8c9d0e1f2a3b4c5d
+Date:      2023-07-18T00:12:01.222387Z
+Title:     ProgrammingError: column users_user.role does not exist
+
+Exception: ProgrammingError: column users_user.role does not exist
+
+Stacktrace:
+  django/db/backends/utils.py:84 in execute
+  app/models/user.py:42 in get_user_role
+  app/views/profile.py:17 in profile_view
+
+Tags:
+  environment=production
+  level=error
+  server_name=web-1.example.com
+
+```
