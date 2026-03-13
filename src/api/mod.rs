@@ -952,6 +952,17 @@ impl AuthenticatedApi<'_> {
         Ok(rv)
     }
 
+    /// Returns the latest event for a given issue, or None if not found.
+    pub fn get_issue_latest_event(&self, issue_id: &str) -> ApiResult<Option<IssueEvent>> {
+        let path = format!("/issues/{}/events/latest/", PathArg(issue_id));
+        let resp = self.get(&path)?;
+        if resp.status() == 404 {
+            Ok(None)
+        } else {
+            resp.convert()
+        }
+    }
+
     /// List all repos associated with an organization
     pub fn list_organization_repos(&self, org: &str) -> ApiResult<Vec<Repo>> {
         let mut rv = vec![];
@@ -1991,6 +2002,30 @@ impl fmt::Display for ProcessedEventTag {
         write!(f, "{}: {}", &self.key, &self.value)?;
         Ok(())
     }
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueEvent {
+    #[serde(rename = "eventID")]
+    pub event_id: String,
+    #[serde(default)]
+    pub date_created: String,
+    #[serde(default)]
+    pub title: String,
+    #[serde(default)]
+    pub tags: Option<Vec<ProcessedEventTag>>,
+    #[serde(default)]
+    pub entries: Option<Vec<IssueEventEntry>>,
+}
+
+#[derive(Clone, Debug, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct IssueEventEntry {
+    #[serde(rename = "type")]
+    pub entry_type: String,
+    #[serde(default)]
+    pub data: serde_json::Value,
 }
 
 #[derive(Clone, Debug, Deserialize)]
