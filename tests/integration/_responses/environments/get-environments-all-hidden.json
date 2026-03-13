@@ -1,0 +1,10 @@
+[
+  {
+    "name": "development",
+    "isHidden": true
+  },
+  {
+    "name": "staging",
+    "isHidden": true
+  }
+]

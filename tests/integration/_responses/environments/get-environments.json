@@ -1,0 +1,14 @@
+[
+  {
+    "name": "production",
+    "isHidden": false
+  },
+  {
+    "name": "staging",
+    "isHidden": false
+  },
+  {
+    "name": "development",
+    "isHidden": true
+  }
+]

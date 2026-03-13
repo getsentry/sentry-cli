@@ -1,0 +1,6 @@
+```
+$ sentry-cli environments list
+? success
+No environments found
+
+```

@@ -1,0 +1,11 @@
+```
+$ sentry-cli environments list
+? success
++------------+--------+
+| Name       | Hidden |
++------------+--------+
+| production | no     |
+| staging    | no     |
++------------+--------+
+
+```

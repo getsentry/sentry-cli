@@ -2,6 +2,7 @@ mod bash_hook;
 mod build;
 mod debug_files;
 mod deploys;
+mod environments;
 mod events;
 mod help;
 mod info;

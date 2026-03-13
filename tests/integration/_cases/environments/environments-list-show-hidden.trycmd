@@ -1,0 +1,12 @@
+```
+$ sentry-cli environments list --show-hidden
+? success
++-------------+--------+
+| Name        | Hidden |
++-------------+--------+
+| production  | no     |
+| staging     | no     |
+| development | yes    |
++-------------+--------+
+
+```

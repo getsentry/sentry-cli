@@ -1,0 +1,6 @@
+```
+$ sentry-cli environments list
+? success
+No visible environments found (2 hidden, use --show-hidden to see them)
+
+```
