@@ -37,13 +37,13 @@ fn ensure_binary_format(url: &str) -> String {
 }
 
 /// Extract the file extension from the response_format query parameter.
-fn extension_from_url(url: &str) -> &str {
+fn extension_from_url(url: &str) -> Result<&str> {
     if url.contains("response_format=ipa") {
-        "ipa"
+        Ok("ipa")
     } else if url.contains("response_format=apk") {
-        "apk"
+        Ok("apk")
     } else {
-        "zip"
+        bail!("Unsupported build format in download URL.")
     }
 }
 
@@ -71,7 +71,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let output_path = match matches.get_one::<String>("output") {
         Some(path) => PathBuf::from(path),
         None => {
-            let ext = extension_from_url(&download_url);
+            let ext = extension_from_url(&download_url)?;
             PathBuf::from(format!("preprod_artifact_{build_id}.{ext}"))
         }
     };
