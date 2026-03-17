@@ -50,7 +50,9 @@ fn extension_from_url(url: &str) -> Result<&str> {
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
     let org = config.get_org(matches)?;
-    let build_id = matches.get_one::<String>("build_id").unwrap();
+    let build_id = matches
+        .get_one::<String>("build_id")
+        .expect("build_id is required");
 
     let api = Api::current();
     let authenticated_api = api.authenticated()?;
