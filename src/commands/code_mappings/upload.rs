@@ -108,7 +108,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                     })?;
                     let remote_url = vcs::git_repo_remote_url(git_repo, remote_name)?;
                     debug!("Found remote '{remote_name}': {remote_url}");
-                    let inferred = vcs::get_repo_from_remote(&remote_url);
+                    let inferred = vcs::get_repo_from_remote_preserve_case(&remote_url);
                     if inferred.is_empty() {
                         bail!("Could not parse repository name from remote URL: {remote_url}");
                     }
