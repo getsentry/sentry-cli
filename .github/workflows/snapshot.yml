@@ -17,20 +17,22 @@ jobs:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
 
       # Computes a semver-compliant snapshot version based on the current
-      # version in Cargo.toml. The minor version is bumped so that the
+      # version in Cargo.toml. The patch version is bumped so that the
       # snapshot sorts higher than the current release but lower than the
       # next real release. For example, if Cargo.toml has 3.3.1, the
-      # snapshot version will be 3.4.0-snapshot.20260312.abc1234.
+      # snapshot version will be 3.3.2-snapshot.20260312.abc1234.
       - name: Compute snapshot version
         id: version
         run: |
-          CURRENT=$(grep '^version = ' Cargo.toml | head -1 | sed 's/version = "\(.*\)"/\1/')
+          CURRENT=$(cargo metadata --no-deps --format-version 1 \
+            | jq -er '(.workspace_default_members[0]) as $id | .packages[] | select(.id == $id) | .version')
           MAJOR=$(echo "$CURRENT" | cut -d. -f1)
           MINOR=$(echo "$CURRENT" | cut -d. -f2)
-          NEXT_MINOR=$((MINOR + 1))
+          PATCH=$(echo "$CURRENT" | cut -d. -f3)
+          NEXT_PATCH=$((PATCH + 1))
           DATE=$(date -u +%Y%m%d)
           SHORT_SHA=$(git rev-parse --short HEAD)
-          VERSION="${MAJOR}.${NEXT_MINOR}.0-snapshot.${DATE}.${SHORT_SHA}"
+          VERSION="${MAJOR}.${MINOR}.${NEXT_PATCH}-snapshot.${DATE}.${SHORT_SHA}"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
           echo "Snapshot version: $VERSION"
@@ -59,7 +61,6 @@ jobs:
     needs: prepare
     uses: ./.github/workflows/build.yml
     with:
-      skip-signing: true
       is-snapshot: true
       checkout-ref: ${{ needs.prepare.outputs.ref }}
     secrets: inherit
@@ -108,7 +109,8 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - name: Delete snapshot branch
+        if: needs.prepare.outputs.ref != ''
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/${{ needs.prepare.outputs.ref }}" || true
+          gh api -X DELETE "repos/${{ github.repository }}/git/refs/heads/${{ needs.prepare.outputs.ref }}"
