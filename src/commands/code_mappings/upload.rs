@@ -4,7 +4,7 @@ use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use log::debug;
 
-use crate::api::{Api, BulkCodeMapping, BulkCodeMappingsRequest};
+use crate::api::{Api, BulkCodeMapping, BulkCodeMappingResult, BulkCodeMappingsRequest};
 use crate::config::Config;
 use crate::utils::formatting::Table;
 use crate::utils::vcs;
@@ -158,31 +158,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .authenticated()?
         .bulk_upload_code_mappings(&org, &request)?;
 
-    // Display results
-    let mut table = Table::new();
-    table
-        .title_row()
-        .add("Stack Root")
-        .add("Source Root")
-        .add("Status");
-
-    for result in &response.mappings {
-        let status = match result.status.as_str() {
-            "error" => match &result.detail {
-                Some(detail) => format!("error: {detail}"),
-                None => "error".to_owned(),
-            },
-            s => s.to_owned(),
-        };
-        table
-            .add_row()
-            .add(&result.stack_root)
-            .add(&result.source_root)
-            .add(&status);
-    }
-
-    table.print();
-    println!();
+    print_results_table(response.mappings);
     println!(
         "Created: {}, Updated: {}, Errors: {}",
         response.created, response.updated, response.errors
@@ -196,4 +172,28 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn print_results_table(mappings: Vec<BulkCodeMappingResult>) {
+    let mut table = Table::new();
+    table
+        .title_row()
+        .add("Stack Root")
+        .add("Source Root")
+        .add("Status");
+
+    for result in mappings {
+        let status = match result.detail {
+            Some(detail) if result.status == "error" => format!("error: {detail}"),
+            _ => result.status,
+        };
+        table
+            .add_row()
+            .add(&result.stack_root)
+            .add(&result.source_root)
+            .add(&status);
+    }
+
+    table.print();
+    println!();
 }
