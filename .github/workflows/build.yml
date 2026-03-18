@@ -247,7 +247,7 @@ jobs:
   node:
     name: NPM Package
     runs-on: ubuntu-24.04
-    needs: [linux, macos, macos_universal, windows]
+    needs: [linux, sign-macos-binaries, windows]
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
