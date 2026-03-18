@@ -21,7 +21,7 @@ pub fn make_command(mut command: Command) -> Command {
     }
 
     command = command
-        .about("Manage code mappings for Sentry.")
+        .about("Manage code mappings for Sentry. Code mappings link stack trace paths to source code paths in your repository, enabling source context and code linking in Sentry.")
         .subcommand_required(true)
         .arg_required_else_help(true)
         .org_arg()

@@ -13,7 +13,7 @@ struct CodeMapping {
 
 pub fn make_command(command: Command) -> Command {
     command
-        .about("Upload code mappings for a project from a JSON file.")
+        .about("Upload code mappings for a project from a JSON file. Each mapping pairs a stack trace root (e.g. com/example/module) with the corresponding source path in your repository (e.g. modules/module/src/main/java/com/example/module).")
         .arg(
             Arg::new("path")
                 .value_name("PATH")
@@ -36,8 +36,9 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    #[expect(clippy::unwrap_used, reason = "path is a required argument")]
-    let path = matches.get_one::<String>("path").unwrap();
+    let path = matches
+        .get_one::<String>("path")
+        .expect("path is a required argument");
     let data = fs::read(path).with_context(|| format!("Failed to read mappings file '{path}'"))?;
 
     let mappings: Vec<CodeMapping> =

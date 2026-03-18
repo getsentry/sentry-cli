@@ -1,12 +1,15 @@
 ```
 $ sentry-cli code-mappings --help
 ? success
-Manage code mappings for Sentry.
+Manage code mappings for Sentry. Code mappings link stack trace paths to source code paths in your
+repository, enabling source context and code linking in Sentry.
 
 Usage: sentry-cli[EXE] code-mappings [OPTIONS] <COMMAND>
 
 Commands:
-  upload  Upload code mappings for a project from a JSON file.
+  upload  Upload code mappings for a project from a JSON file. Each mapping pairs a stack trace root
+          (e.g. com/example/module) with the corresponding source path in your repository (e.g.
+          modules/module/src/main/java/com/example/module).
   help    Print this message or the help of the given subcommand(s)
 
 Options:
