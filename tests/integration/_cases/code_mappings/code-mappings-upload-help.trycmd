@@ -1,7 +1,9 @@
 ```
 $ sentry-cli code-mappings upload --help
 ? success
-Upload code mappings for a project from a JSON file.
+Upload code mappings for a project from a JSON file. Each mapping pairs a stack trace root (e.g.
+com/example/module) with the corresponding source path in your repository (e.g.
+modules/module/src/main/java/com/example/module).
 
 Usage: sentry-cli[EXE] code-mappings upload [OPTIONS] <PATH>
 
