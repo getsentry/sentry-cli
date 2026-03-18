@@ -188,8 +188,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let total_errors = merged.errors + merged.batch_errors.len() as u64;
     println!(
-        "Created: {}, Updated: {}, Errors: {}",
-        merged.created, merged.updated, total_errors
+        "Created: {}, Updated: {}, Errors: {total_errors}",
+        merged.created, merged.updated
     );
 
     if total_errors > 0 {
