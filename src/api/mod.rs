@@ -986,7 +986,7 @@ impl AuthenticatedApi<'_> {
     ) -> ApiResult<BulkCodeMappingsResponse> {
         let path = format!("/organizations/{}/code-mappings/bulk/", PathArg(org));
         self.post(&path, body)?
-            .convert_rnf(ApiErrorKind::ResourceNotFound)
+            .convert_rnf(ApiErrorKind::OrganizationNotFound)
     }
 
     /// Creates a preprod snapshot artifact for the given project.
