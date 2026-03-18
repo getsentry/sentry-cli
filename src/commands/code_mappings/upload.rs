@@ -4,10 +4,15 @@ use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use log::debug;
 
-use crate::api::{Api, BulkCodeMapping, BulkCodeMappingResult, BulkCodeMappingsRequest};
+use crate::api::{
+    Api, BulkCodeMapping, BulkCodeMappingResult, BulkCodeMappingsRequest, BulkCodeMappingsResponse,
+};
 use crate::config::Config;
 use crate::utils::formatting::Table;
 use crate::utils::vcs;
+
+/// Maximum number of mappings the backend accepts per request.
+const BATCH_SIZE: usize = 300;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -144,56 +149,97 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     };
 
     let mapping_count = mappings.len();
-    let request = BulkCodeMappingsRequest {
-        project,
-        repository: repo_name,
-        default_branch,
-        mappings,
-    };
+    let batches: Vec<&[BulkCodeMapping]> = mappings.chunks(BATCH_SIZE).collect();
+    let total_batches = batches.len();
 
     println!("Uploading {mapping_count} code mapping(s)...");
 
     let api = Api::current();
-    let response = api
-        .authenticated()?
-        .bulk_upload_code_mappings(&org, &request)?;
+    let authenticated = api.authenticated()?;
 
-    print_results_table(response.mappings);
+    let mut merged = MergedResponse::default();
+
+    for (i, batch) in batches.iter().enumerate() {
+        if total_batches > 1 {
+            println!("Sending batch {}/{total_batches}...", i + 1);
+        }
+        let request = BulkCodeMappingsRequest {
+            project: project.clone(),
+            repository: repo_name.clone(),
+            default_branch: default_branch.clone(),
+            mappings: batch.to_vec(),
+        };
+        match authenticated.bulk_upload_code_mappings(&org, &request) {
+            Ok(response) => merged.add(response),
+            Err(err) => {
+                merged
+                    .batch_errors
+                    .push(format!("Batch {}/{total_batches} failed: {err}", i + 1));
+            }
+        }
+    }
+
+    // Display error details (successful mappings are summarized in counts only).
+    print_error_table(&merged.mappings);
+
+    for err in &merged.batch_errors {
+        println!("{err}");
+    }
+
+    let total_errors = merged.errors + merged.batch_errors.len() as u64;
     println!(
-        "Created: {}, Updated: {}, Errors: {}",
-        response.created, response.updated, response.errors
+        "Created: {}, Updated: {}, Errors: {total_errors}",
+        merged.created, merged.updated
     );
 
-    if response.errors > 0 {
-        bail!(
-            "{} mapping(s) failed to upload. See errors above.",
-            response.errors
-        );
+    if total_errors > 0 {
+        bail!("{total_errors} error(s) during upload. See details above.");
     }
 
     Ok(())
 }
 
-fn print_results_table(mappings: Vec<BulkCodeMappingResult>) {
+fn print_error_table(mappings: &[BulkCodeMappingResult]) {
+    let error_mappings: Vec<_> = mappings.iter().filter(|r| r.status == "error").collect();
+
+    if error_mappings.is_empty() {
+        return;
+    }
+
     let mut table = Table::new();
     table
         .title_row()
         .add("Stack Root")
         .add("Source Root")
-        .add("Status");
+        .add("Detail");
 
-    for result in mappings {
-        let status = match result.detail {
-            Some(detail) if result.status == "error" => format!("error: {detail}"),
-            _ => result.status,
-        };
+    for result in &error_mappings {
+        let detail = result.detail.as_deref().unwrap_or("unknown error");
         table
             .add_row()
             .add(&result.stack_root)
             .add(&result.source_root)
-            .add(&status);
+            .add(detail);
     }
 
     table.print();
     println!();
+}
+
+#[derive(Default)]
+struct MergedResponse {
+    created: u64,
+    updated: u64,
+    errors: u64,
+    mappings: Vec<BulkCodeMappingResult>,
+    batch_errors: Vec<String>,
+}
+
+impl MergedResponse {
+    fn add(&mut self, response: BulkCodeMappingsResponse) {
+        self.created += response.created;
+        self.updated += response.updated;
+        self.errors += response.errors;
+        self.mappings.extend(response.mappings);
+    }
 }
