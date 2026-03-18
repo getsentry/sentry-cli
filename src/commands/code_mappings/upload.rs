@@ -186,13 +186,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         println!("{err}");
     }
 
+    let total_errors = merged.errors + merged.batch_errors.len() as u64;
     println!(
         "Created: {}, Updated: {}, Errors: {}",
-        merged.created, merged.updated, merged.errors
+        merged.created, merged.updated, total_errors
     );
 
-    if merged.errors > 0 || !merged.batch_errors.is_empty() {
-        let total_errors = merged.errors + merged.batch_errors.len() as u64;
+    if total_errors > 0 {
         bail!("{total_errors} error(s) during upload. See details above.");
     }
 
