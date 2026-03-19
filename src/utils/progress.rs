@@ -71,7 +71,7 @@ impl ProgressBar {
             inner.finish_with_message(&msg);
             logging::set_progress_bar(None);
         } else {
-            eprintln!("> {msg}");
+            log::info!("{msg}");
         }
     }
 
