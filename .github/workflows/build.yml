@@ -4,6 +4,14 @@ on:
   push:
     branches:
       - release/**
+  workflow_call:
+    inputs:
+      is-snapshot:
+        type: boolean
+        default: false
+      checkout-ref:
+        type: string
+        default: ''
 
 jobs:
   linux:
@@ -32,6 +40,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Add Rustup Target
         run: |
@@ -68,6 +78,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Add Rustup Target
         run: rustup target add ${{ matrix.target }}
@@ -155,6 +167,8 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Install `rcodesign`
         run: |
@@ -219,6 +233,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       # When rustup is updated, it tries to replace its binary, which on Windows is somehow locked.
       # This can result in the CI failure, see: https://github.com/rust-lang/rustup/issues/3029
@@ -251,6 +267,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # 6.2.0
         with:
@@ -280,10 +298,13 @@ jobs:
           if-no-files-found: 'error'
 
   python-base:
+    if: ${{ !inputs.is-snapshot }}
     name: python (base)
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - name: Add Rustup Target
         run: rustup target add x86_64-unknown-linux-musl
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # 6.2.0
@@ -297,11 +318,14 @@ jobs:
           if-no-files-found: 'error'
 
   python:
+    if: ${{ !inputs.is-snapshot }}
     name: python
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows, python-base]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # 6.2.0
         with:
           python-version: '3.11'
@@ -328,6 +352,8 @@ jobs:
     needs: [linux, sign-macos-binaries, windows]
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
       - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # 6.2.0
         with:
           node-version: '20.10.0'
@@ -366,6 +392,7 @@ jobs:
           if-no-files-found: 'error'
 
   platform-specific-docker:
+    if: ${{ !inputs.is-snapshot }}
     name: Build Docker Image (${{ matrix.platform }})
     strategy:
       matrix:
@@ -380,6 +407,8 @@ jobs:
       packages: write
     steps:
       - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
+        with:
+          ref: ${{ inputs.checkout-ref }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@4d04d5d9486b7bd6fa91e7baf45bbb4f8b9deedd # 4.0.0
@@ -402,6 +431,7 @@ jobs:
           cache-to: type=gha,mode=max,scope=${{ matrix.platform }}
 
   multiarch-docker:
+    if: ${{ !inputs.is-snapshot }}
     name: Create Multi-Architecture Docker Image
     needs: platform-specific-docker
     runs-on: ubuntu-24.04
@@ -422,6 +452,7 @@ jobs:
             ghcr.io/${{ github.repository }}:${{ github.sha }}-arm64
 
   merge:
+    if: ${{ !inputs.is-snapshot }}
     name: Create Release Artifact
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows, npm-distributions, node, python]
