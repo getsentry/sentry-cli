@@ -67,7 +67,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let git_repo = (explicit_repo.is_none() || explicit_branch.is_none())
         .then(|| git2::Repository::open_from_env().ok())
         .flatten();
-    let remote_name = git_repo.as_ref().and_then(|repo| resolve_git_remote(repo));
+    let remote_name = git_repo.as_ref().and_then(resolve_git_remote);
 
     let repo_name = if let Some(r) = explicit_repo {
         r.to_owned()
