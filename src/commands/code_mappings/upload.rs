@@ -60,90 +60,25 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    // Resolve repo name and default branch
+    // Resolve repo name and default branch, falling back to git inference.
     let explicit_repo = matches.get_one::<String>("repo");
     let explicit_branch = matches.get_one::<String>("default_branch");
 
-    let (repo_name, default_branch) = match (explicit_repo, explicit_branch) {
-        (Some(r), Some(b)) => (r.to_owned(), b.to_owned()),
-        _ => {
-            let git_repo = git2::Repository::open_from_env();
+    let git_repo = (explicit_repo.is_none() || explicit_branch.is_none())
+        .then(|| git2::Repository::open_from_env().ok())
+        .flatten();
+    let remote_name = git_repo.as_ref().and_then(|repo| resolve_git_remote(repo));
 
-            // Resolve the best remote name when we have a git repo.
-            // Prefer explicit config (SENTRY_VCS_REMOTE / ini), then inspect
-            // the repo for the best remote (upstream > origin > first).
-            let remote_name = git_repo.as_ref().ok().and_then(|repo| {
-                let config = Config::current();
-                let configured_remote = config.get_cached_vcs_remote();
-                if vcs::git_repo_remote_url(repo, &configured_remote).is_ok() {
-                    debug!("Using configured VCS remote: {configured_remote}");
-                    Some(configured_remote)
-                } else {
-                    match vcs::find_best_remote(repo) {
-                        Ok(Some(best)) => {
-                            debug!(
-                                "Configured remote '{configured_remote}' not found, using: {best}"
-                            );
-                            Some(best)
-                        }
-                        _ => None,
-                    }
-                }
-            });
+    let repo_name = if let Some(r) = explicit_repo {
+        r.to_owned()
+    } else {
+        infer_repo_name(git_repo.as_ref(), remote_name.as_deref())?
+    };
 
-            let repo_name = match explicit_repo {
-                Some(r) => r.to_owned(),
-                None => {
-                    let git_repo = git_repo.as_ref().map_err(|e| {
-                        anyhow::anyhow!(
-                            "Could not open git repository: {e}. \
-                             Use --repo to specify manually."
-                        )
-                    })?;
-                    let remote_name = remote_name.as_deref().ok_or_else(|| {
-                        anyhow::anyhow!(
-                            "No remotes found in the git repository. \
-                             Use --repo to specify manually."
-                        )
-                    })?;
-                    let remote_url = vcs::git_repo_remote_url(git_repo, remote_name)?;
-                    debug!("Found remote '{remote_name}': {remote_url}");
-                    let inferred = vcs::get_repo_from_remote_preserve_case(&remote_url);
-                    if inferred.is_empty() {
-                        bail!("Could not parse repository name from remote URL: {remote_url}");
-                    }
-                    println!("Inferred repository: {inferred}");
-                    inferred
-                }
-            };
-
-            let default_branch = match explicit_branch {
-                Some(b) => b.to_owned(),
-                None => {
-                    let inferred = git_repo
-                        .as_ref()
-                        .ok()
-                        .and_then(|repo| {
-                            remote_name.as_deref().and_then(|name| {
-                                vcs::git_repo_base_ref(repo, name)
-                                    .map(Some)
-                                    .unwrap_or_else(|e| {
-                                        debug!("Could not infer default branch from remote: {e}");
-                                        None
-                                    })
-                            })
-                        })
-                        .unwrap_or_else(|| {
-                            debug!("No git repo or remote available, falling back to 'main'");
-                            "main".to_owned()
-                        });
-                    println!("Inferred default branch: {inferred}");
-                    inferred
-                }
-            };
-
-            (repo_name, default_branch)
-        }
+    let default_branch = if let Some(b) = explicit_branch {
+        b.to_owned()
+    } else {
+        infer_default_branch(git_repo.as_ref(), remote_name.as_deref())
     };
 
     println!("Found {} code mapping(s) in {path}", mappings.len());
@@ -151,4 +86,63 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     println!("Default branch: {default_branch}");
 
     Ok(())
+}
+
+/// Finds the best git remote name. Prefers the configured VCS remote
+/// (SENTRY_VCS_REMOTE / ini), then falls back to upstream > origin > first.
+fn resolve_git_remote(repo: &git2::Repository) -> Option<String> {
+    let config = Config::current();
+    let configured_remote = config.get_cached_vcs_remote();
+    if vcs::git_repo_remote_url(repo, &configured_remote).is_ok() {
+        debug!("Using configured VCS remote: {configured_remote}");
+        return Some(configured_remote);
+    }
+    match vcs::find_best_remote(repo) {
+        Ok(Some(best)) => {
+            debug!("Configured remote '{configured_remote}' not found, using: {best}");
+            Some(best)
+        }
+        _ => None,
+    }
+}
+
+/// Infers the repository name (e.g. "owner/repo") from the git remote URL.
+fn infer_repo_name(
+    git_repo: Option<&git2::Repository>,
+    remote_name: Option<&str>,
+) -> Result<String> {
+    let git_repo = git_repo.ok_or_else(|| {
+        anyhow::anyhow!("Could not open git repository. Use --repo to specify manually.")
+    })?;
+    let remote_name = remote_name.ok_or_else(|| {
+        anyhow::anyhow!("No remotes found in the git repository. Use --repo to specify manually.")
+    })?;
+    let remote_url = vcs::git_repo_remote_url(git_repo, remote_name)?;
+    debug!("Found remote '{remote_name}': {remote_url}");
+    let inferred = vcs::get_repo_from_remote_preserve_case(&remote_url);
+    if inferred.is_empty() {
+        bail!("Could not parse repository name from remote URL: {remote_url}");
+    }
+    println!("Inferred repository: {inferred}");
+    Ok(inferred)
+}
+
+/// Infers the default branch from the git remote HEAD, falling back to "main".
+fn infer_default_branch(git_repo: Option<&git2::Repository>, remote_name: Option<&str>) -> String {
+    let inferred = git_repo
+        .zip(remote_name)
+        .and_then(|(repo, name)| {
+            vcs::git_repo_base_ref(repo, name)
+                .map_err(|e| {
+                    debug!("Could not infer default branch from remote: {e}");
+                    e
+                })
+                .ok()
+        })
+        .unwrap_or_else(|| {
+            debug!("No git repo or remote available, falling back to 'main'");
+            "main".to_owned()
+        });
+    println!("Inferred default branch: {inferred}");
+    inferred
 }
