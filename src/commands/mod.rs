@@ -21,6 +21,7 @@ use crate::utils::value_parsers::auth_token_parser;
 
 mod bash_hook;
 mod build;
+mod code_mappings;
 mod dart_symbol_map;
 mod debug_files;
 mod deploys;
@@ -52,6 +53,7 @@ macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(bash_hook);
         $mac!(build);
+        $mac!(code_mappings);
         $mac!(debug_files);
         $mac!(deploys);
         $mac!(events);
