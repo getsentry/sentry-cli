@@ -123,7 +123,6 @@ fn infer_repo_name(
     if inferred.is_empty() {
         bail!("Could not parse repository name from remote URL: {remote_url}");
     }
-    println!("Inferred repository: {inferred}");
     Ok(inferred)
 }
 
@@ -143,6 +142,5 @@ fn infer_default_branch(git_repo: Option<&git2::Repository>, remote_name: Option
             debug!("No git repo or remote available, falling back to 'main'");
             "main".to_owned()
         });
-    println!("Inferred default branch: {inferred}");
     inferred
 }
