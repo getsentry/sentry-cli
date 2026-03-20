@@ -6,7 +6,6 @@ on:
 
 permissions:
   contents: write
-  packages: write
 
 jobs:
   prepare:
@@ -67,46 +66,34 @@ jobs:
       checkout-ref: ${{ needs.prepare.outputs.ref }}
     secrets: inherit
 
-  publish-npm:
-    name: Publish to npm
+  publish-github-release:
+    name: Publish GitHub Release
     needs: [prepare, build]
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # 6.2.0
-        with:
-          node-version: '20.10.0'
-          registry-url: 'https://registry.npmjs.org'
-
-      - name: Download npm binary distributions
+      - name: Download binaries
         uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # 8.0.0
         with:
-          name: artifact-npm-binary-distributions
-          path: npm-distributions
+          pattern: artifact-bin-*
+          merge-multiple: true
 
-      - name: Download node package
-        uses: actions/download-artifact@70fc10c6e5e1ce46ad2ea6f2b72d43f7d47b13c3 # 8.0.0
-        with:
-          name: artifact-pkg-node
-          path: node-package
-
-      - name: Publish platform packages
+      - name: Create GitHub Release
         env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          VERSION: ${{ needs.prepare.outputs.version }}
+          REF: ${{ needs.prepare.outputs.ref }}
         run: |
-          for pkg in npm-distributions/*/*.tgz; do
-            echo "Publishing $pkg"
-            npm publish "$pkg" --tag snapshot
-          done
-
-      - name: Publish main package
-        env:
-          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-        run: |
-          npm publish node-package/*.tgz --tag snapshot
+          gh release create "$VERSION" \
+            --target "$REF" \
+            --prerelease \
+            --title "$VERSION" \
+            --notes "Snapshot build from master at ${VERSION##*.}." \
+            sentry-cli-*
 
   cleanup:
     name: Cleanup
-    needs: [prepare, publish-npm]
+    needs: [prepare, publish-github-release]
     if: always()
     runs-on: ubuntu-24.04
     steps:
