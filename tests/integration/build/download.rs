@@ -32,7 +32,7 @@ fn command_build_download_apk() {
     .to_string();
 
     let output = tempfile::NamedTempFile::new().expect("Failed to create temp file");
-    let output_path = output.path().to_str().unwrap().to_string();
+    let output_path = output.path().to_str().unwrap().to_owned();
 
     manager
         .mock_endpoint(
@@ -74,7 +74,7 @@ fn command_build_download_ipa_converts_plist_format() {
     .to_string();
 
     let output = tempfile::NamedTempFile::new().expect("Failed to create temp file");
-    let output_path = output.path().to_str().unwrap().to_string();
+    let output_path = output.path().to_str().unwrap().to_owned();
 
     manager
         .mock_endpoint(

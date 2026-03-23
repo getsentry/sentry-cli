@@ -5,7 +5,7 @@ Download a build from a project.
 
 This feature only works with Sentry SaaS.
 
-Usage: sentry-cli build download [OPTIONS] --build-id <build_id>
+Usage: sentry-cli[EXE] build download [OPTIONS] --build-id <build_id>
 
 Options:
   -o, --org <ORG>
