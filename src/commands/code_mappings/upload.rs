@@ -3,12 +3,12 @@ use std::fs;
 use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use log::debug;
-use serde::{Deserialize, Serialize};
+use serde::Deserialize;
 
 use crate::config::Config;
 use crate::utils::vcs;
 
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct CodeMapping {
     stack_root: String,
