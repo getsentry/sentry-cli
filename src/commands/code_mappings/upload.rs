@@ -60,7 +60,18 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    let (repo_name, default_branch) = resolve_repo_and_branch(matches)?;
+    let explicit_repo = matches.get_one::<String>("repo");
+    let explicit_branch = matches.get_one::<String>("default_branch");
+
+    let git_repo = (explicit_repo.is_none() || explicit_branch.is_none())
+        .then(|| git2::Repository::open_from_env().ok())
+        .flatten();
+
+    let (repo_name, default_branch) = resolve_repo_and_branch(
+        explicit_repo.map(|s| s.as_str()),
+        explicit_branch.map(|s| s.as_str()),
+        git_repo.as_ref(),
+    )?;
 
     println!("Found {} code mapping(s) in {path}", mappings.len());
     println!("Repository: {repo_name}");
@@ -69,30 +80,25 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     Ok(())
 }
 
-/// Resolves the repository name and default branch from CLI args and git inference.
-fn resolve_repo_and_branch(matches: &ArgMatches) -> Result<(String, String)> {
-    let explicit_repo = matches.get_one::<String>("repo");
-    let explicit_branch = matches.get_one::<String>("default_branch");
-
-    let git_repo = (explicit_repo.is_none() || explicit_branch.is_none())
-        .then(|| git2::Repository::open_from_env().ok())
-        .flatten();
-
+/// Resolves the repository name and default branch from explicit args and git inference.
+fn resolve_repo_and_branch(
+    explicit_repo: Option<&str>,
+    explicit_branch: Option<&str>,
+    git_repo: Option<&git2::Repository>,
+) -> Result<(String, String)> {
     let (repo_name, remote_name) = if let Some(r) = explicit_repo {
-        let remote = git_repo
-            .as_ref()
-            .and_then(|repo| find_remote_for_repo(repo, r));
+        let remote = git_repo.and_then(|repo| find_remote_for_repo(repo, r));
         (r.to_owned(), remote)
     } else {
-        let remote = git_repo.as_ref().and_then(resolve_git_remote);
-        let name = infer_repo_name(git_repo.as_ref(), remote.as_deref())?;
+        let remote = git_repo.and_then(resolve_git_remote);
+        let name = infer_repo_name(git_repo, remote.as_deref())?;
         (name, remote)
     };
 
     let default_branch = if let Some(b) = explicit_branch {
         b.to_owned()
     } else {
-        infer_default_branch(git_repo.as_ref(), remote_name.as_deref())
+        infer_default_branch(git_repo, remote_name.as_deref())
     };
 
     Ok((repo_name, default_branch))
@@ -235,31 +241,19 @@ mod tests {
         }
     }
 
-    /// Runs `resolve_repo_and_branch` with the given CLI args, pointing GIT_DIR
-    /// at the temp repo. Returns the resolved (repo_name, default_branch).
-    fn run_resolve(dir: &std::path::Path, args: &[&str]) -> Result<(String, String)> {
-        // Point git2::Repository::open_from_env() at our temp repo.
-        let old_git_dir = std::env::var("GIT_DIR").ok();
-        std::env::set_var("GIT_DIR", dir.join(".git"));
-
+    /// Calls `resolve_repo_and_branch` with explicit args and a pre-opened git repo.
+    fn run_resolve(
+        git_repo: Option<&git2::Repository>,
+        explicit_repo: Option<&str>,
+        explicit_branch: Option<&str>,
+    ) -> Result<(String, String)> {
         // Bind a default Config so resolve_git_remote can call Config::current().
         Config::from_file(PathBuf::from("/dev/null"), Ini::new()).bind_to_process();
 
-        let cmd = make_command(Command::new("upload"));
-        let matches = cmd.try_get_matches_from(args).expect("valid args");
-        let result = resolve_repo_and_branch(&matches);
-
-        // Restore GIT_DIR.
-        match old_git_dir {
-            Some(val) => std::env::set_var("GIT_DIR", val),
-            None => std::env::remove_var("GIT_DIR"),
-        }
-
-        result
+        resolve_repo_and_branch(explicit_repo, explicit_branch, git_repo)
     }
 
     #[test]
-    #[serial]
     fn find_remote_for_repo_matches_upstream() {
         let dir = init_git_repo_with_remotes(&[
             ("origin", "https://github.com/my-fork/MyRepo"),
@@ -273,7 +267,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn find_remote_for_repo_matches_origin() {
         let dir = init_git_repo_with_remotes(&[("origin", "https://github.com/MyOrg/MyRepo")]);
         let repo = git2::Repository::open(dir.path()).unwrap();
@@ -284,7 +277,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn find_remote_for_repo_no_match() {
         let dir =
             init_git_repo_with_remotes(&[("origin", "https://github.com/other-org/other-repo")]);
@@ -293,7 +285,6 @@ mod tests {
     }
 
     #[test]
-    #[serial]
     fn find_remote_for_repo_preserves_case() {
         let dir = init_git_repo_with_remotes(&[("origin", "https://github.com/MyOrg/MyRepo")]);
         let repo = git2::Repository::open(dir.path()).unwrap();
@@ -307,7 +298,7 @@ mod tests {
         let repo = git2::Repository::open(dir.path()).unwrap();
         setup_remote_head_refs(&repo, dir.path(), &[("origin", "develop")]);
 
-        let (repo_name, branch) = run_resolve(dir.path(), &["upload", "mappings.json"]).unwrap();
+        let (repo_name, branch) = run_resolve(Some(&repo), None, None).unwrap();
         assert_eq!(repo_name, "MyOrg/MyRepo");
         assert_eq!(branch, "develop");
     }
@@ -316,12 +307,9 @@ mod tests {
     #[serial]
     fn resolve_explicit_branch_no_repo_infers_repo() {
         let dir = init_git_repo_with_remotes(&[("origin", "https://github.com/MyOrg/MyRepo")]);
+        let repo = git2::Repository::open(dir.path()).unwrap();
 
-        let (repo_name, branch) = run_resolve(
-            dir.path(),
-            &["upload", "mappings.json", "--default-branch", "release"],
-        )
-        .unwrap();
+        let (repo_name, branch) = run_resolve(Some(&repo), None, Some("release")).unwrap();
         assert_eq!(repo_name, "MyOrg/MyRepo");
         assert_eq!(branch, "release");
     }
@@ -329,21 +317,7 @@ mod tests {
     #[test]
     #[serial]
     fn resolve_both_explicit_skips_git() {
-        // Both --repo and --default-branch given: no git needed at all.
-        let dir = tempdir().expect("temp dir");
-
-        let (repo_name, branch) = run_resolve(
-            dir.path(),
-            &[
-                "upload",
-                "mappings.json",
-                "--repo",
-                "MyOrg/MyRepo",
-                "--default-branch",
-                "release",
-            ],
-        )
-        .unwrap();
+        let (repo_name, branch) = run_resolve(None, Some("MyOrg/MyRepo"), Some("release")).unwrap();
         assert_eq!(repo_name, "MyOrg/MyRepo");
         assert_eq!(branch, "release");
     }
@@ -353,12 +327,9 @@ mod tests {
     fn resolve_explicit_repo_no_match_falls_back_to_main() {
         let dir =
             init_git_repo_with_remotes(&[("origin", "https://github.com/other-org/other-repo")]);
+        let repo = git2::Repository::open(dir.path()).unwrap();
 
-        let (repo_name, branch) = run_resolve(
-            dir.path(),
-            &["upload", "mappings.json", "--repo", "MyOrg/MyRepo"],
-        )
-        .unwrap();
+        let (repo_name, branch) = run_resolve(Some(&repo), Some("MyOrg/MyRepo"), None).unwrap();
         assert_eq!(repo_name, "MyOrg/MyRepo");
         assert_eq!(branch, "main");
     }
@@ -380,11 +351,7 @@ mod tests {
             &[("origin", "master"), ("upstream", "develop")],
         );
 
-        let (repo_name, branch) = run_resolve(
-            dir.path(),
-            &["upload", "mappings.json", "--repo", "MyOrg/MyRepo"],
-        )
-        .unwrap();
+        let (repo_name, branch) = run_resolve(Some(&repo), Some("MyOrg/MyRepo"), None).unwrap();
         assert_eq!(repo_name, "MyOrg/MyRepo");
         assert_eq!(branch, "develop");
     }
