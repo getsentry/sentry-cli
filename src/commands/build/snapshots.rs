@@ -332,6 +332,7 @@ fn upload_images(
     let mut many_builder = session.many();
     let mut manifest_entries = HashMap::new();
     let mut collisions: HashMap<String, Vec<String>> = HashMap::new();
+    let mut kept_paths: HashMap<String, String> = HashMap::new();
     for image in images {
         debug!("Processing image: {}", image.path.display());
 
@@ -375,6 +376,7 @@ fn upload_images(
         });
         extra.insert("content_hash".to_owned(), serde_json::Value::String(hash));
 
+        kept_paths.insert(image_file_name.clone(), relative_path);
         manifest_entries.insert(
             image_file_name,
             ImageMetadata::new(image.width, image.height, extra),
@@ -383,13 +385,12 @@ fn upload_images(
 
     if !collisions.is_empty() {
         let mut details = String::new();
-        for (name, paths) in &collisions {
-            details.push_str(&format!("\n  {name}:"));
-            for path in paths {
-                details.push_str(&format!("\n    - {path}"));
-            }
+        for (name, excluded_paths) in &collisions {
+            let mut all_paths = vec![kept_paths[name].as_str()];
+            all_paths.extend(excluded_paths.iter().map(|s| s.as_str()));
+            details.push_str(&format!("\n  {name}: {}", all_paths.join(", ")));
         }
-        warn!("Some images have been excluded due to having identical file names!{details}");
+        warn!("Some images share identical file names. Only the first occurrence of each is included:{details}");
     }
 
     let result = runtime.block_on(async { many_builder.send().error_for_failures().await });
