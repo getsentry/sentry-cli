@@ -1,6 +1,10 @@
+use std::collections::BTreeMap;
 use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
+
+use serde::Deserialize;
+use sha1_smol::Sha1;
 
 use crate::integration::{chunk_upload, AssertCommand, MockEndpointBuilder, TestManager};
 
@@ -275,6 +279,8 @@ fn chunk_upload_multiple_files() {
                         .collect();
 
                     assert_eq!(decompressed.len(), 3, "expected exactly three chunks");
+                    let decompressed: std::collections::HashSet<_> =
+                        decompressed.into_iter().collect();
                     assert_eq!(
                         decompressed, expected_files,
                         "decompressed chunks should match the fixture files"
@@ -364,6 +370,8 @@ fn chunk_upload_multiple_files_only_some() {
 
                     // Only 2 of 3 files need uploading (one is already on the server).
                     assert_eq!(decompressed.len(), 2, "expected exactly two chunks");
+                    let decompressed: std::collections::HashSet<_> =
+                        decompressed.into_iter().collect();
                     assert!(
                         decompressed.is_subset(&all_fixtures),
                         "uploaded chunks should be a subset of the fixture files"
@@ -423,6 +431,59 @@ fn chunk_upload_multiple_files_only_some() {
         .run_and_assert(AssertCommand::Success);
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SmallChunkUploadOptions {
+    chunk_size: usize,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AssembleFileResponse {
+    missing_chunks: Vec<String>,
+}
+
+fn sha1_hex(data: &[u8]) -> String {
+    let mut sha = Sha1::new();
+    sha.update(data);
+    sha.digest().to_string()
+}
+
+fn expected_uploaded_chunk_digests(assemble_response_path: &str) -> BTreeMap<String, usize> {
+    let chunk_upload_options: SmallChunkUploadOptions = serde_json::from_slice(
+        &fs::read("tests/integration/_responses/debug_files/get-chunk-upload-small-chunks.json")
+            .expect("chunk upload options response file should be present"),
+    )
+    .expect("chunk upload options response should be valid JSON");
+
+    let assemble_response: BTreeMap<String, AssembleFileResponse> = serde_json::from_slice(
+        &fs::read(assemble_response_path).expect("assemble response file should be present"),
+    )
+    .expect("assemble response should be valid JSON");
+
+    let fixture_dir = "tests/integration/_fixtures/debug_files/upload/chunk_upload_multiple_files";
+    let mut chunk_digests = BTreeMap::new();
+
+    for fixture_name in ["fibonacci", "fibonacci-fast", "main"] {
+        let fixture_data = fs::read(format!("{fixture_dir}/{fixture_name}"))
+            .expect("fixture file should be readable");
+        let file_checksum = sha1_hex(&fixture_data);
+        let file_response = assemble_response
+            .get(&file_checksum)
+            .expect("assemble response should contain an entry for every fixture file");
+
+        for chunk_checksum in fixture_data
+            .chunks(chunk_upload_options.chunk_size)
+            .map(sha1_hex)
+            .filter(|chunk_checksum| file_response.missing_chunks.contains(chunk_checksum))
+        {
+            *chunk_digests.entry(chunk_checksum).or_default() += 1;
+        }
+    }
+
+    chunk_digests
+}
+
 #[test]
 /// This test verifies a correct chunk upload of multiple debug files
 /// with a small chunk size (2048 bytes).
@@ -433,8 +494,14 @@ fn chunk_upload_multiple_files_small_chunks() {
     /// at most 64 chunks.
     const CHUNKS_PER_REQUEST: usize = 64;
 
-    let received_chunk_count = Arc::new(Mutex::new(0usize));
-    let received_chunk_count_closure = received_chunk_count.clone();
+    let expected_chunk_digests = expected_uploaded_chunk_digests(
+        "tests/integration/_responses/debug_files/assemble-chunk-upload-small-chunks.json",
+    );
+    let expected_total_chunks: usize = expected_chunk_digests.values().sum();
+    let expected_requests = expected_total_chunks.div_ceil(CHUNKS_PER_REQUEST);
+
+    let received_chunk_digests = Arc::new(Mutex::new(BTreeMap::<String, usize>::new()));
+    let received_chunk_digests_closure = received_chunk_digests.clone();
 
     let is_first_assemble_call = AtomicBool::new(true);
     TestManager::new()
@@ -489,13 +556,17 @@ fn chunk_upload_multiple_files_small_chunks() {
                     // No single request should contain more than CHUNKS_PER_REQUEST chunks.
                     assert!(decompressed.len() <= CHUNKS_PER_REQUEST);
 
-                    *received_chunk_count_closure
+                    let request_chunk_digests = chunk_upload::chunk_digest_counts(&decompressed);
+                    let mut received_chunk_digests = received_chunk_digests_closure
                         .lock()
-                        .expect("should be able to lock mutex") += decompressed.len();
+                        .expect("should be able to lock mutex");
+                    for (chunk_digest, count) in request_chunk_digests {
+                        *received_chunk_digests.entry(chunk_digest).or_default() += count;
+                    }
 
                     vec![]
                 })
-                .expect_at_least(1),
+                .expect(expected_requests),
         )
         .assert_cmd(vec![
             "debug-files",
@@ -505,15 +576,12 @@ fn chunk_upload_multiple_files_small_chunks() {
         .with_default_token()
         .run_and_assert(AssertCommand::Success);
 
-    let total_received = *received_chunk_count
+    let received_chunk_digests = received_chunk_digests
         .lock()
         .expect("should be able to lock mutex");
-    // The exact chunk count depends on compression output, but it must be
-    // in a reasonable range. With 2048-byte chunks and ~1.2MB of fixture data,
-    // we expect several hundred chunks.
-    assert!(
-        total_received > 100,
-        "Expected several hundred chunks, got only {total_received}"
+    assert_eq!(
+        *received_chunk_digests, expected_chunk_digests,
+        "uploaded chunk digests should match the missing chunks requested by assemble"
     );
 }
 
@@ -528,8 +596,14 @@ fn chunk_upload_multiple_files_small_chunks_only_some() {
     /// at most 64 chunks.
     const CHUNKS_PER_REQUEST: usize = 64;
 
-    let received_chunk_count = Arc::new(Mutex::new(0usize));
-    let received_chunk_count_closure = received_chunk_count.clone();
+    let expected_chunk_digests = expected_uploaded_chunk_digests(
+        "tests/integration/_responses/debug_files/assemble-chunk-upload-small-chunks-only-some-missing.json",
+    );
+    let expected_total_chunks: usize = expected_chunk_digests.values().sum();
+    let expected_requests = expected_total_chunks.div_ceil(CHUNKS_PER_REQUEST);
+
+    let received_chunk_digests = Arc::new(Mutex::new(BTreeMap::<String, usize>::new()));
+    let received_chunk_digests_closure = received_chunk_digests.clone();
 
     let is_first_assemble_call = AtomicBool::new(true);
 
@@ -585,13 +659,17 @@ fn chunk_upload_multiple_files_small_chunks_only_some() {
                     // No single request should contain more than CHUNKS_PER_REQUEST chunks.
                     assert!(decompressed.len() <= CHUNKS_PER_REQUEST);
 
-                    *received_chunk_count_closure
+                    let request_chunk_digests = chunk_upload::chunk_digest_counts(&decompressed);
+                    let mut received_chunk_digests = received_chunk_digests_closure
                         .lock()
-                        .expect("should be able to lock mutex") += decompressed.len();
+                        .expect("should be able to lock mutex");
+                    for (chunk_digest, count) in request_chunk_digests {
+                        *received_chunk_digests.entry(chunk_digest).or_default() += count;
+                    }
 
                     vec![]
                 })
-                .expect_at_least(1),
+                .expect(expected_requests),
         )
         .assert_cmd(vec![
             "debug-files",
@@ -601,15 +679,12 @@ fn chunk_upload_multiple_files_small_chunks_only_some() {
         .with_default_token()
         .run_and_assert(AssertCommand::Success);
 
-    let total_received = *received_chunk_count
+    let received_chunk_digests = received_chunk_digests
         .lock()
         .expect("should be able to lock mutex");
-    // The "only some" test should upload fewer chunks than the "all" test (619 total).
-    // The exact count depends on compression output, but it must be non-zero and
-    // strictly less than the full set, proving that already-uploaded chunks were skipped.
-    assert!(
-        total_received > 0 && total_received < 619,
-        "Expected a partial upload (0 < n < 619), got {total_received}"
+    assert_eq!(
+        *received_chunk_digests, expected_chunk_digests,
+        "uploaded chunk digests should match the missing chunks requested by assemble"
     );
 }
 
