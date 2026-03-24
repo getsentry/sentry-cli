@@ -332,8 +332,6 @@ fn upload_images(
     let mut many_builder = session.many();
     let mut manifest_entries = HashMap::new();
     let mut collisions: HashMap<String, Vec<String>> = HashMap::new();
-    let image_count = images.len();
-
     for image in images {
         debug!("Processing image: {}", image.path.display());
 
@@ -396,13 +394,15 @@ fn upload_images(
 
     let result = runtime.block_on(async { many_builder.send().error_for_failures().await });
 
+    let uploaded_count = manifest_entries.len();
+
     match result {
         Ok(()) => {
             println!(
                 "{} Uploaded {} image {}",
                 style(">").dim(),
-                style(image_count).yellow(),
-                if image_count == 1 { "file" } else { "files" }
+                style(uploaded_count).yellow(),
+                if uploaded_count == 1 { "file" } else { "files" }
             );
             Ok(manifest_entries)
         }
@@ -414,7 +414,7 @@ fn upload_images(
                 eprintln!("  {}", style(format!("{error:#}")).red());
                 error_count += 1;
             }
-            anyhow::bail!("Failed to upload {error_count} out of {image_count} images")
+            anyhow::bail!("Failed to upload {error_count} out of {uploaded_count} images")
         }
     }
 }
