@@ -1,0 +1,14 @@
+```
+$ sentry-cli code-mappings upload tests/integration/_fixtures/code_mappings/mappings.json --org wat-org --project wat-project --repo owner/repo --default-branch main
+? success
+Uploading 2 code mapping(s)...
++------------------+---------------------------------------------+---------+
+| Stack Root       | Source Root                                 | Status  |
++------------------+---------------------------------------------+---------+
+| com/example/core | modules/core/src/main/java/com/example/core | created |
+| com/example/maps | modules/maps/src/main/java/com/example/maps | created |
++------------------+---------------------------------------------+---------+
+
+Created: 2, Updated: 0, Errors: 0
+
+```

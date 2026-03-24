@@ -1,5 +1,7 @@
 use crate::integration::TestManager;
 
+mod upload;
+
 #[test]
 fn command_code_mappings_help() {
     TestManager::new().register_trycmd_test("code_mappings/code-mappings-help.trycmd");

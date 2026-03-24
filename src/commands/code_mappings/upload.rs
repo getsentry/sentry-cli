@@ -3,17 +3,11 @@ use std::fs;
 use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use log::debug;
-use serde::Deserialize;
 
+use crate::api::{Api, BulkCodeMapping, BulkCodeMappingResult, BulkCodeMappingsRequest};
 use crate::config::Config;
+use crate::utils::formatting::Table;
 use crate::utils::vcs;
-
-#[derive(Debug, Deserialize)]
-#[serde(rename_all = "camelCase")]
-struct CodeMapping {
-    stack_root: String,
-    source_root: String,
-}
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -39,12 +33,16 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    let config = Config::current();
+    let org = config.get_org(matches)?;
+    let project = config.get_project(matches)?;
+
     let path = matches
         .get_one::<String>("path")
         .expect("path is a required argument");
     let data = fs::read(path).with_context(|| format!("Failed to read mappings file '{path}'"))?;
 
-    let mappings: Vec<CodeMapping> =
+    let mappings: Vec<BulkCodeMapping> =
         serde_json::from_slice(&data).context("Failed to parse mappings JSON")?;
 
     if mappings.is_empty() {
@@ -73,9 +71,33 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         git_repo.as_ref(),
     )?;
 
-    println!("Found {} code mapping(s) in {path}", mappings.len());
-    println!("Repository: {repo_name}");
-    println!("Default branch: {default_branch}");
+    let mapping_count = mappings.len();
+    let request = BulkCodeMappingsRequest {
+        project: &project,
+        repository: &repo_name,
+        default_branch: &default_branch,
+        mappings: &mappings,
+    };
+
+    println!("Uploading {mapping_count} code mapping(s)...");
+
+    let api = Api::current();
+    let response = api
+        .authenticated()?
+        .bulk_upload_code_mappings(&org, &request)?;
+
+    print_results_table(response.mappings);
+    println!(
+        "Created: {}, Updated: {}, Errors: {}",
+        response.created, response.updated, response.errors
+    );
+
+    if response.errors > 0 {
+        bail!(
+            "{} mapping(s) failed to upload. See errors above.",
+            response.errors
+        );
+    }
 
     Ok(())
 }
@@ -172,6 +194,30 @@ fn infer_default_branch(git_repo: Option<&git2::Repository>, remote_name: Option
             debug!("No git repo or remote available, falling back to 'main'");
             "main".to_owned()
         })
+}
+
+fn print_results_table(mappings: Vec<BulkCodeMappingResult>) {
+    let mut table = Table::new();
+    table
+        .title_row()
+        .add("Stack Root")
+        .add("Source Root")
+        .add("Status");
+
+    for result in mappings {
+        let status = match result.detail {
+            Some(detail) if result.status == "error" => format!("error: {detail}"),
+            _ => result.status,
+        };
+        table
+            .add_row()
+            .add(&result.stack_root)
+            .add(&result.source_root)
+            .add(&status);
+    }
+
+    table.print();
+    println!();
 }
 
 #[cfg(test)]
