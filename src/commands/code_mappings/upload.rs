@@ -87,6 +87,8 @@ fn resolve_repo_and_branch(
     git_repo: Option<&git2::Repository>,
 ) -> Result<(String, String)> {
     let (repo_name, remote_name) = if let Some(r) = explicit_repo {
+        // Try to find a local remote whose URL matches the explicit repo name,
+        // so we can infer the default branch from it. Falls back to None (-> "main").
         let remote = git_repo.and_then(|repo| find_remote_for_repo(repo, r));
         (r.to_owned(), remote)
     } else {
