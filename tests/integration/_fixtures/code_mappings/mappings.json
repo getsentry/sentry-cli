@@ -1,0 +1,4 @@
+[
+  {"stackRoot": "com/example/core", "sourceRoot": "modules/core/src/main/java/com/example/core"},
+  {"stackRoot": "com/example/maps", "sourceRoot": "modules/maps/src/main/java/com/example/maps"}
+]

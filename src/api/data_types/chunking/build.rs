@@ -28,6 +28,13 @@ pub struct AssembleBuildResponse {
     pub artifact_url: Option<String>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct BuildInstallDetails {
+    pub is_installable: bool,
+    pub install_url: Option<String>,
+}
+
 /// VCS information for build app uploads
 #[derive(Debug, Serialize)]
 pub struct VcsInfo<'a> {
