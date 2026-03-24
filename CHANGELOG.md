@@ -8,6 +8,10 @@
 
 ## 3.3.3
 
+### New Features ✨
+
+- Add `sentry-cli code-mappings upload` command to bulk upload code mappings from a JSON file, with automatic git inference for repository name and default branch ([#3207](https://github.com/getsentry/sentry-cli/pull/3207), [#3208](https://github.com/getsentry/sentry-cli/pull/3208), [#3209](https://github.com/getsentry/sentry-cli/pull/3209), [#3210](https://github.com/getsentry/sentry-cli/pull/3210)).
+
 ### Internal Changes 🔧
 
 - (npm) 🤖 Bump optional dependencies to 3.3.2 in [afdef906](https://github.com/getsentry/sentry-cli/commit/afdef906ba225132f138469afd0d63df859ce0b4)
