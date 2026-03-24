@@ -1,0 +1,44 @@
+```
+$ sentry-cli build download --help
+? success
+Download a build artifact.
+
+[EXPERIMENTAL] The "build download" command is experimental. The command is subject to breaking
+changes, including removal, in any Sentry CLI release.
+
+Usage: sentry-cli[EXE] build download [OPTIONS] --build-id <build_id>
+
+Options:
+  -o, --org <ORG>
+          The organization ID or slug.
+
+  -b, --build-id <build_id>
+          The ID of the build to download.
+
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
+
+  -p, --project <PROJECT>
+          The project ID or slug.
+
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
+
+      --output <output>
+          The output file path. Defaults to 'preprod_artifact_<build_id>.<ext>' in the current
+          directory, where ext is ipa or apk depending on the platform.
+
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands.
+          
+          [aliases: --silent]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+```
