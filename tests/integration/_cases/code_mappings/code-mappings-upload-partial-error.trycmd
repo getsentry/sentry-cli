@@ -1,0 +1,17 @@
+```
+$ sentry-cli code-mappings upload tests/integration/_fixtures/code_mappings/mappings.json --org wat-org --project wat-project --repo owner/repo --default-branch main
+? failed
+Uploading 2 code mapping(s)...
++------------------+---------------------------------------------+-------------------+
+| Stack Root       | Source Root                                 | Detail            |
++------------------+---------------------------------------------+-------------------+
+| com/example/maps | modules/maps/src/main/java/com/example/maps | duplicate mapping |
++------------------+---------------------------------------------+-------------------+
+
+Created: 1, Updated: 0, Errors: 1
+error: 1 error(s) during upload. See details above.
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```
