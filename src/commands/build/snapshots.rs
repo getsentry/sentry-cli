@@ -378,8 +378,8 @@ fn upload_images(
         extra.insert("content_hash".to_owned(), serde_json::Value::String(hash));
 
         manifest_entries.insert(
-            image_file_name.clone(),
-            ImageMetadata::new(image_file_name, image.width, image.height, extra),
+            image_file_name,
+            ImageMetadata::new(image.width, image.height, extra),
         );
     }
 
