@@ -77,35 +77,31 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     )?;
 
     let mapping_count = mappings.len();
-    let batches: Vec<&[BulkCodeMapping]> = mappings.chunks(BATCH_SIZE).collect();
-    let total_batches = batches.len();
+    let total_batches = mapping_count.div_ceil(BATCH_SIZE);
 
     println!("Uploading {mapping_count} code mapping(s)...");
 
     let api = Api::current();
     let authenticated = api.authenticated()?;
 
-    let mut merged = MergedResponse::default();
-
-    for (i, batch) in batches.iter().enumerate() {
-        if total_batches > 1 {
-            println!("Sending batch {}/{total_batches}...", i + 1);
-        }
-        let request = BulkCodeMappingsRequest {
-            project: &project,
-            repository: &repo_name,
-            default_branch: &default_branch,
-            mappings: batch,
-        };
-        match authenticated.bulk_upload_code_mappings(&org, &request) {
-            Ok(response) => merged.add(response),
-            Err(err) => {
-                merged
-                    .batch_errors
-                    .push(format!("Batch {}/{total_batches} failed: {err}", i + 1));
+    let merged: MergedResponse = mappings
+        .chunks(BATCH_SIZE)
+        .enumerate()
+        .map(|(i, batch)| {
+            if total_batches > 1 {
+                println!("Sending batch {}/{total_batches}...", i + 1);
             }
-        }
-    }
+            let request = BulkCodeMappingsRequest {
+                project: &project,
+                repository: &repo_name,
+                default_branch: &default_branch,
+                mappings: batch,
+            };
+            authenticated
+                .bulk_upload_code_mappings(&org, &request)
+                .map_err(|err| format!("Batch {}/{total_batches} failed: {err}", i + 1))
+        })
+        .collect();
 
     // Display error details (successful mappings are summarized in counts only).
     print_error_table(&merged.mappings);
@@ -222,9 +218,7 @@ fn infer_default_branch(git_repo: Option<&git2::Repository>, remote_name: Option
 }
 
 fn print_error_table(mappings: &[BulkCodeMappingResult]) {
-    let error_mappings: Vec<_> = mappings.iter().filter(|r| r.status == "error").collect();
-
-    if error_mappings.is_empty() {
+    if !mappings.iter().any(|r| r.status == "error") {
         return;
     }
 
@@ -235,7 +229,7 @@ fn print_error_table(mappings: &[BulkCodeMappingResult]) {
         .add("Source Root")
         .add("Detail");
 
-    for result in &error_mappings {
+    for result in mappings.iter().filter(|r| r.status == "error") {
         let detail = result.detail.as_deref().unwrap_or("unknown error");
         table
             .add_row()
@@ -257,12 +251,24 @@ struct MergedResponse {
     batch_errors: Vec<String>,
 }
 
-impl MergedResponse {
-    fn add(&mut self, response: BulkCodeMappingsResponse) {
-        self.created += response.created;
-        self.updated += response.updated;
-        self.errors += response.errors;
-        self.mappings.extend(response.mappings);
+impl FromIterator<Result<BulkCodeMappingsResponse, String>> for MergedResponse {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = Result<BulkCodeMappingsResponse, String>>,
+    {
+        let mut merged = Self::default();
+        for result in iter {
+            match result {
+                Ok(response) => {
+                    merged.created += response.created;
+                    merged.updated += response.updated;
+                    merged.errors += response.errors;
+                    merged.mappings.extend(response.mappings);
+                }
+                Err(err) => merged.batch_errors.push(err),
+            }
+        }
+        merged
     }
 }
 

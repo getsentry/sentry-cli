@@ -1,4 +1,4 @@
-use std::sync::atomic::{AtomicU16, Ordering};
+use std::sync::atomic::{AtomicU8, Ordering};
 
 use crate::integration::{AssertCommand, MockEndpointBuilder, TestManager};
 
@@ -49,7 +49,7 @@ fn command_code_mappings_upload_batches() {
     let fixture = tempfile::NamedTempFile::new().expect("failed to create temp file");
     serde_json::to_writer(&fixture, &mappings).expect("failed to write fixture");
 
-    let call_count = AtomicU16::new(0);
+    let call_count = AtomicU8::new(0);
 
     TestManager::new()
         .mock_endpoint(
