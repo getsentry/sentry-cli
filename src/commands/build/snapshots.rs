@@ -360,16 +360,13 @@ fn upload_images(
             .to_string_lossy()
             .into_owned();
 
-        let relative_path_key = image.relative_path.to_string_lossy().into_owned();
+        let relative_path_key = crate::utils::fs::path_as_url(&image.relative_path);
 
         let mut extra = read_sidecar_metadata(&image.path).unwrap_or_else(|err| {
             warn!("Error reading sidecar metadata, ignoring it instead: {err:#}");
             HashMap::new()
         });
-        extra.insert(
-            "content_hash".to_string(),
-            serde_json::Value::String(hash),
-        );
+        extra.insert("content_hash".to_string(), serde_json::Value::String(hash));
 
         manifest_entries.insert(
             relative_path_key,
