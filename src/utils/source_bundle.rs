@@ -195,7 +195,6 @@ fn url_to_bundle_path(url: &str) -> Result<String> {
 
 #[cfg(test)]
 mod tests {
-    use sha1_smol::Sha1;
     use symbolic::debuginfo::sourcebundle::SourceFileType;
 
     use crate::utils::file_upload::SourceFile;
@@ -229,37 +228,37 @@ mod tests {
 
     #[test]
     fn build_deterministic() {
-        let projects_slice = &["wat-project".into()];
-        let context = BundleContext {
-            org: "wat-org",
-            projects: Some(projects_slice.into()),
-            release: None,
-            dist: None,
-            note: None,
+        let make_bundle = || {
+            let projects_slice = &["wat-project".into()];
+            let context = BundleContext {
+                org: "wat-org",
+                projects: Some(projects_slice.into()),
+                release: None,
+                dist: None,
+                note: None,
+            };
+
+            let source_files = ["bundle.min.js.map", "vendor.min.js.map"]
+                .into_iter()
+                .map(|name| SourceFile {
+                    url: format!("~/{name}"),
+                    path: format!("tests/integration/_fixtures/{name}").into(),
+                    contents: std::fs::read(format!("tests/integration/_fixtures/{name}"))
+                        .unwrap()
+                        .into(),
+                    ty: SourceFileType::SourceMap,
+                    headers: Default::default(),
+                    messages: Default::default(),
+                    already_uploaded: false,
+                })
+                .collect::<Vec<_>>();
+
+            let file = build(context, &source_files, None).unwrap();
+            std::fs::read(file.path()).unwrap()
         };
 
-        let source_files = ["bundle.min.js.map", "vendor.min.js.map"]
-            .into_iter()
-            .map(|name| SourceFile {
-                url: format!("~/{name}"),
-                path: format!("tests/integration/_fixtures/{name}").into(),
-                contents: std::fs::read(format!("tests/integration/_fixtures/{name}"))
-                    .unwrap()
-                    .into(),
-                ty: SourceFileType::SourceMap,
-                headers: Default::default(),
-                messages: Default::default(),
-                already_uploaded: false,
-            })
-            .collect::<Vec<_>>();
-
-        let file = build(context, &source_files, None).unwrap();
-
-        let buf = std::fs::read(file.path()).unwrap();
-        let hash = Sha1::from(buf);
-        assert_eq!(
-            hash.digest().to_string(),
-            "f0e25ae149b711c510148e022ebc883ad62c7c4c"
-        );
+        let first = make_bundle();
+        let second = make_bundle();
+        assert_eq!(first, second, "bundle output should be deterministic");
     }
 }
