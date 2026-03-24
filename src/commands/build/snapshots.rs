@@ -337,23 +337,6 @@ fn upload_images(
     for image in images {
         debug!("Processing image: {}", image.path.display());
 
-        let hash = compute_sha256_hash(&image.path)?;
-        let file = runtime
-            .block_on(tokio::fs::File::open(&image.path))
-            .with_context(|| {
-                format!("Failed to open image for upload: {}", image.path.display())
-            })?;
-
-        let key = format!("{org_id}/{project_id}/{hash}");
-        info!("Queueing {} as {key}", image.relative_path.display());
-
-        many_builder = many_builder.push(
-            session
-                .put_file(file)
-                .key(&key)
-                .expiration_policy(expiration),
-        );
-
         let image_file_name = image
             .relative_path
             .file_name()
@@ -370,6 +353,23 @@ fn upload_images(
                 .push(relative_path);
             continue;
         }
+
+        let hash = compute_sha256_hash(&image.path)?;
+        let file = runtime
+            .block_on(tokio::fs::File::open(&image.path))
+            .with_context(|| {
+                format!("Failed to open image for upload: {}", image.path.display())
+            })?;
+
+        let key = format!("{org_id}/{project_id}/{hash}");
+        info!("Queueing {} as {key}", image.relative_path.display());
+
+        many_builder = many_builder.push(
+            session
+                .put_file(file)
+                .key(&key)
+                .expiration_policy(expiration),
+        );
 
         let mut extra = read_sidecar_metadata(&image.path).unwrap_or_else(|err| {
             warn!("Error reading sidecar metadata, ignoring it instead: {err:#}");
