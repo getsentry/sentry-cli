@@ -331,6 +331,7 @@ fn upload_images(
 
     let mut many_builder = session.many();
     let mut manifest_entries = HashMap::new();
+    let mut collisions: HashMap<String, Vec<String>> = HashMap::new();
     let image_count = images.len();
 
     for image in images {
@@ -360,7 +361,15 @@ fn upload_images(
             .to_string_lossy()
             .into_owned();
 
-        let relative_path_key = crate::utils::fs::path_as_url(&image.relative_path);
+        let relative_path = crate::utils::fs::path_as_url(&image.relative_path);
+
+        if manifest_entries.contains_key(&image_file_name) {
+            collisions
+                .entry(image_file_name)
+                .or_default()
+                .push(relative_path);
+            continue;
+        }
 
         let mut extra = read_sidecar_metadata(&image.path).unwrap_or_else(|err| {
             warn!("Error reading sidecar metadata, ignoring it instead: {err:#}");
@@ -369,9 +378,20 @@ fn upload_images(
         extra.insert("content_hash".to_owned(), serde_json::Value::String(hash));
 
         manifest_entries.insert(
-            relative_path_key,
+            image_file_name.clone(),
             ImageMetadata::new(image_file_name, image.width, image.height, extra),
         );
+    }
+
+    if !collisions.is_empty() {
+        let mut details = String::new();
+        for (name, paths) in &collisions {
+            details.push_str(&format!("\n  {name}:"));
+            for path in paths {
+                details.push_str(&format!("\n    - {path}"));
+            }
+        }
+        warn!("Some images have been excluded due to having identical file names!{details}");
     }
 
     let result = runtime.block_on(async { many_builder.send().error_for_failures().await });
