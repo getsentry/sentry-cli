@@ -10,12 +10,17 @@ use crate::config::Config;
 use crate::utils::args::ArgExt as _;
 use crate::utils::fs::TempFile;
 
+const EXPERIMENTAL_WARNING: &str =
+    "[EXPERIMENTAL] The \"build download\" command is experimental. \
+    The command is subject to breaking changes, including removal, in any Sentry CLI release.";
+
 pub fn make_command(command: Command) -> Command {
     command
-        .about("Download a build from a project.")
-        .long_about("Download a build from a project.\n\nThis feature only works with Sentry SaaS.")
+        .about("[EXPERIMENTAL] Download a build artifact.")
+        .long_about(format!(
+            "Download a build artifact.\n\n{EXPERIMENTAL_WARNING}"
+        ))
         .org_arg()
-        .project_arg(false)
         .arg(
             Arg::new("build_id")
                 .long("build-id")
@@ -48,6 +53,7 @@ fn extension_from_url(url: &str) -> Result<&str> {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
+    eprintln!("{EXPERIMENTAL_WARNING}");
     let config = Config::current();
     let org = config.get_org(matches)?;
     let build_id = matches
