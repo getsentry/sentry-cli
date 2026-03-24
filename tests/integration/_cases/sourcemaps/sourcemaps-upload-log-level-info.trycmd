@@ -1,0 +1,35 @@
+```
+$ sentry-cli sourcemaps upload --log-level=info tests/integration/_fixtures/bundle.min.js.map tests/integration/_fixtures/vendor.min.js.map
+? success
+  INFO    [..] Loaded config from [CWD]/.sentryclirc
+  INFO    [..] sentry-cli was invoked with the following command line: [..]
+  INFO    [..] found: tests/integration/_fixtures/bundle.min.js.map ([..] bytes)
+> Found 1 file
+  INFO    [..] found: tests/integration/_fixtures/vendor.min.js.map ([..] bytes)
+> Found 1 file
+> Analyzing 2 sources
+  INFO    [..] Analyzing completed in [..]s
+> Rewriting sources
+  INFO    [..] Rewriting completed in [..]s
+> Adding source map references
+  INFO    [..] Bundling completed in [..]s
+> Bundled 2 files for upload
+> Bundle ID: [..]-[..]-[..]-[..]-[..]
+  INFO    [..] Optimizing completed in [..]s
+  INFO    [..] using 'uncompressed' compression for chunk upload
+  INFO    [..] Uploading completed in [..]s
+> Uploaded files to Sentry
+  INFO    [..] Processing completed in [..]s
+> File upload complete (processing pending on server)
+> Organization: wat-org
+> Projects: wat-project
+> Release: None
+> Dist: None
+> Upload type: artifact bundle
+
+Source Map Upload Report
+  Source Maps
+    ~/bundle.min.js.map
+    ~/vendor.min.js.map
+
+```
