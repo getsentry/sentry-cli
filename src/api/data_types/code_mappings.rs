@@ -4,11 +4,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
-pub struct BulkCodeMappingsRequest {
-    pub project: String,
-    pub repository: String,
-    pub default_branch: String,
-    pub mappings: Vec<BulkCodeMapping>,
+pub struct BulkCodeMappingsRequest<'a> {
+    pub project: &'a str,
+    pub repository: &'a str,
+    pub default_branch: &'a str,
+    pub mappings: &'a [BulkCodeMapping],
 }
 
 #[derive(Debug, Deserialize, Serialize)]

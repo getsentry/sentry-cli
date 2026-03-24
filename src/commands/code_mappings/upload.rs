@@ -73,10 +73,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     let mapping_count = mappings.len();
     let request = BulkCodeMappingsRequest {
-        project,
-        repository: repo_name,
-        default_branch,
-        mappings,
+        project: &project,
+        repository: &repo_name,
+        default_branch: &default_branch,
+        mappings: &mappings,
     };
 
     println!("Uploading {mapping_count} code mapping(s)...");
@@ -194,6 +194,30 @@ fn infer_default_branch(git_repo: Option<&git2::Repository>, remote_name: Option
             debug!("No git repo or remote available, falling back to 'main'");
             "main".to_owned()
         })
+}
+
+fn print_results_table(mappings: Vec<BulkCodeMappingResult>) {
+    let mut table = Table::new();
+    table
+        .title_row()
+        .add("Stack Root")
+        .add("Source Root")
+        .add("Status");
+
+    for result in mappings {
+        let status = match result.detail {
+            Some(detail) if result.status == "error" => format!("error: {detail}"),
+            _ => result.status,
+        };
+        table
+            .add_row()
+            .add(&result.stack_root)
+            .add(&result.source_root)
+            .add(&status);
+    }
+
+    table.print();
+    println!();
 }
 
 #[cfg(test)]
@@ -373,28 +397,4 @@ mod tests {
         assert_eq!(repo_name, "MyOrg/MyRepo");
         assert_eq!(branch, "develop");
     }
-}
-
-fn print_results_table(mappings: Vec<BulkCodeMappingResult>) {
-    let mut table = Table::new();
-    table
-        .title_row()
-        .add("Stack Root")
-        .add("Source Root")
-        .add("Status");
-
-    for result in mappings {
-        let status = match result.detail {
-            Some(detail) if result.status == "error" => format!("error: {detail}"),
-            _ => result.status,
-        };
-        table
-            .add_row()
-            .add(&result.stack_root)
-            .add(&result.source_root)
-            .add(&status);
-    }
-
-    table.print();
-    println!();
 }
