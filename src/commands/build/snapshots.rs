@@ -366,7 +366,7 @@ fn upload_images(
             warn!("Error reading sidecar metadata, ignoring it instead: {err:#}");
             HashMap::new()
         });
-        extra.insert("content_hash".to_string(), serde_json::Value::String(hash));
+        extra.insert("content_hash".to_owned(), serde_json::Value::String(hash));
 
         manifest_entries.insert(
             relative_path_key,
