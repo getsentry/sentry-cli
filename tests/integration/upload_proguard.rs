@@ -1,5 +1,5 @@
+use std::fs;
 use std::sync::atomic::{AtomicU8, Ordering};
-use std::{fs, str};
 
 use mockito::Matcher;
 
@@ -71,13 +71,7 @@ fn chunk_upload_already_there() {
 
 #[test]
 fn chunk_upload_needs_upload() {
-    const EXPECTED_CHUNKS_BOUNDARY: &str = "------------------------w2uOUUnuLEYTmQorc0ix48";
-
     let call_count = AtomicU8::new(0);
-    let expected_chunk_body = fs::read(
-        "tests/integration/_expected_requests/proguard/upload/chunk_upload_needs_upload.bin",
-    )
-    .expect("expected chunk upload request file should be readable");
 
     TestManager::new()
         .mock_endpoint(
@@ -92,20 +86,17 @@ fn chunk_upload_needs_upload() {
 
                     let body = request.body().expect("body should be readable");
 
-                    let chunks = chunk_upload::split_chunk_body(body, boundary)
-                        .expect("body should be a valid multipart/form-data body");
+                    let decompressed = chunk_upload::decompress_chunks(body, boundary)
+                        .expect("chunks should be valid gzip data");
 
-                    let expected_chunks = chunk_upload::split_chunk_body(
-                        &expected_chunk_body,
-                        EXPECTED_CHUNKS_BOUNDARY,
-                    )
-                    .expect("expected body is valid multipart form data");
+                    let expected_content =
+                        fs::read("tests/integration/_fixtures/proguard/upload/mapping.txt")
+                            .expect("fixture file should be readable");
 
-                    // Using assert! because in case of failure, the output with assert_eq!
-                    // is too long to be useful.
-                    assert_eq!(
-                        chunks, expected_chunks,
-                        "Uploaded chunks differ from the expected chunks"
+                    assert_eq!(decompressed.len(), 1, "expected exactly one chunk");
+                    assert!(
+                        decompressed.contains(&expected_content),
+                        "decompressed chunk should match the source file"
                     );
 
                     vec![]
@@ -164,12 +155,7 @@ fn chunk_upload_needs_upload() {
 
 #[test]
 fn chunk_upload_two_files() {
-    const EXPECTED_CHUNKS_BOUNDARY: &str = "------------------------HNdDRjCgjkRtu3COUTCcJV";
-
     let call_count = AtomicU8::new(0);
-    let expected_chunk_body =
-        fs::read("tests/integration/_expected_requests/proguard/upload/chunk_upload_two_files.bin")
-            .expect("expected chunk upload request file should be readable");
 
     TestManager::new()
         .mock_endpoint(
@@ -184,20 +170,20 @@ fn chunk_upload_two_files() {
 
                     let body = request.body().expect("body should be readable");
 
-                    let chunks = chunk_upload::split_chunk_body(body, boundary)
-                        .expect("body should be a valid multipart/form-data body");
+                    let decompressed = chunk_upload::decompress_chunks(body, boundary)
+                        .expect("chunks should be valid gzip data");
 
-                    let expected_chunks = chunk_upload::split_chunk_body(
-                        &expected_chunk_body,
-                        EXPECTED_CHUNKS_BOUNDARY,
-                    )
-                    .expect("expected body is valid multipart form data");
+                    let expected_1 =
+                        fs::read("tests/integration/_fixtures/proguard/upload/mapping.txt")
+                            .expect("fixture file should be readable");
+                    let expected_2 =
+                        fs::read("tests/integration/_fixtures/proguard/upload/mapping-2.txt")
+                            .expect("fixture file should be readable");
 
-                    // Using assert! because in case of failure, the output with assert_eq!
-                    // is too long to be useful.
-                    assert_eq!(
-                        chunks, expected_chunks,
-                        "Uploaded chunks differ from the expected chunks"
+                    assert_eq!(decompressed.len(), 2, "expected exactly two chunks");
+                    assert!(
+                        decompressed.contains(&expected_1) && decompressed.contains(&expected_2),
+                        "decompressed chunks should match the source files"
                     );
 
                     vec![]

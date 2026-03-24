@@ -1,9 +1,11 @@
 //! Utilities for chunk upload tests.
 use std::collections::HashSet;
 use std::error::Error;
+use std::io::Read as _;
 use std::str;
 use std::sync::LazyLock;
 
+use flate2::read::GzDecoder;
 use mockito::Request;
 use regex::bytes::Regex;
 
@@ -104,4 +106,30 @@ fn entire_body_regex(regex_escaped_boundary: &str) -> Regex {
 /// matches the start of a section of the form.
 fn boundary_regex(regex_escaped_boundary: &str) -> Regex {
     Regex::new(&format!(r#"--{regex_escaped_boundary}"#)).expect("This regex should be valid")
+}
+
+/// Regex to separate multipart headers from the body (separated by \r\n\r\n).
+static HEADER_BODY_SEPARATOR: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"\r\n\r\n").expect("Regex is valid"));
+
+/// Extract and decompress the file contents from a multipart chunk upload request.
+/// Each chunk part has headers followed by a gzip-compressed body. This function
+/// strips the multipart headers, decompresses each chunk, and returns the set of
+/// decompressed contents. This makes assertions independent of compression library
+/// internals.
+pub fn decompress_chunks(body: &[u8], boundary: &str) -> Result<HashSet<Vec<u8>>, Box<dyn Error>> {
+    let parts = split_chunk_body(body, boundary)?;
+    let mut decompressed = HashSet::new();
+    for part in parts {
+        // Each part is: \r\nHeaders\r\n\r\n<gzip body>
+        // Split on the first \r\n\r\n to separate headers from body.
+        if let Some(m) = HEADER_BODY_SEPARATOR.find(part) {
+            let compressed = &part[m.end()..];
+            let mut decoder = GzDecoder::new(compressed);
+            let mut content = Vec::new();
+            decoder.read_to_end(&mut content)?;
+            decompressed.insert(content);
+        }
+    }
+    Ok(decompressed)
 }
