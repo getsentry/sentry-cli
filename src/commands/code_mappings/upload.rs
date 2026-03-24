@@ -291,7 +291,6 @@ mod tests {
     }
 
     #[test]
-
     fn resolve_no_repo_no_branch_infers_both() {
         let dir = init_git_repo_with_remotes(&[("origin", "https://github.com/MyOrg/MyRepo")]);
         let repo = git2::Repository::open(dir.path()).unwrap();
@@ -303,7 +302,6 @@ mod tests {
     }
 
     #[test]
-
     fn resolve_explicit_branch_no_repo_infers_repo() {
         let dir = init_git_repo_with_remotes(&[("origin", "https://github.com/MyOrg/MyRepo")]);
         let repo = git2::Repository::open(dir.path()).unwrap();
@@ -314,7 +312,6 @@ mod tests {
     }
 
     #[test]
-
     fn resolve_both_explicit_skips_git() {
         let (repo_name, branch) = run_resolve(None, Some("MyOrg/MyRepo"), Some("release")).unwrap();
         assert_eq!(repo_name, "MyOrg/MyRepo");
@@ -322,7 +319,6 @@ mod tests {
     }
 
     #[test]
-
     fn resolve_explicit_repo_no_match_falls_back_to_main() {
         let dir =
             init_git_repo_with_remotes(&[("origin", "https://github.com/other-org/other-repo")]);
@@ -334,7 +330,6 @@ mod tests {
     }
 
     #[test]
-
     fn resolve_explicit_repo_infers_branch_from_matching_remote() {
         // --repo matches "upstream", --default-branch omitted:
         // branch should be inferred from upstream's HEAD ("develop"),
