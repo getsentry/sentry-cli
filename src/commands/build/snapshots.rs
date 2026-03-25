@@ -331,10 +331,27 @@ fn upload_images(
 
     let mut many_builder = session.many();
     let mut manifest_entries = HashMap::new();
-    let image_count = images.len();
-
+    let mut collisions: HashMap<String, Vec<String>> = HashMap::new();
+    let mut kept_paths: HashMap<String, String> = HashMap::new();
     for image in images {
         debug!("Processing image: {}", image.path.display());
+
+        let image_file_name = image
+            .relative_path
+            .file_name()
+            .unwrap_or_default()
+            .to_string_lossy()
+            .into_owned();
+
+        let relative_path = crate::utils::fs::path_as_url(&image.relative_path);
+
+        if manifest_entries.contains_key(&image_file_name) {
+            collisions
+                .entry(image_file_name)
+                .or_default()
+                .push(relative_path);
+            continue;
+        }
 
         let hash = compute_sha256_hash(&image.path)?;
         let file = runtime
@@ -353,33 +370,40 @@ fn upload_images(
                 .expiration_policy(expiration),
         );
 
-        let image_file_name = image
-            .relative_path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .into_owned();
-
-        let extra = read_sidecar_metadata(&image.path).unwrap_or_else(|err| {
+        let mut extra = read_sidecar_metadata(&image.path).unwrap_or_else(|err| {
             warn!("Error reading sidecar metadata, ignoring it instead: {err:#}");
             HashMap::new()
         });
+        extra.insert("content_hash".to_owned(), serde_json::Value::String(hash));
 
+        kept_paths.insert(image_file_name.clone(), relative_path);
         manifest_entries.insert(
-            hash,
-            ImageMetadata::new(image_file_name, image.width, image.height, extra),
+            image_file_name,
+            ImageMetadata::new(image.width, image.height, extra),
         );
     }
 
+    if !collisions.is_empty() {
+        let mut details = String::new();
+        for (name, excluded_paths) in &collisions {
+            let mut all_paths = vec![kept_paths[name].as_str()];
+            all_paths.extend(excluded_paths.iter().map(|s| s.as_str()));
+            details.push_str(&format!("\n  {name}: {}", all_paths.join(", ")));
+        }
+        warn!("Some images share identical file names. Only the first occurrence of each is included:{details}");
+    }
+
     let result = runtime.block_on(async { many_builder.send().error_for_failures().await });
+
+    let uploaded_count = manifest_entries.len();
 
     match result {
         Ok(()) => {
             println!(
                 "{} Uploaded {} image {}",
                 style(">").dim(),
-                style(image_count).yellow(),
-                if image_count == 1 { "file" } else { "files" }
+                style(uploaded_count).yellow(),
+                if uploaded_count == 1 { "file" } else { "files" }
             );
             Ok(manifest_entries)
         }
@@ -391,7 +415,7 @@ fn upload_images(
                 eprintln!("  {}", style(format!("{error:#}")).red());
                 error_count += 1;
             }
-            anyhow::bail!("Failed to upload {error_count} out of {image_count} images")
+            anyhow::bail!("Failed to upload {error_count} out of {uploaded_count} images")
         }
     }
 }
