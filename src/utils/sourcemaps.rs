@@ -790,7 +790,12 @@ impl SourceMapProcessor {
 
                         let Ok(mut decoded) = data_encoding::BASE64.decode(encoded.as_bytes())
                         else {
-                            bail!("Invalid embedded sourcemap in source file {source_url}");
+                            // The data URL isn't valid base64, so we can't use it.
+                            // This commonly happens when minified bundles contain
+                            // sourceMappingURL strings inside template literals
+                            // (e.g from bundled terser or babel)
+                            warn!("Skipping {source_url}: embedded sourcemap is not valid base64");
+                            continue;
                         };
 
                         let mut sourcemap =
