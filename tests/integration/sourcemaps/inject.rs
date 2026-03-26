@@ -241,6 +241,29 @@ fn command_sourcemaps_inject_malformed_map() {
     );
 }
 
+#[test]
+fn command_sourcemaps_inject_sourcemap_url_in_string_literal() {
+    // When tools like terser or babel are bundled into a worker, their minified
+    // code contains string concatenations that produce sourceMappingURL comments.
+    // After minification these can land at column 0, making them look like real
+    // sourcemap directives. sentry-cli should not treat them as embedded
+    // sourcemaps and should not fail.
+    let testcase_cwd_path =
+        "tests/integration/_cases/sourcemaps/sourcemaps-inject-sourcemap-in-string-literal.in/";
+    if std::path::Path::new(testcase_cwd_path).exists() {
+        remove_dir_all(testcase_cwd_path).unwrap();
+    }
+    copy_recursively(
+        "tests/integration/_fixtures/inject_sourcemap_in_string_literal/",
+        testcase_cwd_path,
+    )
+    .unwrap();
+
+    TestManager::new()
+        .assert_cmd(vec!["sourcemaps", "inject", testcase_cwd_path])
+        .run_and_assert(AssertCommand::Success);
+}
+
 /// Recursively assert that the contents of two directories are equal.
 ///
 /// We only support directories that contain exclusively text files.
