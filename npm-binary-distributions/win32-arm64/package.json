@@ -1,6 +1,6 @@
 {
   "name": "@sentry/cli-win32-arm64",
-  "version": "3.3.3",
+  "version": "3.3.4-snapshot.20260326.5477440",
   "description": "The windows arm64 distribution of the Sentry CLI binary.",
   "repository": "https://github.com/getsentry/sentry-cli",
   "license": "FSL-1.1-MIT",
