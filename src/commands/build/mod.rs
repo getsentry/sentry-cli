@@ -3,12 +3,14 @@ use clap::{ArgMatches, Command};
 
 use crate::utils::args::ArgExt as _;
 
+#[cfg(not(feature = "managed"))]
 pub mod download;
 pub mod snapshots;
 pub mod upload;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
+        #[cfg(not(feature = "managed"))]
         $mac!(download);
         $mac!(snapshots);
         $mac!(upload);

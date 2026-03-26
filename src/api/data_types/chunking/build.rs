@@ -28,6 +28,7 @@ pub struct AssembleBuildResponse {
     pub artifact_url: Option<String>,
 }
 
+#[cfg(not(feature = "managed"))]
 #[derive(Debug, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct BuildInstallDetails {

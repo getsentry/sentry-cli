@@ -16,6 +16,7 @@ use std::borrow::Cow;
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::error::Error as _;
+#[cfg(any(target_os = "macos", not(feature = "managed")))]
 use std::fs::File;
 use std::io::{self, Read as _, Write};
 use std::rc::Rc;
@@ -723,6 +724,7 @@ impl AuthenticatedApi<'_> {
             .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
+    #[cfg(not(feature = "managed"))]
     pub fn get_build_install_details(
         &self,
         org: &str,
@@ -737,6 +739,7 @@ impl AuthenticatedApi<'_> {
         self.get(&url)?.convert()
     }
 
+    #[cfg(not(feature = "managed"))]
     pub fn download_installable_build(&self, url: &str, dst: &mut File) -> ApiResult<ApiResponse> {
         self.request(Method::Get, url)?
             .progress_bar_mode(ProgressBarMode::Response)
