@@ -8,6 +8,7 @@
 
 ### Fixes
 
+- (snapshots) Chunk image uploads to avoid file descriptor exhaustion and 413 errors when uploading hundreds of images ([#3249](https://github.com/getsentry/sentry-cli/pull/3249))
 - (sourcemaps) Skip non-base64 embedded sourcemaps during injection ([#3243](https://github.com/getsentry/sentry-cli/pull/3243))
 
 ### New Features ✨
