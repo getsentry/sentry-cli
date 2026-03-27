@@ -13,6 +13,7 @@
 
 # Files co-owned by Emerge Tools team
 /apple-catalog-parsing @getsentry/emerge-tools @getsentry/owners-sentry-cli
+/src/api/data_types/snapshots.rs @getsentry/emerge-tools @getsentry/owners-sentry-cli
 /src/commands/build @getsentry/emerge-tools @getsentry/owners-sentry-cli
 /src/utils/build @getsentry/emerge-tools @getsentry/owners-sentry-cli
 /tests/integration/build @getsentry/emerge-tools @getsentry/owners-sentry-cli
