@@ -4,10 +4,15 @@ use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use log::debug;
 
-use crate::api::{Api, BulkCodeMapping, BulkCodeMappingResult, BulkCodeMappingsRequest};
+use crate::api::{
+    Api, BulkCodeMapping, BulkCodeMappingResult, BulkCodeMappingsRequest, BulkCodeMappingsResponse,
+};
 use crate::config::Config;
 use crate::utils::formatting::Table;
 use crate::utils::vcs;
+
+/// Maximum number of mappings the backend accepts per request.
+const BATCH_SIZE: usize = 300;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -72,31 +77,47 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     )?;
 
     let mapping_count = mappings.len();
-    let request = BulkCodeMappingsRequest {
-        project: &project,
-        repository: &repo_name,
-        default_branch: &default_branch,
-        mappings: &mappings,
-    };
+    let total_batches = mapping_count.div_ceil(BATCH_SIZE);
 
     println!("Uploading {mapping_count} code mapping(s)...");
 
     let api = Api::current();
-    let response = api
-        .authenticated()?
-        .bulk_upload_code_mappings(&org, &request)?;
+    let authenticated = api.authenticated()?;
 
-    print_results_table(response.mappings);
+    let merged: MergedResponse = mappings
+        .chunks(BATCH_SIZE)
+        .enumerate()
+        .map(|(i, batch)| {
+            if total_batches > 1 {
+                println!("Sending batch {}/{total_batches}...", i + 1);
+            }
+            let request = BulkCodeMappingsRequest {
+                project: &project,
+                repository: &repo_name,
+                default_branch: &default_branch,
+                mappings: batch,
+            };
+            authenticated
+                .bulk_upload_code_mappings(&org, &request)
+                .map_err(|err| format!("Batch {}/{total_batches} failed: {err}", i + 1))
+        })
+        .collect();
+
+    // Display error details (successful mappings are summarized in counts only).
+    print_error_table(&merged.mappings);
+
+    for err in &merged.batch_errors {
+        println!("{err}");
+    }
+
+    let total_errors = merged.errors + merged.batch_errors.len() as u64;
     println!(
-        "Created: {}, Updated: {}, Errors: {}",
-        response.created, response.updated, response.errors
+        "Created: {}, Updated: {}, Errors: {total_errors}",
+        merged.created, merged.updated
     );
 
-    if response.errors > 0 {
-        bail!(
-            "{} mapping(s) failed to upload. See errors above.",
-            response.errors
-        );
+    if total_errors > 0 {
+        bail!("{total_errors} error(s) during upload. See details above.");
     }
 
     Ok(())
@@ -196,28 +217,59 @@ fn infer_default_branch(git_repo: Option<&git2::Repository>, remote_name: Option
         })
 }
 
-fn print_results_table(mappings: Vec<BulkCodeMappingResult>) {
+fn print_error_table(mappings: &[BulkCodeMappingResult]) {
+    if !mappings.iter().any(|r| r.status == "error") {
+        return;
+    }
+
     let mut table = Table::new();
     table
         .title_row()
         .add("Stack Root")
         .add("Source Root")
-        .add("Status");
+        .add("Detail");
 
-    for result in mappings {
-        let status = match result.detail {
-            Some(detail) if result.status == "error" => format!("error: {detail}"),
-            _ => result.status,
-        };
+    for result in mappings.iter().filter(|r| r.status == "error") {
+        let detail = result.detail.as_deref().unwrap_or("unknown error");
         table
             .add_row()
             .add(&result.stack_root)
             .add(&result.source_root)
-            .add(&status);
+            .add(detail);
     }
 
     table.print();
     println!();
+}
+
+#[derive(Default)]
+struct MergedResponse {
+    created: u64,
+    updated: u64,
+    errors: u64,
+    mappings: Vec<BulkCodeMappingResult>,
+    batch_errors: Vec<String>,
+}
+
+impl FromIterator<Result<BulkCodeMappingsResponse, String>> for MergedResponse {
+    fn from_iter<I>(iter: I) -> Self
+    where
+        I: IntoIterator<Item = Result<BulkCodeMappingsResponse, String>>,
+    {
+        let mut merged = Self::default();
+        for result in iter {
+            match result {
+                Ok(response) => {
+                    merged.created += response.created;
+                    merged.updated += response.updated;
+                    merged.errors += response.errors;
+                    merged.mappings.extend(response.mappings);
+                }
+                Err(err) => merged.batch_errors.push(err),
+            }
+        }
+        merged
+    }
 }
 
 #[cfg(test)]

@@ -2,9 +2,21 @@
 
 ## Unreleased
 
+### Performance
+
+- (snapshots) Parallelize image hashing with rayon ([#3250](https://github.com/getsentry/sentry-cli/pull/3250))
+
+### Fixes
+
+- (sourcemaps) Skip non-base64 embedded sourcemaps during injection ([#3243](https://github.com/getsentry/sentry-cli/pull/3243))
+
 ### New Features ✨
 
 - Add `sentry-cli build download` command to download installable builds (IPA/APK) by build ID ([#3221](https://github.com/getsentry/sentry-cli/pull/3221)).
+- Add `sentry-cli code-mappings upload` command to bulk upload code mappings from a JSON file ([#3207](https://github.com/getsentry/sentry-cli/pull/3207), [#3208](https://github.com/getsentry/sentry-cli/pull/3208), [#3209](https://github.com/getsentry/sentry-cli/pull/3209), [#3210](https://github.com/getsentry/sentry-cli/pull/3210)).
+  - Code mappings link stack trace paths (e.g. `com/example/module`) to source paths in your repository (e.g. `src/main/java/com/example/module`), enabling Sentry to display source context and link directly to your code from error stack traces.
+  - Repository name and default branch are automatically inferred from your local git remotes, or can be specified explicitly with `--repo` and `--default-branch`.
+  - Large mapping files are automatically split into batches for upload.
 
 ## 3.3.3
 
