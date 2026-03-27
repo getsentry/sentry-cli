@@ -1,22 +1,12 @@
-use std::collections::HashSet;
+use std::collections::BTreeMap;
+use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
-use std::sync::{Arc, LazyLock, Mutex};
-use std::{fs, str};
+use std::sync::{Arc, Mutex};
 
-use regex::bytes::Regex;
+use serde::Deserialize;
+use sha1_smol::Sha1;
 
 use crate::integration::{chunk_upload, AssertCommand, MockEndpointBuilder, TestManager};
-
-/// This regex is used to extract the boundary from the content-type header.
-/// We need to match the boundary, since it changes with each request.
-/// The regex matches the format as specified in
-/// https://www.w3.org/Protocols/rfc1341/7_2_Multipart.html.
-static CONTENT_TYPE_REGEX: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(
-        r#"^multipart\/form-data; boundary=(?<boundary>[\w'\(\)+,\-\.\/:=? ]{0,69}[\w'\(\)+,\-\.\/:=?])$"#
-    )
-    .expect("Regex is valid")
-});
 
 #[test]
 fn command_debug_files_upload() {
@@ -197,9 +187,6 @@ fn ensure_correct_assemble_call() {
 /// It also verifies that the correct calls are made to the assemble endpoint.
 fn ensure_correct_chunk_upload() {
     let is_first_assemble_call = AtomicBool::new(true);
-    let expected_chunk_body =
-        fs::read("tests/integration/_expected_requests/debug_files/upload/chunk_upload.bin")
-            .expect("expected chunk body file should be present");
 
     TestManager::new()
         .mock_endpoint(
@@ -209,42 +196,23 @@ fn ensure_correct_chunk_upload() {
         .mock_endpoint(
             MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/chunk-upload/")
                 .with_response_fn(move |request| {
-                    let content_type_headers = request.header("content-type");
-                    assert_eq!(
-                        content_type_headers.len(),
-                        1,
-                        "content-type header should be present exactly once, found {} times",
-                        content_type_headers.len()
-                    );
-
-                    let content_type = content_type_headers[0].as_bytes();
-
-                    let boundary = CONTENT_TYPE_REGEX
-                        .captures(content_type)
-                        .expect("content-type should match regex")
-                        .name("boundary")
-                        .expect("boundary should be present")
-                        .as_bytes();
-
-                    let boundary_str = str::from_utf8(boundary).expect("boundary should be valid utf-8");
-
-                    let boundary_escaped = regex::escape(boundary_str);
-
-                    let body_regex = Regex::new(&format!(
-                        r#"^--{boundary_escaped}(?<chunk_body>(?s-u:.)*?)--{boundary_escaped}--\s*$"#
-                    ))
-                    .expect("regex should be valid");
+                    let boundary = chunk_upload::boundary_from_request(request)
+                        .expect("content-type header should be a valid multipart/form-data header");
 
                     let body = request.body().expect("body should be readable");
 
-                    let chunk_body = body_regex
-                        .captures(body)
-                        .expect("body should match regex")
-                        .name("chunk_body")
-                        .expect("chunk_body section should be present")
-                        .as_bytes();
+                    let decompressed = chunk_upload::decompress_chunks(body, boundary)
+                        .expect("chunks should be valid gzip data");
 
-                    assert_eq!(chunk_body, expected_chunk_body);
+                    let expected_content =
+                        fs::read("tests/integration/_fixtures/SrcGenSampleApp.pdb")
+                            .expect("fixture file should be readable");
+
+                    assert_eq!(decompressed.len(), 1, "expected exactly one chunk");
+                    assert!(
+                        decompressed.contains(&expected_content),
+                        "decompressed chunk should match the source file"
+                    );
 
                     vec![] // Client does not expect a response body
                 }),
@@ -287,15 +255,6 @@ fn ensure_correct_chunk_upload() {
 #[test]
 /// This test verifies a correct chunk upload of multiple debug files.
 fn chunk_upload_multiple_files() {
-    /// This is the boundary used in the expected request file.
-    /// It was randomly generated when the expected request was recorded.
-    const EXPECTED_REQUEST_BOUNDARY: &str = "------------------------b26LKrHFvpOPfwMoDhYNY8";
-
-    let expected_chunk_body = fs::read(
-        "tests/integration/_expected_requests/debug_files/upload/chunk_upload_multiple_files.bin",
-    )
-    .expect("expected chunk body file should be present");
-
     let is_first_assemble_call = AtomicBool::new(true);
     TestManager::new()
         .mock_endpoint(
@@ -310,20 +269,21 @@ fn chunk_upload_multiple_files() {
 
                     let body = request.body().expect("body should be readable");
 
-                    let chunks = chunk_upload::split_chunk_body(body, boundary)
-                        .expect("body should be a valid multipart/form-data body");
+                    let decompressed = chunk_upload::decompress_chunks(body, boundary)
+                        .expect("chunks should be valid gzip data");
 
-                    let expected_chunks = chunk_upload::split_chunk_body(
-                        &expected_chunk_body,
-                        EXPECTED_REQUEST_BOUNDARY,
-                    )
-                    .expect("expected chunk body is a valid multipart/form-data body");
+                    let fixture_dir = "tests/integration/_fixtures/debug_files/upload/chunk_upload_multiple_files";
+                    let expected_files: std::collections::HashSet<Vec<u8>> = ["fibonacci", "fibonacci-fast", "main"]
+                        .iter()
+                        .map(|name| fs::read(format!("{fixture_dir}/{name}")).expect("fixture should be readable"))
+                        .collect();
 
-                    // Using assert! because in case of failure, the output with assert_eq!
-                    // is too long to be useful.
-                    assert!(
-                        chunks == expected_chunks,
-                        "Uploaded chunks differ from the expected chunks"
+                    assert_eq!(decompressed.len(), 3, "expected exactly three chunks");
+                    let decompressed: std::collections::HashSet<_> =
+                        decompressed.into_iter().collect();
+                    assert_eq!(
+                        decompressed, expected_files,
+                        "decompressed chunks should match the fixture files"
                     );
 
                     vec![]
@@ -385,15 +345,6 @@ fn chunk_upload_multiple_files() {
 /// where one of the files is already uploaded.
 /// Only the missing files should be uploaded.
 fn chunk_upload_multiple_files_only_some() {
-    let expected_chunk_body = fs::read(
-        "tests/integration/_expected_requests/debug_files/upload/chunk_upload_multiple_files_only_some.bin",
-    )
-    .expect("expected chunk body file should be present");
-
-    /// This is the boundary used in the expected request file.
-    /// It was randomly generated when the expected request was recorded.
-    const EXPECTED_REQUEST_BOUNDARY: &str = "------------------------mfIgsRj6pG8q8GGnJIShDh";
-
     let is_first_assemble_call = AtomicBool::new(true);
     TestManager::new()
         .mock_endpoint(
@@ -407,20 +358,23 @@ fn chunk_upload_multiple_files_only_some() {
                         .expect("content-type header should be a valid multipart/form-data header");
 
                     let body = request.body().expect("body should be readable");
-                    let chunks = chunk_upload::split_chunk_body(body, boundary)
-                        .expect("body should be a valid multipart/form-data body");
 
-                    let expected_chunks = chunk_upload::split_chunk_body(
-                        &expected_chunk_body,
-                        EXPECTED_REQUEST_BOUNDARY,
-                    )
-                    .expect("expected chunk body is a valid multipart/form-data body");
+                    let decompressed = chunk_upload::decompress_chunks(body, boundary)
+                        .expect("chunks should be valid gzip data");
 
-                    // Using assert! because in case of failure, the output with assert_eq!
-                    // is too long to be useful.
+                    let fixture_dir = "tests/integration/_fixtures/debug_files/upload/chunk_upload_multiple_files";
+                    let all_fixtures: std::collections::HashSet<Vec<u8>> = ["fibonacci", "fibonacci-fast", "main"]
+                        .iter()
+                        .map(|name| fs::read(format!("{fixture_dir}/{name}")).expect("fixture should be readable"))
+                        .collect();
+
+                    // Only 2 of 3 files need uploading (one is already on the server).
+                    assert_eq!(decompressed.len(), 2, "expected exactly two chunks");
+                    let decompressed: std::collections::HashSet<_> =
+                        decompressed.into_iter().collect();
                     assert!(
-                        chunks == expected_chunks,
-                        "Uploaded chunks differ from the expected chunks"
+                        decompressed.is_subset(&all_fixtures),
+                        "uploaded chunks should be a subset of the fixture files"
                     );
 
                     vec![]
@@ -477,6 +431,59 @@ fn chunk_upload_multiple_files_only_some() {
         .run_and_assert(AssertCommand::Success);
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SmallChunkUploadOptions {
+    chunk_size: usize,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct AssembleFileResponse {
+    missing_chunks: Vec<String>,
+}
+
+fn sha1_hex(data: &[u8]) -> String {
+    let mut sha = Sha1::new();
+    sha.update(data);
+    sha.digest().to_string()
+}
+
+fn expected_uploaded_chunk_digests(assemble_response_path: &str) -> BTreeMap<String, usize> {
+    let chunk_upload_options: SmallChunkUploadOptions = serde_json::from_slice(
+        &fs::read("tests/integration/_responses/debug_files/get-chunk-upload-small-chunks.json")
+            .expect("chunk upload options response file should be present"),
+    )
+    .expect("chunk upload options response should be valid JSON");
+
+    let assemble_response: BTreeMap<String, AssembleFileResponse> = serde_json::from_slice(
+        &fs::read(assemble_response_path).expect("assemble response file should be present"),
+    )
+    .expect("assemble response should be valid JSON");
+
+    let fixture_dir = "tests/integration/_fixtures/debug_files/upload/chunk_upload_multiple_files";
+    let mut chunk_digests = BTreeMap::new();
+
+    for fixture_name in ["fibonacci", "fibonacci-fast", "main"] {
+        let fixture_data = fs::read(format!("{fixture_dir}/{fixture_name}"))
+            .expect("fixture file should be readable");
+        let file_checksum = sha1_hex(&fixture_data);
+        let file_response = assemble_response
+            .get(&file_checksum)
+            .expect("assemble response should contain an entry for every fixture file");
+
+        for chunk_checksum in fixture_data
+            .chunks(chunk_upload_options.chunk_size)
+            .map(sha1_hex)
+            .filter(|chunk_checksum| file_response.missing_chunks.contains(chunk_checksum))
+        {
+            *chunk_digests.entry(chunk_checksum).or_default() += 1;
+        }
+    }
+
+    chunk_digests
+}
+
 #[test]
 /// This test verifies a correct chunk upload of multiple debug files
 /// with a small chunk size (2048 bytes).
@@ -487,25 +494,14 @@ fn chunk_upload_multiple_files_small_chunks() {
     /// at most 64 chunks.
     const CHUNKS_PER_REQUEST: usize = 64;
 
-    /// 582 chunks will be uploaded in total.
-    const TOTAL_CHUNKS: usize = 582;
+    let expected_chunk_digests = expected_uploaded_chunk_digests(
+        "tests/integration/_responses/debug_files/assemble-chunk-upload-small-chunks.json",
+    );
+    let expected_total_chunks: usize = expected_chunk_digests.values().sum();
+    let expected_requests = expected_total_chunks.div_ceil(CHUNKS_PER_REQUEST);
 
-    /// We expect the smallest number of requests that can be used to upload
-    /// all chunks, given the maximum number of chunks per request.
-    const EXPECTED_REQUESTS: usize = TOTAL_CHUNKS.div_ceil(CHUNKS_PER_REQUEST);
-
-    /// This is the boundary used in the expected request file.
-    /// It was randomly generated when the expected request was recorded.
-    const EXPECTED_CHUNKS_BOUNDARY: &str = "------------------------au0ff4bj3Ky3LCMhImSTsy";
-
-    // Store all chunks received at the chunk upload endpoint.
-    let received_chunks = Arc::new(Mutex::new(HashSet::<Vec<_>>::new()));
-    let received_chunks_closure = received_chunks.clone();
-
-    let expected_chunks = fs::read(
-        "tests/integration/_expected_requests/debug_files/upload/chunk_upload_small_chunks.bin",
-    )
-    .expect("expected chunks file should be present");
+    let received_chunk_digests = Arc::new(Mutex::new(BTreeMap::<String, usize>::new()));
+    let received_chunk_digests_closure = received_chunk_digests.clone();
 
     let is_first_assemble_call = AtomicBool::new(true);
     TestManager::new()
@@ -554,20 +550,23 @@ fn chunk_upload_multiple_files_small_chunks() {
 
                     let body = request.body().expect("body should be readable");
 
-                    let chunks = chunk_upload::split_chunk_body(body, boundary)
-                        .expect("body should be a valid multipart/form-data body");
+                    let decompressed = chunk_upload::decompress_chunks(body, boundary)
+                        .expect("chunks should be valid gzip data");
 
                     // No single request should contain more than CHUNKS_PER_REQUEST chunks.
-                    assert!(chunks.len() <= CHUNKS_PER_REQUEST);
+                    assert!(decompressed.len() <= CHUNKS_PER_REQUEST);
 
-                    received_chunks_closure
+                    let request_chunk_digests = chunk_upload::chunk_digest_counts(&decompressed);
+                    let mut received_chunk_digests = received_chunk_digests_closure
                         .lock()
-                        .expect("should be able to lock mutex")
-                        .extend(chunks.into_iter().map(|chunk| chunk.into()));
+                        .expect("should be able to lock mutex");
+                    for (chunk_digest, count) in request_chunk_digests {
+                        *received_chunk_digests.entry(chunk_digest).or_default() += count;
+                    }
 
                     vec![]
                 })
-                .expect(EXPECTED_REQUESTS),
+                .expect(expected_requests),
         )
         .assert_cmd(vec![
             "debug-files",
@@ -577,28 +576,12 @@ fn chunk_upload_multiple_files_small_chunks() {
         .with_default_token()
         .run_and_assert(AssertCommand::Success);
 
-    // For simplicity, even though multiple requests are expected, the expected chunks
-    // are all stored in a single file, which was generated by setting a larger maximum
-    // number of chunks per request when generating the expected request.
-    let expected_chunks =
-        chunk_upload::split_chunk_body(&expected_chunks, EXPECTED_CHUNKS_BOUNDARY)
-            .expect("expected chunks file should be a valid multipart/form-data body");
-
-    // Transform received chunks from a set of vectors to a set of slices.
-    let received_chunks_guard = received_chunks
+    let received_chunk_digests = received_chunk_digests
         .lock()
         .expect("should be able to lock mutex");
-
-    let received_chunks: HashSet<_> = received_chunks_guard
-        .iter()
-        .map(|chunk| chunk.as_slice())
-        .collect();
-
-    // Use assert! because in case of failure, the output with assert_eq!
-    // is too long to be useful.
-    assert!(
-        received_chunks == expected_chunks,
-        "Uploaded chunks differ from the expected chunks"
+    assert_eq!(
+        *received_chunk_digests, expected_chunk_digests,
+        "uploaded chunk digests should match the missing chunks requested by assemble"
     );
 }
 
@@ -613,25 +596,14 @@ fn chunk_upload_multiple_files_small_chunks_only_some() {
     /// at most 64 chunks.
     const CHUNKS_PER_REQUEST: usize = 64;
 
-    /// Total number of chunks which will be uploaded.
-    const TOTAL_CHUNKS: usize = 327;
+    let expected_chunk_digests = expected_uploaded_chunk_digests(
+        "tests/integration/_responses/debug_files/assemble-chunk-upload-small-chunks-only-some-missing.json",
+    );
+    let expected_total_chunks: usize = expected_chunk_digests.values().sum();
+    let expected_requests = expected_total_chunks.div_ceil(CHUNKS_PER_REQUEST);
 
-    /// We expect the smallest number of requests that can be used to upload
-    /// all chunks, given the maximum number of chunks per request.
-    const EXPECTED_REQUESTS: usize = TOTAL_CHUNKS.div_ceil(CHUNKS_PER_REQUEST);
-
-    /// This is the boundary used in the expected request file.
-    /// It was randomly generated when the expected request was recorded.
-    const EXPECTED_CHUNKS_BOUNDARY: &str = "------------------------7MEblR9wDkWDeus1Jn5Qwy";
-
-    // Store all chunks received at the chunk upload endpoint.
-    let received_chunks = Arc::new(Mutex::new(HashSet::<Vec<_>>::new()));
-    let received_chunks_closure = received_chunks.clone();
-
-    let expected_chunks = fs::read(
-        "tests/integration/_expected_requests/debug_files/upload/chunk_upload_small_chunks_only_some.bin",
-    )
-    .expect("expected chunks file should be present");
+    let received_chunk_digests = Arc::new(Mutex::new(BTreeMap::<String, usize>::new()));
+    let received_chunk_digests_closure = received_chunk_digests.clone();
 
     let is_first_assemble_call = AtomicBool::new(true);
 
@@ -681,20 +653,23 @@ fn chunk_upload_multiple_files_small_chunks_only_some() {
 
                     let body = request.body().expect("body should be readable");
 
-                    let chunks = chunk_upload::split_chunk_body(body, boundary)
-                        .expect("body should be a valid multipart/form-data body");
+                    let decompressed = chunk_upload::decompress_chunks(body, boundary)
+                        .expect("chunks should be valid gzip data");
 
                     // No single request should contain more than CHUNKS_PER_REQUEST chunks.
-                    assert!(chunks.len() <= CHUNKS_PER_REQUEST);
+                    assert!(decompressed.len() <= CHUNKS_PER_REQUEST);
 
-                    received_chunks_closure
+                    let request_chunk_digests = chunk_upload::chunk_digest_counts(&decompressed);
+                    let mut received_chunk_digests = received_chunk_digests_closure
                         .lock()
-                        .expect("should be able to lock mutex")
-                        .extend(chunks.into_iter().map(|chunk| chunk.into()));
+                        .expect("should be able to lock mutex");
+                    for (chunk_digest, count) in request_chunk_digests {
+                        *received_chunk_digests.entry(chunk_digest).or_default() += count;
+                    }
 
                     vec![]
                 })
-                .expect(EXPECTED_REQUESTS),
+                .expect(expected_requests),
         )
         .assert_cmd(vec![
             "debug-files",
@@ -704,28 +679,12 @@ fn chunk_upload_multiple_files_small_chunks_only_some() {
         .with_default_token()
         .run_and_assert(AssertCommand::Success);
 
-    // For simplicity, even though multiple requests are expected, the expected chunks
-    // are all stored in a single file, which was generated by setting a larger maximum
-    // number of chunks per request when generating the expected request.
-    let expected_chunks =
-        chunk_upload::split_chunk_body(&expected_chunks, EXPECTED_CHUNKS_BOUNDARY)
-            .expect("expected chunks file should be a valid multipart/form-data body");
-
-    // Transform received chunks from a set of vectors to a set of slices.
-    let received_chunks_guard = received_chunks
+    let received_chunk_digests = received_chunk_digests
         .lock()
         .expect("should be able to lock mutex");
-
-    let received_chunks: HashSet<_> = received_chunks_guard
-        .iter()
-        .map(|chunk| chunk.as_slice())
-        .collect();
-
-    // Use assert! because in case of failure, the output with assert_eq!
-    // is too long to be useful.
-    assert!(
-        received_chunks == expected_chunks,
-        "Uploaded chunks differ from the expected chunks"
+    assert_eq!(
+        *received_chunk_digests, expected_chunk_digests,
+        "uploaded chunk digests should match the missing chunks requested by assemble"
     );
 }
 
