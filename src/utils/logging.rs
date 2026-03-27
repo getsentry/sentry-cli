@@ -54,7 +54,7 @@ impl Logger {
 
 impl log::Log for Logger {
     fn enabled(&self, metadata: &log::Metadata) -> bool {
-        self.get_actual_level(metadata) <= max_level()
+        !should_skip_log(metadata) && self.get_actual_level(metadata) <= max_level()
     }
 
     fn log(&self, record: &log::Record) {
@@ -84,10 +84,6 @@ impl log::Log for Logger {
             .dim(),
         );
 
-        if should_skip_log(record) {
-            return;
-        }
-
         if let Some(pb) = get_progress_bar() {
             pb.println(msg);
         } else {
@@ -98,9 +94,9 @@ impl log::Log for Logger {
     fn flush(&self) {}
 }
 
-fn should_skip_log(record: &log::Record) -> bool {
-    let level = record.metadata().level();
-    let target = record.target();
+fn should_skip_log(metadata: &log::Metadata) -> bool {
+    let level = metadata.level();
+    let target = metadata.target();
 
     // We want to filter everything that is non-error from `goblin` crate,
     // as `symbolicator` is responsible for making sure all warnings are handled correctly.
