@@ -146,3 +146,7 @@ strip = "debuginfo" # Only strip debuginfo (not symbols) to keep backtraces usef
 codegen-units = 1   # Parallel compilation prevents some optimizations.
 # We do not enable link-time optimizations (lto) because they cause the
 # CLI to timeout when run in Xcode Cloud.
+
+[patch.crates-io]
+goblin = { git = "https://github.com/supervacuus/goblin.git", branch = "feat/add_parse_imports_pe_option" }
+symbolic = { git = "https://github.com/getsentry/symbolic.git", branch = "fix/disable_goblin_import_parser" }
