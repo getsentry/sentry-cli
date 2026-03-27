@@ -11,6 +11,7 @@ use console::style;
 use itertools::Itertools as _;
 use log::{debug, info, warn};
 use objectstore_client::{ClientBuilder, ExpirationPolicy, Usecase};
+use rayon::prelude::*;
 use secrecy::ExposeSecret as _;
 use serde_json::Value;
 use sha2::{Digest as _, Sha256};
@@ -230,7 +231,7 @@ fn compute_sha256_hash(path: &Path) -> Result<String> {
     let mut file = std::fs::File::open(path)
         .with_context(|| format!("Failed to open image for hashing: {}", path.display()))?;
     let mut hasher = Sha256::new();
-    let mut buffer = [0u8; 8192];
+    let mut buffer = [0u8; 65536];
     loop {
         let bytes_read = file
             .read(&mut buffer)
@@ -332,10 +333,17 @@ fn upload_images(
     let mut many_builder = session.many();
     let mut manifest_entries = HashMap::new();
     let mut collisions: HashMap<String, Vec<String>> = HashMap::new();
-    let mut kept_paths: HashMap<String, String> = HashMap::new();
-    for image in images {
-        debug!("Processing image: {}", image.path.display());
+    let mut kept_paths = HashMap::new();
 
+    let hashed_images: Vec<_> = images
+        .into_par_iter()
+        .map(|image| {
+            let hash = compute_sha256_hash(&image.path)?;
+            Ok((image, hash))
+        })
+        .collect::<Result<Vec<_>>>()?;
+
+    for (image, hash) in hashed_images {
         let image_file_name = image
             .relative_path
             .file_name()
@@ -353,7 +361,6 @@ fn upload_images(
             continue;
         }
 
-        let hash = compute_sha256_hash(&image.path)?;
         let file = runtime
             .block_on(tokio::fs::File::open(&image.path))
             .with_context(|| {

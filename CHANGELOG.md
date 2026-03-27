@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Performance
+
+- (snapshots) Parallelize image hashing with rayon ([#3250](https://github.com/getsentry/sentry-cli/pull/3250))
+
 ### Fixes
 
 - (sourcemaps) Skip non-base64 embedded sourcemaps during injection ([#3243](https://github.com/getsentry/sentry-cli/pull/3243))
