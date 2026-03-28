@@ -1,4 +1,5 @@
 use std::fs;
+use std::path::Path;
 
 use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
@@ -45,7 +46,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let path = matches
         .get_one::<String>("path")
         .expect("path is a required argument");
-    let data = fs::read(path).with_context(|| format!("Failed to read mappings file '{path}'"))?;
+
+    // Validate and canonicalize the path to prevent path traversal attacks
+    let canonical_path = Path::new(path)
+        .canonicalize()
+        .with_context(|| format!("Failed to resolve path '{path}'. Ensure the file exists and is accessible."))?;
+
+    let data = fs::read(&canonical_path).with_context(|| format!("Failed to read mappings file '{}'", canonical_path.display()))?;
 
     let mappings: Vec<BulkCodeMapping> =
         serde_json::from_slice(&data).context("Failed to parse mappings JSON")?;
