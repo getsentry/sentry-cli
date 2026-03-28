@@ -10,7 +10,9 @@ mod hash_algorithm;
 mod upload;
 
 pub use self::artifact::{AssembleArtifactsResponse, ChunkedArtifactRequest};
-pub use self::build::{AssembleBuildResponse, BuildInstallDetails, ChunkedBuildRequest, VcsInfo};
+#[cfg(not(feature = "managed"))]
+pub use self::build::BuildInstallDetails;
+pub use self::build::{AssembleBuildResponse, ChunkedBuildRequest, VcsInfo};
 pub use self::compression::ChunkCompression;
 pub use self::dif::{AssembleDifsRequest, AssembleDifsResponse, ChunkedDifRequest};
 pub use self::file_state::ChunkedFileState;

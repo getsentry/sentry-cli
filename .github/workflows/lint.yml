@@ -89,3 +89,7 @@ jobs:
 
       - name: Run Clippy
         run: cargo clippy --workspace --tests --target ${{ matrix.target }}
+
+      - name: Check managed feature compiles
+        if: matrix.target == 'x86_64-unknown-linux-musl'
+        run: cargo check --features managed --target ${{ matrix.target }}
