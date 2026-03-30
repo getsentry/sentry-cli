@@ -10,6 +10,8 @@
 
 - (sourcemaps) Skip non-base64 embedded sourcemaps during injection ([#3243](https://github.com/getsentry/sentry-cli/pull/3243))
 
+## 3.3.4
+
 ### New Features ✨
 
 - Add `sentry-cli build download` command to download installable builds (IPA/APK) by build ID ([#3221](https://github.com/getsentry/sentry-cli/pull/3221)).
