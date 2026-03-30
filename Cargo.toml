@@ -146,3 +146,6 @@ strip = "debuginfo" # Only strip debuginfo (not symbols) to keep backtraces usef
 codegen-units = 1   # Parallel compilation prevents some optimizations.
 # We do not enable link-time optimizations (lto) because they cause the
 # CLI to timeout when run in Xcode Cloud.
+
+[patch.crates-io]
+objectstore-client = { git = "https://github.com/getsentry/objectstore", branch = "feat/put-path-ulimit" }

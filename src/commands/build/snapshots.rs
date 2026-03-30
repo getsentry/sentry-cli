@@ -410,24 +410,16 @@ fn upload_images(
 
         let mut many_builder = session.many();
         for prepared in chunk {
-            let file = runtime
-                .block_on(tokio::fs::File::open(&prepared.path))
-                .with_context(|| {
-                    format!(
-                        "Failed to open image for upload: {}",
-                        prepared.path.display()
-                    )
-                })?;
-
             many_builder = many_builder.push(
                 session
-                    .put_file(file)
+                    .put_path(prepared.path.clone())
                     .key(&prepared.key)
                     .expiration_policy(expiration),
             );
         }
 
-        let result = runtime.block_on(async { many_builder.send().error_for_failures().await });
+        let result =
+            runtime.block_on(async { many_builder.send().await.error_for_failures().await });
         if let Err(errors) = result {
             let errors: Vec<_> = errors.collect();
             eprintln!("There were errors uploading images:");
