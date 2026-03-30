@@ -301,19 +301,17 @@ pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<S
         })
 }
 
-/// Like git_repo_base_repo_name but preserves the original case of the repository name.
-/// This is used specifically for build upload where case preservation is important.
-pub fn git_repo_base_repo_name_preserve_case(repo: &git2::Repository) -> Result<Option<String>> {
+/// Finds the best remote in a git repository.
+/// Prefers "upstream" if it exists, then "origin", otherwise uses the first remote.
+pub fn find_best_remote(repo: &git2::Repository) -> Result<Option<String>> {
     let remotes = repo.remotes()?;
     let remote_names: Vec<&str> = remotes.iter().flatten().collect();
 
     if remote_names.is_empty() {
-        warn!("No remotes found in repository");
         return Ok(None);
     }
 
-    // Prefer "upstream" if it exists, then "origin", otherwise use the first one
-    let chosen_remote = if remote_names.contains(&"upstream") {
+    let chosen = if remote_names.contains(&"upstream") {
         "upstream"
     } else if remote_names.contains(&"origin") {
         "origin"
@@ -321,7 +319,21 @@ pub fn git_repo_base_repo_name_preserve_case(repo: &git2::Repository) -> Result<
         remote_names[0]
     };
 
-    match git_repo_remote_url(repo, chosen_remote) {
+    Ok(Some(chosen.to_owned()))
+}
+
+/// Like git_repo_base_repo_name but preserves the original case of the repository name.
+/// This is used specifically for build upload where case preservation is important.
+pub fn git_repo_base_repo_name_preserve_case(repo: &git2::Repository) -> Result<Option<String>> {
+    let chosen_remote = match find_best_remote(repo)? {
+        Some(remote) => remote,
+        None => {
+            warn!("No remotes found in repository");
+            return Ok(None);
+        }
+    };
+
+    match git_repo_remote_url(repo, &chosen_remote) {
         Ok(remote_url) => {
             debug!("Found remote '{chosen_remote}': {remote_url}");
             let repo_name = get_repo_from_remote_preserve_case(&remote_url);

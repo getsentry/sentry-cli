@@ -7,7 +7,6 @@ use serde_json::Value;
 
 use super::VcsInfo;
 
-const IMAGE_FILE_NAME_FIELD: &str = "image_file_name";
 const WIDTH_FIELD: &str = "width";
 const HEIGHT_FIELD: &str = "height";
 
@@ -42,16 +41,7 @@ pub struct ImageMetadata {
 }
 
 impl ImageMetadata {
-    pub fn new(
-        image_file_name: String,
-        width: u32,
-        height: u32,
-        mut extra: HashMap<String, Value>,
-    ) -> Self {
-        extra.insert(
-            IMAGE_FILE_NAME_FIELD.to_owned(),
-            Value::String(image_file_name),
-        );
+    pub fn new(width: u32, height: u32, mut extra: HashMap<String, Value>) -> Self {
         extra.insert(WIDTH_FIELD.to_owned(), Value::from(width));
         extra.insert(HEIGHT_FIELD.to_owned(), Value::from(height));
 
@@ -68,18 +58,16 @@ mod tests {
     #[test]
     fn cli_managed_fields_override_sidecar_fields() {
         let extra = serde_json::from_value(json!({
-            (IMAGE_FILE_NAME_FIELD): "from-sidecar.png",
             (WIDTH_FIELD): 1,
             (HEIGHT_FIELD): 2,
             "custom": "keep-me"
         }))
         .unwrap();
 
-        let metadata = ImageMetadata::new("from-cli.png".to_owned(), 100, 200, extra);
+        let metadata = ImageMetadata::new(100, 200, extra);
         let serialized = serde_json::to_value(metadata).unwrap();
 
         let expected = json!({
-            (IMAGE_FILE_NAME_FIELD): "from-cli.png",
             (WIDTH_FIELD): 100,
             (HEIGHT_FIELD): 200,
             "custom": "keep-me"
