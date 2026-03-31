@@ -44,15 +44,19 @@ impl TestManager {
     }
 
     /// Mock the common upload endpoints.
-    pub fn mock_common_upload_endpoints(
+    pub fn mock_common_upload_endpoints(self) -> Self {
+        self.mock_common_upload_endpoints_with(None, true)
+    }
+
+    pub fn mock_common_upload_endpoints_with(
         self,
         chunk_size: Option<usize>,
-        initial_missing_chunks: Option<Vec<&'static str>>,
+        simulate_missing_chunks: bool,
     ) -> Self {
         mock_common_endpoints::common_upload_endpoints(
             self.server_url(),
             chunk_size,
-            initial_missing_chunks,
+            simulate_missing_chunks,
         )
         .fold(self, |manager, builder| manager.mock_endpoint(builder))
     }
