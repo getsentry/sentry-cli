@@ -2300,8 +2300,9 @@ dependencies = [
 
 [[package]]
 name = "objectstore-client"
-version = "0.1.2"
-source = "git+https://github.com/getsentry/objectstore?branch=feat%2Fput-path-ulimit#fdf5537d54f71db0ae97c7abdd2071f7a6e8a263"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2b9086ed0fb934a4773f3ecbbf37f2e22f3e7e505db362ec1d0ba4f14c635430"
 dependencies = [
  "async-compression",
  "bytes",
@@ -2322,8 +2323,9 @@ dependencies = [
 
 [[package]]
 name = "objectstore-types"
-version = "0.1.2"
-source = "git+https://github.com/getsentry/objectstore?branch=feat%2Fput-path-ulimit#fdf5537d54f71db0ae97c7abdd2071f7a6e8a263"
+version = "0.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3bf553967aa3b32403848d249f2a339e77cf8b2b3315640485612d9ca68b5c35"
 dependencies = [
  "http",
  "humantime",
