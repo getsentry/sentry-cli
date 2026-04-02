@@ -29,7 +29,6 @@ const EXPERIMENTAL_WARNING: &str =
 
 const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg"];
 const MAX_PIXELS_PER_IMAGE: u64 = 40_000_000;
-const UPLOAD_BATCH_SIZE: usize = 100;
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -399,39 +398,26 @@ fn upload_images(
     }
 
     let total_count = uploads.len();
-    let total_batches = total_count.div_ceil(UPLOAD_BATCH_SIZE);
 
-    for (batch_idx, chunk) in uploads.chunks(UPLOAD_BATCH_SIZE).enumerate() {
-        debug!(
-            "Uploading batch {}/{total_batches} ({} images)",
-            batch_idx + 1,
-            chunk.len()
+    let mut many_builder = session.many();
+    for prepared in uploads {
+        many_builder = many_builder.push(
+            session
+                .put_path(prepared.path.clone())
+                .key(&prepared.key)
+                .expiration_policy(expiration),
         );
+    }
 
-        let mut many_builder = session.many();
-        for prepared in chunk {
-            many_builder = many_builder.push(
-                session
-                    .put_path(prepared.path.clone())
-                    .key(&prepared.key)
-                    .expiration_policy(expiration),
-            );
+    let result = runtime.block_on(async { many_builder.send().await.error_for_failures().await });
+    if let Err(errors) = result {
+        let errors: Vec<_> = errors.collect();
+        eprintln!("There were errors uploading images:");
+        for error in &errors {
+            eprintln!("  {}", style(format!("{error:#}")).red());
         }
-
-        let result =
-            runtime.block_on(async { many_builder.send().await.error_for_failures().await });
-        if let Err(errors) = result {
-            let errors: Vec<_> = errors.collect();
-            eprintln!("There were errors uploading images:");
-            for error in &errors {
-                eprintln!("  {}", style(format!("{error:#}")).red());
-            }
-            let error_count = errors.len();
-            let batch_num = batch_idx + 1;
-            anyhow::bail!(
-                "Failed to upload {error_count} images in batch {batch_num}/{total_batches}"
-            );
-        }
+        let error_count = errors.len();
+        anyhow::bail!("Failed to upload {error_count} images");
     }
 
     println!(
