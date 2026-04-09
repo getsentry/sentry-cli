@@ -3,17 +3,11 @@ $ sentry-cli sourcemaps upload --bundle tests/integration/_fixtures/file-hermes-
 ? success
   WARN    [..] Regular bundle found
 > Analyzing 2 sources
-> Analyzing completed in [..]
 > Rewriting sources
-> Rewriting completed in [..]
 > Adding source map references
-> Bundling completed in [..]
 > Bundled 2 files for upload
 > Bundle ID: b87a18c0-0d49-5771-bb15-cb1654bc9129
-> Optimizing completed in [..]
-> Uploading completed in [..]
 > Uploaded files to Sentry
-> Processing completed in [..]
 > File upload complete (processing pending on server)
 > Organization: wat-org
 > Projects: wat-project

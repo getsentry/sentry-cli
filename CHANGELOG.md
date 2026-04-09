@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+### Fixes
+
+- Replace `eprintln!` with `log::info!` for progress bar completion messages when the progress bar is disabled (e.g. in CI). This avoids spurious stderr output that some CI systems treat as errors ([#3223](https://github.com/getsentry/sentry-cli/pull/3223)).
+
+## 3.3.5
+
 ### Performance
 
 - (snapshots) Parallelize image hashing with rayon ([#3250](https://github.com/getsentry/sentry-cli/pull/3250))
@@ -9,6 +15,8 @@
 ### Fixes
 
 - (sourcemaps) Skip non-base64 embedded sourcemaps during injection ([#3243](https://github.com/getsentry/sentry-cli/pull/3243))
+
+## 3.3.4
 
 ### New Features ✨
 
