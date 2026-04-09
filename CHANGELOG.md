@@ -4,7 +4,6 @@
 
 ### Features
 
-- (snapshots) Support dedicated objectstore auth token ([#3258](https://github.com/getsentry/sentry-cli/pull/3258))
 - (snapshots) Add `--selective` flag to `build snapshots` to indicate the upload contains only a subset of images ([#3268](https://github.com/getsentry/sentry-cli/pull/3268))
 - (bundle-jvm) Allow running directly on a project root (including multi-module repos) by automatically collecting only JVM source files (`.java`, `.kt`, `.scala`, `.groovy`), respecting `.gitignore`, and excluding common build output directories ([#3260](https://github.com/getsentry/sentry-cli/pull/3260))
 - (bundle-jvm) Add `--exclude` option for custom glob patterns to exclude files/directories from source collection ([#3260](https://github.com/getsentry/sentry-cli/pull/3260))
