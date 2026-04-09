@@ -25,6 +25,10 @@ pub struct CreateSnapshotResponse {
 pub struct SnapshotsManifest<'a> {
     pub app_id: String,
     pub images: HashMap<String, ImageMetadata>,
+    /// If set, Sentry will only report images as changed if their difference %
+    /// is greater than this value (e.g. 0.01 = only report changes >= 1%).
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub diff_threshold: Option<f64>,
     #[serde(flatten)]
     pub vcs_info: VcsInfo<'a>,
 }

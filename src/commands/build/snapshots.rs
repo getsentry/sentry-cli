@@ -51,6 +51,23 @@ pub fn make_command(command: Command) -> Command {
                 .help("The application identifier.")
                 .required(true),
         )
+        .arg(
+            Arg::new("diff_threshold")
+                .long("diff-threshold")
+                .value_name("THRESHOLD")
+                .value_parser(|s: &str| {
+                    let v: f64 = s.parse().map_err(|e| format!("invalid float: {e}"))?;
+                    if !(0.0..=1.0).contains(&v) {
+                        return Err("value must be between 0.0 and 1.0".to_owned());
+                    }
+                    Ok(v)
+                })
+                .help(
+                    "If set, Sentry will only report images as changed if their \
+                     difference % is greater than this value. \
+                     Example: 0.01 = only report image changes >= 1%.",
+                ),
+        )
         .git_metadata_args()
 }
 
@@ -123,9 +140,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let manifest_entries = upload_images(images, &org, &project)?;
 
     // Build manifest from discovered images
+    let diff_threshold = matches.get_one::<f64>("diff_threshold").copied();
+
     let manifest = SnapshotsManifest {
         app_id: app_id.clone(),
         images: manifest_entries,
+        diff_threshold,
         vcs_info,
     };
 

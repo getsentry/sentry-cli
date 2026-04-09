@@ -20,6 +20,7 @@
 
 ### New Features ✨
 
+- (snapshots) Add `--diff-threshold` option to `build snapshots` to set a minimum pixel difference percentage for reporting image changes ([#3259](https://github.com/getsentry/sentry-cli/pull/3259))
 - Add `sentry-cli build download` command to download installable builds (IPA/APK) by build ID ([#3221](https://github.com/getsentry/sentry-cli/pull/3221)).
 - Add `sentry-cli code-mappings upload` command to bulk upload code mappings from a JSON file ([#3207](https://github.com/getsentry/sentry-cli/pull/3207), [#3208](https://github.com/getsentry/sentry-cli/pull/3208), [#3209](https://github.com/getsentry/sentry-cli/pull/3209), [#3210](https://github.com/getsentry/sentry-cli/pull/3210)).
   - Code mappings link stack trace paths (e.g. `com/example/module`) to source paths in your repository (e.g. `src/main/java/com/example/module`), enabling Sentry to display source context and link directly to your code from error stack traces.
