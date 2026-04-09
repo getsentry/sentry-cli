@@ -33,7 +33,7 @@ use lazy_static::lazy_static;
 use log::{debug, info, warn};
 use parking_lot::Mutex;
 use regex::{Captures, Regex};
-use secrecy::ExposeSecret as _;
+use secrecy::{ExposeSecret as _, SecretString};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use sha1_smol::Digest;
@@ -2065,6 +2065,6 @@ pub struct SnapshotsUploadOptions {
 pub struct ObjectstoreUploadOptions {
     pub url: String,
     pub scopes: Vec<(String, String)>,
-    pub auth_token: Option<secrecy::SecretString>,
+    pub auth_token: Option<SecretString>,
     pub expiration_policy: String,
 }
