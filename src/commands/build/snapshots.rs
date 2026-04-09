@@ -410,7 +410,7 @@ fn upload_images(
         warn!("Some images share identical file names. Only the first occurrence of each is included:{details}");
     }
 
-    let result = runtime.block_on(async { many_builder.send().error_for_failures().await });
+    let result = runtime.block_on(async { many_builder.send().await.error_for_failures().await });
 
     let uploaded_count = manifest_entries.len();
 
