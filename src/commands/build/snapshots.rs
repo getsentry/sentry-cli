@@ -297,7 +297,7 @@ fn upload_images(
 
     let mut builder = ClientBuilder::new(options.objectstore.url);
     if let Some(token) = options.objectstore.auth_token {
-        builder = builder.token(token);
+        builder = builder.token(token.expose_secret().to_owned());
     }
 
     let sentry_token = match authenticated_api.auth() {
