@@ -55,7 +55,13 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("diff_threshold")
                 .long("diff-threshold")
                 .value_name("THRESHOLD")
-                .value_parser(clap::value_parser!(f64))
+                .value_parser(|s: &str| {
+                    let v: f64 = s.parse().map_err(|e| format!("invalid float: {e}"))?;
+                    if !(0.0..=1.0).contains(&v) {
+                        return Err("value must be between 0.0 and 1.0".to_owned());
+                    }
+                    Ok(v)
+                })
                 .help(
                     "If set, Sentry will only report images as changed if their \
                      difference % is greater than this value. \
