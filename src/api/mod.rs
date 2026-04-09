@@ -2065,5 +2065,6 @@ pub struct SnapshotsUploadOptions {
 pub struct ObjectstoreUploadOptions {
     pub url: String,
     pub scopes: Vec<(String, String)>,
+    pub auth_token: Option<String>,
     pub expiration_policy: String,
 }
