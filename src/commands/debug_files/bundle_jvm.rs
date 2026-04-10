@@ -17,10 +17,25 @@ use std::sync::Arc;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 
 /// File extensions for JVM-based languages.
-const JVM_EXTENSIONS: &[&str] = &["java", "kt", "scala", "groovy"];
+const JVM_EXTENSIONS: &[&str] = &["java", "kt", "scala", "groovy", "clj", "cljc"];
 
 /// Default directory patterns to exclude from source collection.
-const DEFAULT_EXCLUDES: &[&str] = &["!build", "!.gradle", "!.cxx", "!node_modules"];
+const DEFAULT_EXCLUDES: &[&str] = &[
+    "!build",
+    "!.gradle",
+    "!.cxx",
+    "!node_modules",
+    "!target",
+    "!.mvn",
+    "!.idea",
+    "!.vscode",
+    "!.eclipse",
+    "!.settings",
+    "!bin",
+    "!out",
+    "!.kotlin",
+    "!.fleet",
+];
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -60,7 +75,8 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::Append)
                 .help(
                     "Glob pattern to exclude files/directories. Can be repeated. \
-                     By default, 'build', '.gradle', '.cxx', and 'node_modules' directories are excluded.",
+                     By default, common build output and IDE directories are excluded \
+                     (build, .gradle, target, .idea, .vscode, out, bin, etc.).",
                 ),
         )
 }
