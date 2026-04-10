@@ -20,6 +20,7 @@ pub struct ReleaseFileSearch {
     ignores: BTreeSet<String>,
     ignore_file: Option<String>,
     decompress: bool,
+    respect_ignores: bool,
 }
 
 #[derive(Eq, PartialEq, Hash)]
@@ -37,6 +38,7 @@ impl ReleaseFileSearch {
             ignore_file: None,
             ignores: BTreeSet::new(),
             decompress: false,
+            respect_ignores: false,
         }
     }
 
@@ -78,6 +80,11 @@ impl ReleaseFileSearch {
         self
     }
 
+    pub fn respect_ignores(&mut self, respect: bool) -> &mut Self {
+        self.respect_ignores = respect;
+        self
+    }
+
     pub fn collect_file(path: PathBuf) -> Result<ReleaseFileMatch> {
         // NOTE: `collect_file` currently do not handle gzip decompression,
         // as its mostly used for 3rd tools like xcode or gradle.
@@ -105,11 +112,11 @@ impl ReleaseFileSearch {
         let mut collected = Vec::new();
 
         let mut builder = WalkBuilder::new(&self.path);
-        builder
-            .follow_links(true)
-            .git_exclude(false)
-            .git_ignore(false)
-            .ignore(false);
+        builder.follow_links(true);
+
+        if !self.respect_ignores {
+            builder.git_exclude(false).git_ignore(false).ignore(false);
+        }
 
         if !&self.extensions.is_empty() {
             let mut types_builder = TypesBuilder::new();

@@ -7,7 +7,7 @@ use crate::utils::file_upload::SourceFile;
 use crate::utils::fs::path_as_url;
 use crate::utils::source_bundle::{self, BundleContext};
 use anyhow::{bail, Context as _, Result};
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgAction, ArgMatches, Command};
 use sentry::types::DebugId;
 use std::collections::BTreeMap;
 use std::fs;
@@ -15,6 +15,29 @@ use std::path::PathBuf;
 use std::str::FromStr as _;
 use std::sync::Arc;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
+
+/// File extensions for JVM-based languages.
+const JVM_EXTENSIONS: &[&str] = &[
+    "java", "kt", "scala", "sc", "groovy", "gvy", "gy", "gsh", "clj", "cljs", "cljc",
+];
+
+/// Default directory patterns to exclude from source collection.
+const DEFAULT_EXCLUDES: &[&str] = &[
+    "!build",
+    "!.gradle",
+    "!.cxx",
+    "!node_modules",
+    "!target",
+    "!.mvn",
+    "!.idea",
+    "!.vscode",
+    "!.eclipse",
+    "!.settings",
+    "!bin",
+    "!out",
+    "!.kotlin",
+    "!.fleet",
+];
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -47,6 +70,17 @@ pub fn make_command(command: Command) -> Command {
                 .value_parser(DebugId::from_str)
                 .help("Debug ID (UUID) to use for the source bundle."),
         )
+        .arg(
+            Arg::new("exclude")
+                .long("exclude")
+                .value_name("PATTERN")
+                .action(ArgAction::Append)
+                .help(
+                    "Glob pattern to exclude files/directories. Can be repeated. \
+                     By default, common build output and IDE directories are excluded \
+                     (build, .gradle, target, .idea, .vscode, out, bin, etc.).",
+                ),
+        )
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -75,7 +109,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         ))?;
     }
 
-    let sources = ReleaseFileSearch::new(path.clone()).collect_files()?;
+    let user_excludes: Vec<String> = matches
+        .get_many::<String>("exclude")
+        .map(|vals| vals.map(|v| format!("!{v}")).collect())
+        .unwrap_or_default();
+
+    let all_excludes: Vec<&str> = DEFAULT_EXCLUDES
+        .iter()
+        .copied()
+        .chain(user_excludes.iter().map(|s| s.as_str()))
+        .collect();
+
+    let sources = ReleaseFileSearch::new(path.clone())
+        .extensions(JVM_EXTENSIONS.iter().copied())
+        .ignores(all_excludes)
+        .respect_ignores(true)
+        .collect_files()?;
     let files = sources.iter().map(|source| {
         let local_path = source.path.strip_prefix(&source.base_path).unwrap();
         let local_path_jvm_ext = local_path.with_extension("jvm");
