@@ -315,15 +315,25 @@ fn upload_images(
     let expiration = ExpirationPolicy::from_str(&options.objectstore.expiration_policy)
         .context("Failed to parse expiration policy from upload options")?;
 
-    let client = ClientBuilder::new(options.objectstore.url)
-        .token({
-            // TODO: replace with auth from `ObjectstoreUploadOptions` when appropriate
-            let auth = match authenticated_api.auth() {
-                Auth::Token(token) => token.raw().expose_secret().to_owned(),
-            };
-            auth
+    let mut builder = ClientBuilder::new(options.objectstore.url);
+    if let Some(token) = options.objectstore.auth_token {
+        builder = builder.token(token.expose_secret().to_owned());
+    }
+
+    let sentry_token = match authenticated_api.auth() {
+        Auth::Token(token) => token.raw().expose_secret().to_owned(),
+    };
+    let sentry_token = format!("Bearer {sentry_token}")
+        .parse()
+        // Ignore original error to avoid leaking the token (even though it's invalid)
+        .map_err(|_| anyhow::anyhow!("Invalid auth token"))?;
+    let client = builder
+        .configure_reqwest(|r| {
+            let mut headers = http::HeaderMap::new();
+            headers.insert(http::header::AUTHORIZATION, sentry_token);
+            r.connect_timeout(Duration::from_secs(10))
+                .default_headers(headers)
         })
-        .configure_reqwest(|r| r.connect_timeout(Duration::from_secs(10)))
         .build()?;
 
     let mut scope = Usecase::new("preprod").scope();
@@ -420,7 +430,7 @@ fn upload_images(
         warn!("Some images share identical file names. Only the first occurrence of each is included:{details}");
     }
 
-    let result = runtime.block_on(async { many_builder.send().error_for_failures().await });
+    let result = runtime.block_on(async { many_builder.send().await.error_for_failures().await });
 
     let uploaded_count = manifest_entries.len();
 
