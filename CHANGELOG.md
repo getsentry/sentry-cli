@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Features
+
+- (bundle-jvm) Filter sources by JVM extensions, respect `.gitignore`, and add default directory excludes and `--exclude` option ([#3260](https://github.com/getsentry/sentry-cli/pull/3260))
+
 ### Fixes
 
 - Replace `eprintln!` with `log::info!` for progress bar completion messages when the progress bar is disabled (e.g. in CI). This avoids spurious stderr output that some CI systems treat as errors ([#3223](https://github.com/getsentry/sentry-cli/pull/3223)).

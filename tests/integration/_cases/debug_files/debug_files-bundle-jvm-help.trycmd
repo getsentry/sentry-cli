@@ -18,6 +18,9 @@ Options:
       --debug-id <UUID>          Debug ID (UUID) to use for the source bundle.
       --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
                                  warn, error]
+      --exclude <PATTERN>        Glob pattern to exclude files/directories. Can be repeated. By
+                                 default, 'build', '.gradle', '.cxx', and 'node_modules' directories
+                                 are excluded.
       --quiet                    Do not print any output while preserving correct exit code. This
                                  flag is currently implemented only for selected subcommands.
                                  [aliases: --silent]
