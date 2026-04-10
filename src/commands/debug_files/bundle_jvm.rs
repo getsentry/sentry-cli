@@ -60,7 +60,7 @@ pub fn make_command(command: Command) -> Command {
                 .action(ArgAction::Append)
                 .help(
                     "Glob pattern to exclude files/directories. Can be repeated. \
-                     By default, 'build', '.gradle', and '.cxx' directories are excluded.",
+                     By default, 'build', '.gradle', '.cxx', and 'node_modules' directories are excluded.",
                 ),
         )
 }
