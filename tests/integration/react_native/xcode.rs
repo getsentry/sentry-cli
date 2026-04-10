@@ -3,7 +3,7 @@ use crate::integration::TestManager;
 #[test]
 fn xcode_upload_source_maps_missing_plist() {
     TestManager::new()
-        .mock_common_upload_endpoints(None, None)
+        .mock_common_upload_endpoints_with(None, false)
         .register_trycmd_test("react_native/xcode-upload-source-maps-invalid-plist.trycmd")
         .with_default_token();
 }
@@ -11,7 +11,7 @@ fn xcode_upload_source_maps_missing_plist() {
 #[test]
 fn xcode_upload_source_maps_release_and_dist_from_env() {
     TestManager::new()
-        .mock_common_upload_endpoints(None, Some(vec!["60f215dae7d29497357013d08c35e93716b6a46c"]))
+        .mock_common_upload_endpoints()
         .register_trycmd_test(
             "react_native/xcode-upload-source-maps-release_and_dist_from_env.trycmd",
         )
