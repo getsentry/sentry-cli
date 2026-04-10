@@ -17,7 +17,10 @@ use std::sync::Arc;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 
 /// File extensions for JVM-based languages.
-const JVM_EXTENSIONS: &[&str] = &["java", "kt", "scala", "groovy", "clj", "cljc"];
+const JVM_EXTENSIONS: &[&str] = &[
+    "java", "kt", "scala", "sc", "groovy", "gvy", "gy", "gsh", "gradle", "clj", "cljs", "cljc",
+    "edn", "rb", "py",
+];
 
 /// Default directory patterns to exclude from source collection.
 const DEFAULT_EXCLUDES: &[&str] = &[
