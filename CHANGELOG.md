@@ -4,7 +4,7 @@
 
 ### Features
 
-- (bundle-jvm) Filter sources by JVM extensions, respect `.gitignore`, and add default directory excludes and `--exclude` option ([#3260](https://github.com/getsentry/sentry-cli/pull/3260))
+- (bundle-jvm) Allow running directly on a project root (including multi-module repos) by automatically collecting only JVM source files (`.java`, `.kt`, `.scala`, `.groovy`), respecting `.gitignore`, and excluding common build output directories. Add `--exclude` option for custom glob patterns ([#3260](https://github.com/getsentry/sentry-cli/pull/3260))
 
 ### Fixes
 
