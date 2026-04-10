@@ -207,28 +207,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "async-stream"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "0b5a71a6f37880a80d1d7f19efd781e4b5de42c88f0722cc13bcb6cc2cfe8476"
-dependencies = [
- "async-stream-impl",
- "futures-core",
- "pin-project-lite",
-]
-
-[[package]]
-name = "async-stream-impl"
-version = "0.3.6"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c7c24de15d275a1ecfd47a380fb4d5ec9bfe0933f309ed5e705b775596a3574d"
-dependencies = [
- "proc-macro2",
- "quote",
- "syn",
-]
-
-[[package]]
 name = "atomic-waker"
 version = "1.1.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2322,12 +2300,11 @@ dependencies = [
 
 [[package]]
 name = "objectstore-client"
-version = "0.1.2"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "033eedf125e31b30962c0172842e964fc9983bbccd99d9ff033e7e413946861c"
+checksum = "166e922cee4832ca134d63097c29e5df8f698e59700fd316d474952d7c7b47c6"
 dependencies = [
  "async-compression",
- "async-stream",
  "bytes",
  "futures-util",
  "infer",
@@ -2346,9 +2323,9 @@ dependencies = [
 
 [[package]]
 name = "objectstore-types"
-version = "0.1.2"
+version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "956cbdef3971ea108a15e5248625d6229870da3a3c637b6e7aada213526f8014"
+checksum = "a7696fddec9abc6492c6ee85d2b5aee935c5bdc2c992d1397a54ca83d87eeceb"
 dependencies = [
  "http",
  "humantime",
@@ -4142,6 +4119,7 @@ dependencies = [
  "bytes",
  "futures-core",
  "futures-sink",
+ "futures-util",
  "pin-project-lite",
  "tokio",
 ]
