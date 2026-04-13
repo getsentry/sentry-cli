@@ -48,11 +48,10 @@ const AMBIGUOUS_EXCLUDES: &[&str] = &["bin", "build", "out", "target"];
 /// Returns true if the file should be excluded because it sits inside an
 /// ambiguous build-output directory that is NOT under a `src/` ancestor.
 ///
-/// We walk the path's ancestors and when we find an ambiguous directory name,
-/// we check whether any ancestor *above* it is named `src`. This ensures that
-/// `build/src/main/java/Foo.java` is correctly excluded (build is not under
-/// src), while `src/main/java/com/example/build/Foo.java` is kept (build is
-/// under src).
+/// We check *all* ambiguous directories in the path and exclude if any of them
+/// is not under a `src/` ancestor. This handles nested cases like
+/// `build/src/main/java/com/example/target/Foo.java` where the inner `target`
+/// is under `src`, but the outer `build` is not — the file should be excluded.
 fn is_in_ambiguous_build_dir(relative_path: &Path) -> bool {
     for ancestor in relative_path.ancestors() {
         let Some(name) = ancestor.file_name().and_then(|n| n.to_str()) else {
@@ -64,7 +63,9 @@ fn is_in_ambiguous_build_dir(relative_path: &Path) -> bool {
                 .ancestors()
                 .skip(1) // skip the ambiguous dir itself
                 .any(|a| a.file_name() == Some(OsStr::new("src")));
-            return !has_src_above;
+            if !has_src_above {
+                return true;
+            }
         }
     }
     false
@@ -238,6 +239,17 @@ mod tests {
         )));
         assert!(is_in_ambiguous_build_dir(Path::new(
             "app/build/src/generated/Foo.java"
+        )));
+    }
+
+    #[test]
+    fn test_excludes_nested_ambiguous_dirs_under_build() {
+        // build/src/.../target/ — inner `target` is under src, but outer `build` is not
+        assert!(is_in_ambiguous_build_dir(Path::new(
+            "build/src/main/java/com/example/target/Foo.java"
+        )));
+        assert!(is_in_ambiguous_build_dir(Path::new(
+            "target/src/main/java/com/example/out/Foo.java"
         )));
     }
 
