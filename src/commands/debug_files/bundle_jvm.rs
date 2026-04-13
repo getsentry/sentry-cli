@@ -45,24 +45,26 @@ const SAFE_EXCLUDES: &[&str] = &[
 /// source packages.
 const AMBIGUOUS_EXCLUDES: &[&str] = &["bin", "build", "out", "target"];
 
-/// Returns true if `path` has a `src` ancestor before the given directory name.
-/// E.g. `src/main/java/com/example/build/Foo.java` → true (under src/).
-/// E.g. `app/build/generated/Foo.java` → false (not under src/).
-fn is_under_src(relative_path: &Path) -> bool {
-    relative_path
-        .ancestors()
-        .any(|a| a.file_name() == Some(OsStr::new("src")))
-}
-
 /// Returns true if the file should be excluded because it sits inside an
 /// ambiguous build-output directory that is NOT under a `src/` ancestor.
+///
+/// We walk the path's ancestors and when we find an ambiguous directory name,
+/// we check whether any ancestor *above* it is named `src`. This ensures that
+/// `build/src/main/java/Foo.java` is correctly excluded (build is not under
+/// src), while `src/main/java/com/example/build/Foo.java` is kept (build is
+/// under src).
 fn is_in_ambiguous_build_dir(relative_path: &Path) -> bool {
     for ancestor in relative_path.ancestors() {
         let Some(name) = ancestor.file_name().and_then(|n| n.to_str()) else {
             continue;
         };
         if AMBIGUOUS_EXCLUDES.contains(&name) {
-            return !is_under_src(relative_path);
+            // Check if any ancestor *above* this directory is named "src".
+            let has_src_above = ancestor
+                .ancestors()
+                .skip(1) // skip the ambiguous dir itself
+                .any(|a| a.file_name() == Some(OsStr::new("src")));
+            return !has_src_above;
         }
     }
     false
@@ -225,6 +227,17 @@ mod tests {
         )));
         assert!(!is_in_ambiguous_build_dir(Path::new(
             "src/main/kotlin/com/example/out/Output.kt"
+        )));
+    }
+
+    #[test]
+    fn test_excludes_build_dir_containing_src() {
+        // build/src/... should still be excluded — src is *inside* build, not above it
+        assert!(is_in_ambiguous_build_dir(Path::new(
+            "build/src/main/java/Foo.java"
+        )));
+        assert!(is_in_ambiguous_build_dir(Path::new(
+            "app/build/src/generated/Foo.java"
         )));
     }
 
