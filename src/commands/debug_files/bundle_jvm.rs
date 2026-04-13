@@ -192,3 +192,50 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     Ok(())
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::path::Path;
+
+    #[test]
+    fn test_excludes_build_output_at_module_root() {
+        assert!(is_in_ambiguous_build_dir(Path::new(
+            "app/build/generated/Foo.java"
+        )));
+        assert!(is_in_ambiguous_build_dir(Path::new(
+            "build/generated/Foo.java"
+        )));
+        assert!(is_in_ambiguous_build_dir(Path::new(
+            "module/target/classes/Foo.java"
+        )));
+        assert!(is_in_ambiguous_build_dir(Path::new("bin/Foo.class")));
+        assert!(is_in_ambiguous_build_dir(Path::new(
+            "out/production/Foo.java"
+        )));
+    }
+
+    #[test]
+    fn test_keeps_source_packages_under_src() {
+        assert!(!is_in_ambiguous_build_dir(Path::new(
+            "src/main/java/com/example/build/Builder.java"
+        )));
+        assert!(!is_in_ambiguous_build_dir(Path::new(
+            "app/src/main/java/com/example/target/Target.java"
+        )));
+        assert!(!is_in_ambiguous_build_dir(Path::new(
+            "src/main/kotlin/com/example/out/Output.kt"
+        )));
+    }
+
+    #[test]
+    fn test_keeps_files_without_ambiguous_dirs() {
+        assert!(!is_in_ambiguous_build_dir(Path::new(
+            "src/main/java/com/example/Foo.java"
+        )));
+        assert!(!is_in_ambiguous_build_dir(Path::new("Foo.java")));
+        assert!(!is_in_ambiguous_build_dir(Path::new(
+            "app/src/main/java/Foo.java"
+        )));
+    }
+}
