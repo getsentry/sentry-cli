@@ -3414,7 +3414,7 @@ dependencies = [
 
 [[package]]
 name = "sentry-cli"
-version = "3.3.5"
+version = "3.3.6-snapshot.20260413.5c11709"
 dependencies = [
  "anyhow",
  "anylog",
