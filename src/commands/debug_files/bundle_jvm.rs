@@ -9,6 +9,7 @@ use crate::utils::source_bundle::{self, BundleContext};
 use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use sentry::types::DebugId;
+use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::fs;
 use std::path::PathBuf;
@@ -23,20 +24,20 @@ const JVM_EXTENSIONS: &[&str] = &[
 
 /// Default directory patterns to exclude from source collection.
 const DEFAULT_EXCLUDES: &[&str] = &[
-    "!build",
-    "!.gradle",
     "!.cxx",
-    "!node_modules",
-    "!target",
-    "!.mvn",
-    "!.idea",
-    "!.vscode",
     "!.eclipse",
-    "!.settings",
-    "!bin",
-    "!out",
-    "!.kotlin",
     "!.fleet",
+    "!.gradle",
+    "!.idea",
+    "!.kotlin",
+    "!.mvn",
+    "!.settings",
+    "!.vscode",
+    "!bin",
+    "!build",
+    "!node_modules",
+    "!out",
+    "!target",
 ];
 
 pub fn make_command(command: Command) -> Command {
@@ -109,16 +110,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         ))?;
     }
 
-    let user_excludes: Vec<String> = matches
+    let user_excludes = matches
         .get_many::<String>("exclude")
-        .map(|vals| vals.map(|v| format!("!{v}")).collect())
-        .unwrap_or_default();
+        .into_iter()
+        .flatten()
+        .map(|v| format!("!{v}"));
 
-    let all_excludes: Vec<&str> = DEFAULT_EXCLUDES
+    let all_excludes = DEFAULT_EXCLUDES
         .iter()
         .copied()
-        .chain(user_excludes.iter().map(|s| s.as_str()))
-        .collect();
+        .map(Cow::Borrowed)
+        .chain(user_excludes.map(Cow::Owned));
 
     let sources = ReleaseFileSearch::new(path.clone())
         .extensions(JVM_EXTENSIONS.iter().copied())
