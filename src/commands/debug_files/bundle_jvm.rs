@@ -19,7 +19,7 @@ use symbolic::debuginfo::sourcebundle::SourceFileType;
 
 /// File extensions for JVM-based languages.
 const JVM_EXTENSIONS: &[&str] = &[
-    "java", "kt", "scala", "sc", "groovy", "gvy", "gy", "gsh", "clj", "cljs", "cljc",
+    "java", "kt", "scala", "sc", "groovy", "gvy", "gy", "gsh", "clj", "cljc",
 ];
 
 /// Default directory patterns to exclude from source collection.
