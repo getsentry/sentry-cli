@@ -8,11 +8,13 @@ use crate::utils::fs::path_as_url;
 use crate::utils::source_bundle::{self, BundleContext};
 use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
+use log::debug;
 use sentry::types::DebugId;
 use std::borrow::Cow;
 use std::collections::BTreeMap;
+use std::ffi::OsStr;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::str::FromStr as _;
 use std::sync::Arc;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
@@ -22,8 +24,9 @@ const JVM_EXTENSIONS: &[&str] = &[
     "java", "kt", "scala", "sc", "groovy", "gvy", "gy", "gsh", "clj", "cljc",
 ];
 
-/// Default directory patterns to exclude from source collection.
-const DEFAULT_EXCLUDES: &[&str] = &[
+/// Directory patterns that are always safe to exclude globally (can never be
+/// valid JVM package names due to leading dots or conventions).
+const SAFE_EXCLUDES: &[&str] = &[
     "!.cxx",
     "!.eclipse",
     "!.fleet",
@@ -33,12 +36,37 @@ const DEFAULT_EXCLUDES: &[&str] = &[
     "!.mvn",
     "!.settings",
     "!.vscode",
-    "!bin",
-    "!build",
     "!node_modules",
-    "!out",
-    "!target",
 ];
+
+/// Directory names that are common build output dirs but could also be valid
+/// JVM package names (e.g. `com.example.build`). These are only excluded when
+/// they appear outside of `src/` directories to avoid filtering out legitimate
+/// source packages.
+const AMBIGUOUS_EXCLUDES: &[&str] = &["bin", "build", "out", "target"];
+
+/// Returns true if `path` has a `src` ancestor before the given directory name.
+/// E.g. `src/main/java/com/example/build/Foo.java` → true (under src/).
+/// E.g. `app/build/generated/Foo.java` → false (not under src/).
+fn is_under_src(relative_path: &Path) -> bool {
+    relative_path
+        .ancestors()
+        .any(|a| a.file_name() == Some(OsStr::new("src")))
+}
+
+/// Returns true if the file should be excluded because it sits inside an
+/// ambiguous build-output directory that is NOT under a `src/` ancestor.
+fn is_in_ambiguous_build_dir(relative_path: &Path) -> bool {
+    for ancestor in relative_path.ancestors() {
+        let Some(name) = ancestor.file_name().and_then(|n| n.to_str()) else {
+            continue;
+        };
+        if AMBIGUOUS_EXCLUDES.contains(&name) {
+            return !is_under_src(relative_path);
+        }
+    }
+    false
+}
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -116,7 +144,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .flatten()
         .map(|v| format!("!{v}"));
 
-    let all_excludes = DEFAULT_EXCLUDES
+    let all_excludes = SAFE_EXCLUDES
         .iter()
         .copied()
         .map(Cow::Borrowed)
@@ -127,6 +155,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .ignores(all_excludes)
         .respect_ignores(true)
         .collect_files()?;
+
+    let sources: Vec<_> = sources
+        .into_iter()
+        .filter(|source| {
+            let relative = source.path.strip_prefix(&source.base_path).unwrap();
+            if is_in_ambiguous_build_dir(relative) {
+                debug!("excluding (build output): {}", source.path.display());
+                return false;
+            }
+            true
+        })
+        .collect();
+
     let files = sources.iter().map(|source| {
         let local_path = source.path.strip_prefix(&source.base_path).unwrap();
         let local_path_jvm_ext = local_path.with_extension("jvm");
