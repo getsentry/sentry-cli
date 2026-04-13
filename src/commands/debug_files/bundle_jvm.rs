@@ -10,7 +10,6 @@ use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::debug;
 use sentry::types::DebugId;
-use std::borrow::Cow;
 use std::collections::BTreeMap;
 use std::ffi::OsStr;
 use std::fs;
@@ -19,39 +18,32 @@ use std::str::FromStr as _;
 use std::sync::Arc;
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 
-/// File extensions for JVM-based languages.
 const JVM_EXTENSIONS: &[&str] = &[
     "java", "kt", "scala", "sc", "groovy", "gvy", "gy", "gsh", "clj", "cljc",
 ];
 
-/// Directory patterns that are always safe to exclude globally (can never be
-/// valid JVM package names due to leading dots or conventions).
+/// Safe to exclude globally — can never be valid JVM package names.
 const SAFE_EXCLUDES: &[&str] = &[
-    "!.cxx",
-    "!.eclipse",
-    "!.fleet",
-    "!.gradle",
-    "!.idea",
-    "!.kotlin",
-    "!.mvn",
-    "!.settings",
-    "!.vscode",
-    "!node_modules",
+    ".cxx",
+    ".eclipse",
+    ".fleet",
+    ".gradle",
+    ".idea",
+    ".kotlin",
+    ".mvn",
+    ".settings",
+    ".vscode",
+    "node_modules",
 ];
 
-/// Directory names that are common build output dirs but could also be valid
-/// JVM package names (e.g. `com.example.build`). These are only excluded when
-/// they appear outside of `src/` directories to avoid filtering out legitimate
-/// source packages.
+/// Common build output dirs that could also be valid JVM package names
+/// (e.g. `com.example.build`). Only excluded outside of `src/` directories.
 const AMBIGUOUS_EXCLUDES: &[&str] = &["bin", "build", "out", "target"];
 
-/// Returns true if the file should be excluded because it sits inside an
-/// ambiguous build-output directory that is NOT under a `src/` ancestor.
-///
-/// We check *all* ambiguous directories in the path and exclude if any of them
-/// is not under a `src/` ancestor. This handles nested cases like
-/// `build/src/main/java/com/example/target/Foo.java` where the inner `target`
-/// is under `src`, but the outer `build` is not — the file should be excluded.
+/// Checks *all* ambiguous directories in the path and excludes if any of them
+/// is not under a `src/` ancestor. Handles nested cases like
+/// `build/src/main/java/com/example/target/Foo.java` — inner `target` is under
+/// `src`, but outer `build` is not, so the file is excluded.
 fn is_in_ambiguous_build_dir(relative_path: &Path) -> bool {
     for ancestor in relative_path.ancestors() {
         let Some(name) = ancestor.file_name().and_then(|n| n.to_str()) else {
@@ -141,17 +133,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         ))?;
     }
 
-    let user_excludes = matches
-        .get_many::<String>("exclude")
-        .into_iter()
-        .flatten()
-        .map(|v| format!("!{v}"));
-
     let all_excludes = SAFE_EXCLUDES
         .iter()
         .copied()
-        .map(Cow::Borrowed)
-        .chain(user_excludes.map(Cow::Owned));
+        .chain(
+            matches
+                .get_many::<String>("exclude")
+                .into_iter()
+                .flatten()
+                .map(|s| s.as_str()),
+        )
+        .map(|v| format!("!{v}"));
 
     let sources = ReleaseFileSearch::new(path.clone())
         .extensions(JVM_EXTENSIONS.iter().copied())
@@ -159,32 +151,24 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .respect_ignores(true)
         .collect_files()?;
 
-    let sources: Vec<_> = sources
-        .into_iter()
-        .filter(|source| {
-            let relative = source.path.strip_prefix(&source.base_path).unwrap();
-            if is_in_ambiguous_build_dir(relative) {
-                debug!("excluding (build output): {}", source.path.display());
-                return false;
-            }
-            true
-        })
-        .collect();
-
-    let files = sources.iter().map(|source| {
+    let files = sources.into_iter().filter_map(|source| {
         let local_path = source.path.strip_prefix(&source.base_path).unwrap();
+        if is_in_ambiguous_build_dir(local_path) {
+            debug!("excluding (build output): {}", source.path.display());
+            return None;
+        }
         let local_path_jvm_ext = local_path.with_extension("jvm");
         let url = format!("~/{}", path_as_url(&local_path_jvm_ext));
 
-        SourceFile {
+        Some(SourceFile {
             url,
-            path: source.path.clone(),
-            contents: Arc::new(source.contents.clone()),
+            path: source.path,
+            contents: Arc::new(source.contents),
             ty: SourceFileType::Source,
             headers: BTreeMap::new(),
             messages: vec![],
             already_uploaded: false,
-        }
+        })
     });
 
     let tempfile = source_bundle::build(context, files, Some(*debug_id))
