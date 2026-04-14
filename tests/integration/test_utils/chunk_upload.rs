@@ -1,11 +1,13 @@
 //! Utilities for chunk upload tests.
 use std::collections::BTreeMap;
 use std::error::Error;
-use std::io::{self, Read as _};
+use std::io::{self, Read as _, Write as _};
 use std::str;
 use std::sync::LazyLock;
 
 use flate2::read::GzDecoder;
+use flate2::write::GzEncoder;
+use flate2::Compression;
 use mockito::Request;
 use regex::bytes::Regex;
 use sha1_smol::Sha1;
@@ -153,75 +155,65 @@ where
     counts
 }
 
-#[cfg(test)]
-mod tests {
-    use std::io::Write as _;
+fn gzip(data: &[u8]) -> Vec<u8> {
+    let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
+    encoder
+        .write_all(data)
+        .expect("should write data into gzip encoder");
+    encoder.finish().expect("should finish gzip encoding")
+}
 
-    use flate2::write::GzEncoder;
-    use flate2::Compression;
+fn multipart_body(boundary: &str, parts: &[&[u8]]) -> Vec<u8> {
+    let mut body = Vec::new();
 
-    use super::decompress_chunks;
-
-    fn gzip(data: &[u8]) -> Vec<u8> {
-        let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
-        encoder
-            .write_all(data)
-            .expect("should write data into gzip encoder");
-        encoder.finish().expect("should finish gzip encoding")
-    }
-
-    fn multipart_body(boundary: &str, parts: &[&[u8]]) -> Vec<u8> {
-        let mut body = Vec::new();
-
-        for part in parts {
-            body.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
-            body.extend_from_slice(
-                b"content-disposition: form-data; name=\"file\"; filename=\"chunk\"\r\n",
-            );
-            body.extend_from_slice(b"content-type: application/octet-stream\r\n\r\n");
-            body.extend_from_slice(part);
-            body.extend_from_slice(b"\r\n");
-        }
-
-        body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
-        body
-    }
-
-    #[test]
-    fn decompress_chunks_preserves_duplicate_parts() {
-        let boundary = "boundary";
-        let chunk = gzip(b"duplicate chunk");
-        let body = multipart_body(boundary, &[&chunk, &chunk]);
-
-        let decompressed =
-            decompress_chunks(&body, boundary).expect("multipart body should decompress");
-
-        assert_eq!(
-            decompressed,
-            vec![b"duplicate chunk".to_vec(), b"duplicate chunk".to_vec()]
-        );
-    }
-
-    #[test]
-    fn decompress_chunks_errors_on_part_missing_header_body_separator() {
-        let boundary = "boundary";
-        let chunk = gzip(b"chunk");
-        let mut body = Vec::new();
+    for part in parts {
         body.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
         body.extend_from_slice(
             b"content-disposition: form-data; name=\"file\"; filename=\"chunk\"\r\n",
         );
-        body.extend_from_slice(b"content-type: application/octet-stream\r\n");
-        body.extend_from_slice(&chunk);
+        body.extend_from_slice(b"content-type: application/octet-stream\r\n\r\n");
+        body.extend_from_slice(part);
         body.extend_from_slice(b"\r\n");
-        body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
-
-        let error = decompress_chunks(&body, boundary)
-            .expect_err("multipart part without header/body separator should error");
-
-        assert_eq!(
-            error.to_string(),
-            r"multipart part 1 of 1 is missing \r\n\r\n header/body separator"
-        );
     }
+
+    body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
+    body
+}
+
+#[test]
+fn decompress_chunks_preserves_duplicate_parts() {
+    let boundary = "boundary";
+    let chunk = gzip(b"duplicate chunk");
+    let body = multipart_body(boundary, &[&chunk, &chunk]);
+
+    let decompressed =
+        decompress_chunks(&body, boundary).expect("multipart body should decompress");
+
+    assert_eq!(
+        decompressed,
+        vec![b"duplicate chunk".to_vec(), b"duplicate chunk".to_vec()]
+    );
+}
+
+#[test]
+fn decompress_chunks_errors_on_part_missing_header_body_separator() {
+    let boundary = "boundary";
+    let chunk = gzip(b"chunk");
+    let mut body = Vec::new();
+    body.extend_from_slice(format!("--{boundary}\r\n").as_bytes());
+    body.extend_from_slice(
+        b"content-disposition: form-data; name=\"file\"; filename=\"chunk\"\r\n",
+    );
+    body.extend_from_slice(b"content-type: application/octet-stream\r\n");
+    body.extend_from_slice(&chunk);
+    body.extend_from_slice(b"\r\n");
+    body.extend_from_slice(format!("--{boundary}--\r\n").as_bytes());
+
+    let error = decompress_chunks(&body, boundary)
+        .expect_err("multipart part without header/body separator should error");
+
+    assert_eq!(
+        error.to_string(),
+        r"multipart part 1 of 1 is missing \r\n\r\n header/body separator"
+    );
 }
