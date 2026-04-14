@@ -68,6 +68,17 @@ pub fn make_command(command: Command) -> Command {
                      Example: 0.01 = only report image changes >= 1%.",
                 ),
         )
+        .arg(
+            Arg::new("all_image_names")
+                .long("all-image-names")
+                .value_name("PATH")
+                .help(
+                    "Path to a file containing the full list of preview names \
+                     (one per line). When provided, only images in the upload \
+                     directory are compared; missing images listed here are \
+                     reported as 'skipped' rather than 'removed'.",
+                ),
+        )
         .git_metadata_args()
 }
 
@@ -142,10 +153,43 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // Build manifest from discovered images
     let diff_threshold = matches.get_one::<f64>("diff_threshold").copied();
 
+    let all_image_names: Option<Vec<String>> = matches
+        .get_one::<String>("all_image_names")
+        .map(|path| -> Result<Vec<String>> {
+            let content = std::fs::read_to_string(path)
+                .with_context(|| format!("Failed to read all-image-names file: {path}"))?;
+            Ok(content
+                .lines()
+                .filter(|l| !l.is_empty())
+                .map(String::from)
+                .collect())
+        })
+        .transpose()?;
+
+    if let Some(ref names) = all_image_names {
+        if names.is_empty() {
+            anyhow::bail!("--all-image-names file is empty or contains no names");
+        }
+        let names_set: std::collections::HashSet<&str> =
+            names.iter().map(String::as_str).collect();
+        let missing: Vec<&str> = manifest_entries
+            .keys()
+            .filter(|k| !names_set.contains(k.as_str()))
+            .map(String::as_str)
+            .collect();
+        if !missing.is_empty() {
+            anyhow::bail!(
+                "These uploaded images are not listed in --all-image-names: {}",
+                missing.join(", ")
+            );
+        }
+    }
+
     let manifest = SnapshotsManifest {
         app_id: app_id.clone(),
         images: manifest_entries,
         diff_threshold,
+        all_image_names,
         vcs_info,
     };
 

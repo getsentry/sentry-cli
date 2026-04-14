@@ -29,6 +29,8 @@ pub struct SnapshotsManifest<'a> {
     /// is greater than this value (e.g. 0.01 = only report changes >= 1%).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diff_threshold: Option<f64>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub all_image_names: Option<Vec<String>>,
     #[serde(flatten)]
     pub vcs_info: VcsInfo<'a>,
 }
