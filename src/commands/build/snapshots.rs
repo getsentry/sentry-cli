@@ -74,9 +74,10 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("PATH")
                 .help(
                     "Path to a file containing the full list of preview names \
-                     (one per line). When provided, only images in the upload \
-                     directory are compared; missing images listed here are \
-                     reported as 'skipped' rather than 'removed'.",
+                     (one per line, comma-separated, or both). When provided, \
+                     only images in the upload directory are compared; missing \
+                     images listed here are reported as 'skipped' rather than \
+                     'removed'.",
                 ),
         )
         .git_metadata_args()
@@ -160,7 +161,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 .with_context(|| format!("Failed to read all-image-names file: {path}"))?;
             Ok(content
                 .lines()
-                .filter(|l| !l.is_empty())
+                .flat_map(|l| l.split(','))
+                .map(str::trim)
+                .filter(|s| !s.is_empty())
                 .map(String::from)
                 .collect())
         })
@@ -170,8 +173,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         if names.is_empty() {
             anyhow::bail!("--all-image-names file is empty or contains no names");
         }
-        let names_set: std::collections::HashSet<&str> =
-            names.iter().map(String::as_str).collect();
+        let names_set: std::collections::HashSet<&str> = names.iter().map(String::as_str).collect();
         let missing: Vec<&str> = manifest_entries
             .keys()
             .filter(|k| !names_set.contains(k.as_str()))

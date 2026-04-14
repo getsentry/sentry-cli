@@ -4,6 +4,7 @@
 
 ### Features
 
+- (snapshots) Add `--all-image-names` flag to `build snapshots` to accept a file listing all expected preview names (newline or comma-delimited). Images in the list but not uploaded are reported as 'skipped' instead of 'removed' ([#3268](https://github.com/getsentry/sentry-cli/pull/3268))
 - (bundle-jvm) Allow running directly on a project root (including multi-module repos) by automatically collecting only JVM source files (`.java`, `.kt`, `.scala`, `.groovy`), respecting `.gitignore`, and excluding common build output directories ([#3260](https://github.com/getsentry/sentry-cli/pull/3260))
 - (bundle-jvm) Add `--exclude` option for custom glob patterns to exclude files/directories from source collection ([#3260](https://github.com/getsentry/sentry-cli/pull/3260))
 

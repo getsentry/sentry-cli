@@ -37,9 +37,9 @@ Options:
           Set the log output verbosity. [possible values: trace, debug, info, warn, error]
 
       --all-image-names <PATH>
-          Path to a file containing the full list of preview names (one per line). When provided,
-          only images in the upload directory are compared; missing images listed here are reported
-          as 'skipped' rather than 'removed'.
+          Path to a file containing the full list of preview names (one per line, comma-separated,
+          or both). When provided, only images in the upload directory are compared; missing images
+          listed here are reported as 'skipped' rather than 'removed'.
 
       --quiet
           Do not print any output while preserving correct exit code. This flag is currently
