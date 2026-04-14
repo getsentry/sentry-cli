@@ -141,20 +141,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     validate_image_sizes(&images)?;
 
-    // Upload image files to objectstore
-    println!(
-        "{} Uploading {} image {}",
-        style(">").dim(),
-        style(images.len()).yellow(),
-        if images.len() == 1 { "file" } else { "files" }
-    );
-
-    let manifest_entries = upload_images(images, &org, &project)?;
-
-    // Build manifest from discovered images
-    let diff_threshold = matches.get_one::<f64>("diff_threshold").copied();
-
-    let all_image_names: Option<Vec<String>> = matches
+    let all_image_names = matches
         .get_one::<String>("all_image_names")
         .map(|path| -> Result<Vec<String>> {
             let content = std::fs::read_to_string(path)
@@ -174,10 +161,20 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             anyhow::bail!("--all-image-names file is empty or contains no names");
         }
         let names_set: std::collections::HashSet<&str> = names.iter().map(String::as_str).collect();
-        let missing: Vec<&str> = manifest_entries
-            .keys()
-            .filter(|k| !names_set.contains(k.as_str()))
-            .map(String::as_str)
+        let missing: Vec<String> = images
+            .iter()
+            .filter_map(|img| {
+                let name = img
+                    .relative_path
+                    .file_name()?
+                    .to_string_lossy()
+                    .into_owned();
+                if names_set.contains(name.as_str()) {
+                    None
+                } else {
+                    Some(name)
+                }
+            })
             .collect();
         if !missing.is_empty() {
             anyhow::bail!(
@@ -186,6 +183,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             );
         }
     }
+
+    // Upload image files to objectstore
+    println!(
+        "{} Uploading {} image {}",
+        style(">").dim(),
+        style(images.len()).yellow(),
+        if images.len() == 1 { "file" } else { "files" }
+    );
+
+    let manifest_entries = upload_images(images, &org, &project)?;
+
+    // Build manifest from discovered images
+    let diff_threshold = matches.get_one::<f64>("diff_threshold").copied();
 
     let manifest = SnapshotsManifest {
         app_id: app_id.clone(),

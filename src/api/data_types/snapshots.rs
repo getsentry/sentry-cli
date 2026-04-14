@@ -29,6 +29,8 @@ pub struct SnapshotsManifest<'a> {
     /// is greater than this value (e.g. 0.01 = only report changes >= 1%).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diff_threshold: Option<f64>,
+    /// Full list of expected preview names. When provided, images in this list
+    /// but absent from the upload are reported as "skipped" instead of "removed".
     #[serde(skip_serializing_if = "Option::is_none")]
     pub all_image_names: Option<Vec<String>>,
     #[serde(flatten)]
