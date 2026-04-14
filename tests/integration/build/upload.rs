@@ -199,13 +199,42 @@ fn command_build_upload_ipa_chunked() {
         .mock_endpoint(
             MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/chunk-upload/")
                 .with_response_fn(move |request| {
-                    let content_type_headers = request.header("content-type");
+                    let boundary = chunk_upload::boundary_from_request(request)
+                        .expect("content-type header should be a valid multipart/form-data header");
+
+                    let body = request.body().expect("body should be readable");
+
+                    let decompressed = chunk_upload::decompress_chunks(body, boundary)
+                        .expect("chunks should be valid gzip data");
+
+                    assert_eq!(decompressed.len(), 1, "expected exactly one chunk");
+
+                    // The CLI converts the IPA to an XCArchive structure and
+                    // zips it with a metadata file. Verify the chunk is a valid
+                    // zip containing the expected set of entries.
+                    let chunk = decompressed.first().unwrap();
+                    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(chunk))
+                        .expect("chunk should be a valid zip");
+                    let entry_names: std::collections::HashSet<String> = (0..archive.len())
+                        .map(|i| archive.by_index(i).unwrap().name().to_owned())
+                        .collect();
+                    let expected_entries: std::collections::HashSet<String> = [
+                        "archive.xcarchive/Info.plist",
+                        "archive.xcarchive/Products/Applications/DemoApp.app/DemoApp",
+                        "archive.xcarchive/Products/Applications/DemoApp.app/Info.plist",
+                        "archive.xcarchive/Products/Applications/DemoApp.app/PkgInfo",
+                        "archive.xcarchive/Products/Applications/DemoApp.app/_CodeSignature/CodeResources",
+                        "archive.xcarchive/Products/Applications/DemoApp.app/embedded.mobileprovision",
+                        ".sentry-cli-metadata.txt",
+                    ]
+                    .into_iter()
+                    .map(String::from)
+                    .collect();
                     assert_eq!(
-                        content_type_headers.len(),
-                        1,
-                        "content-type header should be present exactly once, found {} times",
-                        content_type_headers.len()
+                        entry_names, expected_entries,
+                        "IPA-derived xcarchive bundle should contain the expected entries",
                     );
+
                     vec![] // Client does not expect a response body
                 }),
         )
