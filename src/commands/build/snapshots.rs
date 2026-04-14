@@ -432,11 +432,12 @@ fn upload_images(
     let result = runtime.block_on(async { many_builder.send().await.error_for_failures().await });
     if let Err(errors) = result {
         let errors: Vec<_> = errors.collect();
+        let error_count = errors.len();
         eprintln!("There were errors uploading images:");
-        for error in &errors {
+        for error in errors {
+            let error = anyhow::Error::new(error);
             eprintln!("  {}", style(format!("{error:#}")).red());
         }
-        let error_count = errors.len();
         anyhow::bail!("Failed to upload {error_count} images");
     }
 
