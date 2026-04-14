@@ -201,6 +201,35 @@ mod tests {
 
     use super::*;
 
+    /// Build a source bundle from the standard pair of sourcemap fixtures.
+    fn make_test_bundle() -> TempFile {
+        let projects_slice = &["wat-project".into()];
+        let context = BundleContext {
+            org: "wat-org",
+            projects: Some(projects_slice.into()),
+            release: None,
+            dist: None,
+            note: None,
+        };
+
+        let source_files = ["bundle.min.js.map", "vendor.min.js.map"]
+            .into_iter()
+            .map(|name| SourceFile {
+                url: format!("~/{name}"),
+                path: format!("tests/integration/_fixtures/{name}").into(),
+                contents: std::fs::read(format!("tests/integration/_fixtures/{name}"))
+                    .unwrap()
+                    .into(),
+                ty: SourceFileType::SourceMap,
+                headers: Default::default(),
+                messages: Default::default(),
+                already_uploaded: false,
+            })
+            .collect::<Vec<_>>();
+
+        build(context, &source_files, None).unwrap()
+    }
+
     #[test]
     fn test_url_to_bundle_path() {
         assert_eq!(url_to_bundle_path("~/bar").unwrap(), "_/_/bar");
@@ -228,37 +257,35 @@ mod tests {
 
     #[test]
     fn build_deterministic() {
-        let make_bundle = || {
-            let projects_slice = &["wat-project".into()];
-            let context = BundleContext {
-                org: "wat-org",
-                projects: Some(projects_slice.into()),
-                release: None,
-                dist: None,
-                note: None,
-            };
-
-            let source_files = ["bundle.min.js.map", "vendor.min.js.map"]
-                .into_iter()
-                .map(|name| SourceFile {
-                    url: format!("~/{name}"),
-                    path: format!("tests/integration/_fixtures/{name}").into(),
-                    contents: std::fs::read(format!("tests/integration/_fixtures/{name}"))
-                        .unwrap()
-                        .into(),
-                    ty: SourceFileType::SourceMap,
-                    headers: Default::default(),
-                    messages: Default::default(),
-                    already_uploaded: false,
-                })
-                .collect::<Vec<_>>();
-
-            let file = build(context, &source_files, None).unwrap();
-            std::fs::read(file.path()).unwrap()
-        };
-
-        let first = make_bundle();
-        let second = make_bundle();
+        let first = std::fs::read(make_test_bundle().path()).unwrap();
+        let second = std::fs::read(make_test_bundle().path()).unwrap();
         assert_eq!(first, second, "bundle output should be deterministic");
+    }
+
+    /// Canary against silent compression-method changes from upstream bundle
+    /// writers. The allowlist is a starting bound, not a verified server
+    /// contract. We can widen it if a real incompatibility surfaces.
+    #[test]
+    fn build_compression_method_canary() {
+        let bundle = make_test_bundle();
+        let mut archive =
+            zip::ZipArchive::new(std::fs::File::open(bundle.path()).unwrap()).unwrap();
+
+        // Two source files plus the manifest.json that the source bundle
+        // writer adds automatically.
+        assert_eq!(archive.len(), 3, "unexpected bundle entry count");
+        for i in 0..archive.len() {
+            let entry = archive.by_index(i).unwrap();
+            let method = entry.compression();
+            assert!(
+                matches!(
+                    method,
+                    zip::CompressionMethod::Stored | zip::CompressionMethod::Deflated
+                ),
+                "entry {:?} uses {method:?}, outside the current allowlist: \
+                 verify backend compatibility before widening",
+                entry.name(),
+            );
+        }
     }
 }
