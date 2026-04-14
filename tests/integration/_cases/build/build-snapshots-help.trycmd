@@ -29,22 +29,26 @@ Options:
       --auth-token <AUTH_TOKEN>
           Use the given Sentry auth token.
 
-      --head-sha <head_sha>
-          The VCS commit sha to use for the upload. If not provided, the current commit sha will be
-          used.
+      --diff-threshold <THRESHOLD>
+          If set, Sentry will only report images as changed if their difference % is greater than
+          this value. Example: 0.01 = only report image changes >= 1%.
 
       --log-level <LOG_LEVEL>
           Set the log output verbosity. [possible values: trace, debug, info, warn, error]
 
-      --base-sha <base_sha>
-          The VCS commit's base sha to use for the upload. If not provided, the merge-base of the
-          current and remote branch will be used.
+      --head-sha <head_sha>
+          The VCS commit sha to use for the upload. If not provided, the current commit sha will be
+          used.
 
       --quiet
           Do not print any output while preserving correct exit code. This flag is currently
           implemented only for selected subcommands.
           
           [aliases: --silent]
+
+      --base-sha <base_sha>
+          The VCS commit's base sha to use for the upload. If not provided, the merge-base of the
+          current and remote branch will be used.
 
       --vcs-provider <vcs_provider>
           The VCS provider to use for the upload. If not provided, the current provider will be
