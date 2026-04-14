@@ -1,4 +1,4 @@
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashSet};
 use std::fs;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
@@ -273,13 +273,13 @@ fn chunk_upload_multiple_files() {
                         .expect("chunks should be valid gzip data");
 
                     let fixture_dir = "tests/integration/_fixtures/debug_files/upload/chunk_upload_multiple_files";
-                    let expected_files: std::collections::HashSet<Vec<u8>> = ["fibonacci", "fibonacci-fast", "main"]
+                    let expected_files: HashSet<Vec<u8>> = ["fibonacci", "fibonacci-fast", "main"]
                         .iter()
                         .map(|name| fs::read(format!("{fixture_dir}/{name}")).expect("fixture should be readable"))
                         .collect();
 
                     assert_eq!(decompressed.len(), 3, "expected exactly three chunks");
-                    let decompressed: std::collections::HashSet<_> =
+                    let decompressed: HashSet<_> =
                         decompressed.into_iter().collect();
                     assert_eq!(
                         decompressed, expected_files,
@@ -363,18 +363,25 @@ fn chunk_upload_multiple_files_only_some() {
                         .expect("chunks should be valid gzip data");
 
                     let fixture_dir = "tests/integration/_fixtures/debug_files/upload/chunk_upload_multiple_files";
-                    let all_fixtures: std::collections::HashSet<Vec<u8>> = ["fibonacci", "fibonacci-fast", "main"]
-                        .iter()
-                        .map(|name| fs::read(format!("{fixture_dir}/{name}")).expect("fixture should be readable"))
+                    // The chunk already on the server, as per the dif/assemble mock below.
+                    // If it shows up in the request body, the client is re-uploading a chunk
+                    // it was told to skip.
+                    const ALREADY_UPLOADED_HASH: &str = "6e217f035ed538d4d6c14129baad5cb52e680e74";
+                    let expected_uploads: HashSet<Vec<u8>> = ["fibonacci", "fibonacci-fast", "main"]
+                        .into_iter()
+                        .map(|name| {
+                            fs::read(format!("{fixture_dir}/{name}"))
+                                .expect("fixture should be readable")
+                        })
+                        .filter(|contents| {
+                            Sha1::from(contents).digest().to_string() != ALREADY_UPLOADED_HASH
+                        })
                         .collect();
 
-                    // Only 2 of 3 files need uploading (one is already on the server).
-                    assert_eq!(decompressed.len(), 2, "expected exactly two chunks");
-                    let decompressed: std::collections::HashSet<_> =
-                        decompressed.into_iter().collect();
-                    assert!(
-                        decompressed.is_subset(&all_fixtures),
-                        "uploaded chunks should be a subset of the fixture files"
+                    assert_eq!(
+                        HashSet::from_iter(decompressed),
+                        expected_uploads,
+                        "uploaded chunks should be exactly the two fixtures not already on the server",
                     );
 
                     vec![]

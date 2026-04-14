@@ -8,7 +8,7 @@ fn command_sourcemaps_upload_help() {
 #[test]
 fn command_sourcemaps_upload_log_level_info() {
     TestManager::new()
-        .mock_common_upload_endpoints(None, Some(vec!["95d152c0530efb498133138c7e7092612f5abab1"]))
+        .mock_common_upload_endpoints()
         .register_trycmd_test("sourcemaps/sourcemaps-upload-log-level-info.trycmd")
         .with_default_token()
         .assert_mock_endpoints();
