@@ -132,7 +132,7 @@ fn command_build_upload_apk_chunked() {
 
                     // The CLI wraps the APK in a zip bundle with metadata.
                     // Verify the bundle is a valid zip containing the APK.
-                    let chunk = decompressed.iter().next().unwrap();
+                    let chunk = decompressed.first().unwrap();
                     let cursor = std::io::Cursor::new(chunk);
                     let mut archive =
                         zip::ZipArchive::new(cursor).expect("chunk should be a valid zip");

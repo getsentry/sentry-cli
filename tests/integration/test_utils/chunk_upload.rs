@@ -120,14 +120,10 @@ pub fn decompress_chunks(body: &[u8], boundary: &str) -> Result<Vec<Vec<u8>>, Bo
         // Each part is: \r\nHeaders\r\n\r\n<gzip body>
         // Split on the first \r\n\r\n to separate headers from body.
         let separator = HEADER_BODY_SEPARATOR.find(part).ok_or_else(|| {
-            io::Error::new(
-                io::ErrorKind::InvalidData,
-                format!(
-                    "multipart part {} of {} is missing \\r\\n\\r\\n header/body separator",
+            io::Error::new(io::ErrorKind::InvalidData, format!(
+                    "multipart part {} of {total_parts} is missing \\r\\n\\r\\n header/body separator",
                     index + 1,
-                    total_parts
-                ),
-            )
+                ),)
         })?;
 
         let compressed = &part[separator.end()..];
