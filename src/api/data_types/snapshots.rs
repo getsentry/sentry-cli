@@ -30,6 +30,7 @@ pub struct SnapshotsManifest<'a> {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diff_threshold: Option<f64>,
     /// When true, this upload contains only a subset of images.
+    /// Removals and renames will not be detected on PRs.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub selective: bool,
     #[serde(flatten)]
