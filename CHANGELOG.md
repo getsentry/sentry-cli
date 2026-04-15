@@ -14,6 +14,7 @@
 ### Fixes
 
 - (snapshots) Chunk image uploads to avoid file descriptor exhaustion and 413 errors when uploading hundreds of images ([#3249](https://github.com/getsentry/sentry-cli/pull/3249))
+- (snapshots) Preserve subdirectory structure in snapshot manifest keys instead of flattening to bare filenames ([#3269](https://github.com/getsentry/sentry-cli/pull/3269))
 - Replace `eprintln!` with `log::info!` for progress bar completion messages when the progress bar is disabled (e.g. in CI). This avoids spurious stderr output that some CI systems treat as errors ([#3223](https://github.com/getsentry/sentry-cli/pull/3223)).
 
 ## 3.3.5
