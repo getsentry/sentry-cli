@@ -354,8 +354,7 @@ fn upload_images(
         .context("Failed to create tokio runtime")?;
 
     let mut manifest_entries = HashMap::new();
-    let mut collisions: HashMap<String, Vec<String>> = HashMap::new();
-    let mut kept_paths = HashMap::new();
+    let mut duplicates: Vec<String> = Vec::new();
     let mut uploads = Vec::with_capacity(images.len());
 
     let hashed_images: Vec<_> = images
@@ -367,20 +366,10 @@ fn upload_images(
         .collect::<Result<Vec<_>>>()?;
 
     for (image, hash) in hashed_images {
-        let image_file_name = image
-            .relative_path
-            .file_name()
-            .unwrap_or_default()
-            .to_string_lossy()
-            .into_owned();
+        let image_key = crate::utils::fs::path_as_url(&image.relative_path);
 
-        let relative_path = crate::utils::fs::path_as_url(&image.relative_path);
-
-        if manifest_entries.contains_key(&image_file_name) {
-            collisions
-                .entry(image_file_name)
-                .or_default()
-                .push(relative_path);
+        if manifest_entries.contains_key(&image_key) {
+            duplicates.push(image_key);
             continue;
         }
 
@@ -392,29 +381,19 @@ fn upload_images(
         });
         extra.insert("content_hash".to_owned(), serde_json::Value::String(hash));
 
-        kept_paths.insert(image_file_name.clone(), relative_path);
         uploads.push(PreparedImage {
             path: image.path,
             key,
         });
         manifest_entries.insert(
-            image_file_name,
+            image_key,
             ImageMetadata::new(image.width, image.height, extra),
         );
     }
 
-    if !collisions.is_empty() {
-        let details: String = collisions
-            .iter()
-            .map(|(name, excluded)| {
-                let kept = &kept_paths[name];
-                let all = std::iter::once(kept.as_str())
-                    .chain(excluded.iter().map(|s| s.as_str()))
-                    .join(", ");
-                format!("\n  {name}: {all}")
-            })
-            .collect();
-        warn!("Some images share identical file names. Only the first occurrence of each is included:{details}");
+    if !duplicates.is_empty() {
+        let paths = duplicates.join(", ");
+        warn!("Duplicate paths encountered, skipping: {paths}");
     }
 
     let total_count = uploads.len();
