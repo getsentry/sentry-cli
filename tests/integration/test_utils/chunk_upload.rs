@@ -155,6 +155,9 @@ where
     counts
 }
 
+// These helpers and tests exercise the multipart parsing utilities in this
+// module itself. They are tests for test code, not integration tests for
+// sentry-cli behavior.
 fn gzip(data: &[u8]) -> Vec<u8> {
     let mut encoder = GzEncoder::new(Vec::new(), Compression::default());
     encoder
