@@ -68,6 +68,15 @@ pub fn make_command(command: Command) -> Command {
                      Example: 0.01 = only report image changes >= 1%.",
                 ),
         )
+        .arg(
+            Arg::new("selective")
+                .long("selective")
+                .action(clap::ArgAction::SetTrue)
+                .help(
+                    "Indicates this upload contains only a subset of images. \
+                     Removals and renames cannot be detected on PRs.",
+                ),
+        )
         .git_metadata_args()
 }
 
@@ -142,10 +151,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // Build manifest from discovered images
     let diff_threshold = matches.get_one::<f64>("diff_threshold").copied();
 
+    let selective = matches.get_flag("selective");
+
     let manifest = SnapshotsManifest {
         app_id: app_id.clone(),
         images: manifest_entries,
         diff_threshold,
+        selective,
         vcs_info,
     };
 

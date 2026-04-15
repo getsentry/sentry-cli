@@ -29,6 +29,10 @@ pub struct SnapshotsManifest<'a> {
     /// is greater than this value (e.g. 0.01 = only report changes >= 1%).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diff_threshold: Option<f64>,
+    /// When true, this upload contains only a subset of images.
+    /// Removals and renames will not be detected on PRs.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub selective: bool,
     #[serde(flatten)]
     pub vcs_info: VcsInfo<'a>,
 }
@@ -58,6 +62,45 @@ mod tests {
     use super::*;
 
     use serde_json::json;
+
+    fn empty_vcs_info() -> VcsInfo<'static> {
+        VcsInfo {
+            head_sha: None,
+            base_sha: None,
+            vcs_provider: "".into(),
+            head_repo_name: "".into(),
+            base_repo_name: "".into(),
+            head_ref: "".into(),
+            base_ref: "".into(),
+            pr_number: None,
+        }
+    }
+
+    #[test]
+    fn manifest_omits_selective_when_false() {
+        let manifest = SnapshotsManifest {
+            app_id: "app".into(),
+            images: HashMap::new(),
+            diff_threshold: None,
+            selective: false,
+            vcs_info: empty_vcs_info(),
+        };
+        let json = serde_json::to_value(&manifest).unwrap();
+        assert!(!json.as_object().unwrap().contains_key("selective"));
+    }
+
+    #[test]
+    fn manifest_includes_selective_when_true() {
+        let manifest = SnapshotsManifest {
+            app_id: "app".into(),
+            images: HashMap::new(),
+            diff_threshold: None,
+            selective: true,
+            vcs_info: empty_vcs_info(),
+        };
+        let json = serde_json::to_value(&manifest).unwrap();
+        assert_eq!(json["selective"], json!(true));
+    }
 
     #[test]
     fn cli_managed_fields_override_sidecar_fields() {
