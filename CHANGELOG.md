@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+### Features
+
+- (bundle-jvm) Allow running directly on a project root (including multi-module repos) by automatically collecting only JVM source files (`.java`, `.kt`, `.scala`, `.groovy`), respecting `.gitignore`, and excluding common build output directories ([#3260](https://github.com/getsentry/sentry-cli/pull/3260))
+- (bundle-jvm) Add `--exclude` option for custom glob patterns to exclude files/directories from source collection ([#3260](https://github.com/getsentry/sentry-cli/pull/3260))
+
+### Fixes
+
+- Replace `eprintln!` with `log::info!` for progress bar completion messages when the progress bar is disabled (e.g. in CI). This avoids spurious stderr output that some CI systems treat as errors ([#3223](https://github.com/getsentry/sentry-cli/pull/3223)).
+
+## 3.3.5
+
 ### Performance
 
 - (snapshots) Parallelize image hashing with rayon ([#3250](https://github.com/getsentry/sentry-cli/pull/3250))
@@ -10,8 +21,11 @@
 
 - (sourcemaps) Skip non-base64 embedded sourcemaps during injection ([#3243](https://github.com/getsentry/sentry-cli/pull/3243))
 
+## 3.3.4
+
 ### New Features ✨
 
+- (snapshots) Add `--diff-threshold` option to `build snapshots` to set a minimum pixel difference percentage for reporting image changes ([#3259](https://github.com/getsentry/sentry-cli/pull/3259))
 - Add `sentry-cli build download` command to download installable builds (IPA/APK) by build ID ([#3221](https://github.com/getsentry/sentry-cli/pull/3221)).
 - Add `sentry-cli code-mappings upload` command to bulk upload code mappings from a JSON file ([#3207](https://github.com/getsentry/sentry-cli/pull/3207), [#3208](https://github.com/getsentry/sentry-cli/pull/3208), [#3209](https://github.com/getsentry/sentry-cli/pull/3209), [#3210](https://github.com/getsentry/sentry-cli/pull/3210)).
   - Code mappings link stack trace paths (e.g. `com/example/module`) to source paths in your repository (e.g. `src/main/java/com/example/module`), enabling Sentry to display source context and link directly to your code from error stack traces.
