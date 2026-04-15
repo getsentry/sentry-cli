@@ -7,8 +7,13 @@
 - (bundle-jvm) Allow running directly on a project root (including multi-module repos) by automatically collecting only JVM source files (`.java`, `.kt`, `.scala`, `.groovy`), respecting `.gitignore`, and excluding common build output directories ([#3260](https://github.com/getsentry/sentry-cli/pull/3260))
 - (bundle-jvm) Add `--exclude` option for custom glob patterns to exclude files/directories from source collection ([#3260](https://github.com/getsentry/sentry-cli/pull/3260))
 
+### Performance
+
+- (snapshots) Parallelize image hashing with rayon ([#3250](https://github.com/getsentry/sentry-cli/pull/3250))
+
 ### Fixes
 
+- (snapshots) Chunk image uploads to avoid file descriptor exhaustion and 413 errors when uploading hundreds of images ([#3249](https://github.com/getsentry/sentry-cli/pull/3249))
 - Replace `eprintln!` with `log::info!` for progress bar completion messages when the progress bar is disabled (e.g. in CI). This avoids spurious stderr output that some CI systems treat as errors ([#3223](https://github.com/getsentry/sentry-cli/pull/3223)).
 
 ## 3.3.5
