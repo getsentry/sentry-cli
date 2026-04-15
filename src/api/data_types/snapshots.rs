@@ -29,14 +29,9 @@ pub struct SnapshotsManifest<'a> {
     /// is greater than this value (e.g. 0.01 = only report changes >= 1%).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diff_threshold: Option<f64>,
-    /// When true, this upload contains only a subset of images. Without
-    /// `all_image_file_names`, removals and renames cannot be detected on PRs.
+    /// When true, this upload contains only a subset of images.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub selective: bool,
-    /// Only used with `selective`. Full list of image file names; enables
-    /// detection of removals and renames on PRs.
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub all_image_file_names: Option<Vec<String>>,
     #[serde(flatten)]
     pub vcs_info: VcsInfo<'a>,
 }
@@ -87,30 +82,23 @@ mod tests {
             images: HashMap::new(),
             diff_threshold: None,
             selective: false,
-            all_image_file_names: None,
             vcs_info: empty_vcs_info(),
         };
         let json = serde_json::to_value(&manifest).unwrap();
         assert!(!json.as_object().unwrap().contains_key("selective"));
-        assert!(!json
-            .as_object()
-            .unwrap()
-            .contains_key("all_image_file_names"));
     }
 
     #[test]
-    fn manifest_includes_selective_and_all_image_file_names() {
+    fn manifest_includes_selective_when_true() {
         let manifest = SnapshotsManifest {
             app_id: "app".into(),
             images: HashMap::new(),
             diff_threshold: None,
             selective: true,
-            all_image_file_names: Some(vec!["a.png".into(), "b.png".into()]),
             vcs_info: empty_vcs_info(),
         };
         let json = serde_json::to_value(&manifest).unwrap();
         assert_eq!(json["selective"], json!(true));
-        assert_eq!(json["all_image_file_names"], json!(["a.png", "b.png"]));
     }
 
     #[test]

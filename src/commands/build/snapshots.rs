@@ -74,21 +74,7 @@ pub fn make_command(command: Command) -> Command {
                 .action(clap::ArgAction::SetTrue)
                 .help(
                     "Indicates this upload contains only a subset of images. \
-                     Without --all-image-file-names, removals and renames cannot \
-                     be detected on PRs. With --all-image-file-names, removals \
-                     and renames are still detected.",
-                ),
-        )
-        .arg(
-            Arg::new("all_image_file_names")
-                .long("all-image-file-names")
-                .value_name("PATH")
-                .requires("selective")
-                .help(
-                    "Only used with --selective. Path to a file containing the \
-                     full list of image file names (one per line, comma-separated, \
-                     or both). Enables detection of removals and renames on PRs \
-                     even when uploading only a subset of images.",
+                     Removals and renames cannot be detected on PRs.",
                 ),
         )
         .git_metadata_args()
@@ -152,49 +138,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     validate_image_sizes(&images)?;
 
-    let all_image_file_names = matches
-        .get_one::<String>("all_image_file_names")
-        .map(|path| -> Result<Vec<String>> {
-            let content = std::fs::read_to_string(path)
-                .with_context(|| format!("Failed to read all-image-file-names file: {path}"))?;
-            Ok(content
-                .lines()
-                .flat_map(|l| l.split(','))
-                .map(str::trim)
-                .filter(|s| !s.is_empty())
-                .map(String::from)
-                .collect())
-        })
-        .transpose()?;
-
-    if let Some(ref names) = all_image_file_names {
-        if names.is_empty() {
-            anyhow::bail!("--all-image-file-names file is empty or contains no names");
-        }
-        let names_set: std::collections::HashSet<&str> = names.iter().map(String::as_str).collect();
-        let missing: Vec<String> = images
-            .iter()
-            .filter_map(|img| {
-                let name = img
-                    .relative_path
-                    .file_name()?
-                    .to_string_lossy()
-                    .into_owned();
-                if names_set.contains(name.as_str()) {
-                    None
-                } else {
-                    Some(name)
-                }
-            })
-            .collect();
-        if !missing.is_empty() {
-            anyhow::bail!(
-                "These uploaded images are not listed in --all-image-file-names: {}",
-                missing.join(", ")
-            );
-        }
-    }
-
     // Upload image files to objectstore
     println!(
         "{} Uploading {} image {}",
@@ -215,7 +158,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         images: manifest_entries,
         diff_threshold,
         selective,
-        all_image_file_names,
         vcs_info,
     };
 
