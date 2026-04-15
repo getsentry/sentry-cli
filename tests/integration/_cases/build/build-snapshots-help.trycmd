@@ -36,16 +36,21 @@ Options:
       --log-level <LOG_LEVEL>
           Set the log output verbosity. [possible values: trace, debug, info, warn, error]
 
-      --all-image-names <PATH>
-          Path to a file containing the full list of preview names (one per line, comma-separated,
-          or both). When provided, only images in the upload directory are compared; missing images
-          listed here are reported as 'skipped' rather than 'removed'.
-
       --quiet
           Do not print any output while preserving correct exit code. This flag is currently
           implemented only for selected subcommands.
           
           [aliases: --silent]
+
+      --selective
+          Indicates this upload contains only a subset of images. Without --all-image-file-names,
+          removals and renames cannot be detected on PRs. With --all-image-file-names, removals and
+          renames are still detected.
+
+      --all-image-file-names <PATH>
+          Only used with --selective. Path to a file containing the full list of image file names
+          (one per line, comma-separated, or both). Enables detection of removals and renames on PRs
+          even when uploading only a subset of images.
 
       --head-sha <head_sha>
           The VCS commit sha to use for the upload. If not provided, the current commit sha will be

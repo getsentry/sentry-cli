@@ -69,15 +69,26 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         .arg(
-            Arg::new("all_image_names")
-                .long("all-image-names")
-                .value_name("PATH")
+            Arg::new("selective")
+                .long("selective")
+                .action(clap::ArgAction::SetTrue)
                 .help(
-                    "Path to a file containing the full list of preview names \
-                     (one per line, comma-separated, or both). When provided, \
-                     only images in the upload directory are compared; missing \
-                     images listed here are reported as 'skipped' rather than \
-                     'removed'.",
+                    "Indicates this upload contains only a subset of images. \
+                     Without --all-image-file-names, removals and renames cannot \
+                     be detected on PRs. With --all-image-file-names, removals \
+                     and renames are still detected.",
+                ),
+        )
+        .arg(
+            Arg::new("all_image_file_names")
+                .long("all-image-file-names")
+                .value_name("PATH")
+                .requires("selective")
+                .help(
+                    "Only used with --selective. Path to a file containing the \
+                     full list of image file names (one per line, comma-separated, \
+                     or both). Enables detection of removals and renames on PRs \
+                     even when uploading only a subset of images.",
                 ),
         )
         .git_metadata_args()
@@ -141,11 +152,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     validate_image_sizes(&images)?;
 
-    let all_image_names = matches
-        .get_one::<String>("all_image_names")
+    let all_image_file_names = matches
+        .get_one::<String>("all_image_file_names")
         .map(|path| -> Result<Vec<String>> {
             let content = std::fs::read_to_string(path)
-                .with_context(|| format!("Failed to read all-image-names file: {path}"))?;
+                .with_context(|| format!("Failed to read all-image-file-names file: {path}"))?;
             Ok(content
                 .lines()
                 .flat_map(|l| l.split(','))
@@ -156,9 +167,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         })
         .transpose()?;
 
-    if let Some(ref names) = all_image_names {
+    if let Some(ref names) = all_image_file_names {
         if names.is_empty() {
-            anyhow::bail!("--all-image-names file is empty or contains no names");
+            anyhow::bail!("--all-image-file-names file is empty or contains no names");
         }
         let names_set: std::collections::HashSet<&str> = names.iter().map(String::as_str).collect();
         let missing: Vec<String> = images
@@ -178,7 +189,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             .collect();
         if !missing.is_empty() {
             anyhow::bail!(
-                "These uploaded images are not listed in --all-image-names: {}",
+                "These uploaded images are not listed in --all-image-file-names: {}",
                 missing.join(", ")
             );
         }
@@ -197,11 +208,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // Build manifest from discovered images
     let diff_threshold = matches.get_one::<f64>("diff_threshold").copied();
 
+    let selective = matches.get_flag("selective");
+
     let manifest = SnapshotsManifest {
         app_id: app_id.clone(),
         images: manifest_entries,
         diff_threshold,
-        all_image_names,
+        selective,
+        all_image_file_names,
         vcs_info,
     };
 

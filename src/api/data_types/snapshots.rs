@@ -29,10 +29,14 @@ pub struct SnapshotsManifest<'a> {
     /// is greater than this value (e.g. 0.01 = only report changes >= 1%).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub diff_threshold: Option<f64>,
-    /// Full list of expected preview names. When provided, images in this list
-    /// but absent from the upload are reported as "skipped" instead of "removed".
+    /// When true, this upload contains only a subset of images. Without
+    /// `all_image_file_names`, removals and renames cannot be detected on PRs.
+    #[serde(skip_serializing_if = "std::ops::Not::not")]
+    pub selective: bool,
+    /// Only used with `selective`. Full list of image file names; enables
+    /// detection of removals and renames on PRs.
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub all_image_names: Option<Vec<String>>,
+    pub all_image_file_names: Option<Vec<String>>,
     #[serde(flatten)]
     pub vcs_info: VcsInfo<'a>,
 }
@@ -62,6 +66,52 @@ mod tests {
     use super::*;
 
     use serde_json::json;
+
+    fn empty_vcs_info() -> VcsInfo<'static> {
+        VcsInfo {
+            head_sha: None,
+            base_sha: None,
+            vcs_provider: "".into(),
+            head_repo_name: "".into(),
+            base_repo_name: "".into(),
+            head_ref: "".into(),
+            base_ref: "".into(),
+            pr_number: None,
+        }
+    }
+
+    #[test]
+    fn manifest_omits_selective_when_false() {
+        let manifest = SnapshotsManifest {
+            app_id: "app".into(),
+            images: HashMap::new(),
+            diff_threshold: None,
+            selective: false,
+            all_image_file_names: None,
+            vcs_info: empty_vcs_info(),
+        };
+        let json = serde_json::to_value(&manifest).unwrap();
+        assert!(!json.as_object().unwrap().contains_key("selective"));
+        assert!(!json
+            .as_object()
+            .unwrap()
+            .contains_key("all_image_file_names"));
+    }
+
+    #[test]
+    fn manifest_includes_selective_and_all_image_file_names() {
+        let manifest = SnapshotsManifest {
+            app_id: "app".into(),
+            images: HashMap::new(),
+            diff_threshold: None,
+            selective: true,
+            all_image_file_names: Some(vec!["a.png".into(), "b.png".into()]),
+            vcs_info: empty_vcs_info(),
+        };
+        let json = serde_json::to_value(&manifest).unwrap();
+        assert_eq!(json["selective"], json!(true));
+        assert_eq!(json["all_image_file_names"], json!(["a.png", "b.png"]));
+    }
 
     #[test]
     fn cli_managed_fields_override_sidecar_fields() {
