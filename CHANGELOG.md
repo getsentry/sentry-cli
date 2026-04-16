@@ -12,7 +12,6 @@
 
 - (snapshots) Parallelize image hashing with rayon ([#3250](https://github.com/getsentry/sentry-cli/pull/3250))
 
-
 ### Fixes
 
 - (snapshots) Chunk image uploads to avoid file descriptor exhaustion and 413 errors when uploading hundreds of images ([#3249](https://github.com/getsentry/sentry-cli/pull/3249))
