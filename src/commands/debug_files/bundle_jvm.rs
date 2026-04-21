@@ -2,7 +2,7 @@
 
 use crate::config::Config;
 use crate::utils::args::ArgExt as _;
-use crate::utils::file_search::ReleaseFileSearch;
+use crate::utils::file_search::{ReleaseFileMatch, ReleaseFileSearch};
 use crate::utils::file_upload::SourceFile;
 use crate::utils::fs::path_as_url;
 use crate::utils::source_bundle::{self, BundleContext};
@@ -59,6 +59,62 @@ fn build_source_url(relative_path: &Path) -> String {
     let package_path = strip_source_set_prefix(relative_path);
     let package_path_jvm_ext = package_path.with_extension("jvm");
     format!("~/{}", path_as_url(&package_path_jvm_ext))
+}
+
+/// Records a dropped duplicate file whose URL was already seen.
+#[derive(Debug, PartialEq, Eq)]
+struct UrlCollision {
+    url: String,
+    skipped_path: PathBuf,
+    kept_path: PathBuf,
+}
+
+/// Turns walked source files into `SourceFile`s for bundling, filtering out
+/// build-output directories and deduplicating by URL.
+///
+/// Android build variants can contribute the same FQCN from different source
+/// sets (e.g. `src/main/` and `src/debug/` both defining `com.example.Foo`).
+/// After stripping, both map to the same URL — this keeps the first-seen
+/// entry and records the rest as collisions so the caller can warn the user.
+fn build_source_files(sources: Vec<ReleaseFileMatch>) -> (Vec<SourceFile>, Vec<UrlCollision>) {
+    let mut seen_urls: HashMap<String, PathBuf> = HashMap::new();
+    let mut collisions: Vec<UrlCollision> = Vec::new();
+    let files = sources
+        .into_iter()
+        .filter_map(|source| {
+            let local_path = source.path.strip_prefix(&source.base_path).unwrap();
+            if is_in_ambiguous_build_dir(local_path) {
+                debug!("excluding (build output): {}", source.path.display());
+                return None;
+            }
+            let url = build_source_url(local_path);
+
+            match seen_urls.entry(url) {
+                Entry::Occupied(existing) => {
+                    collisions.push(UrlCollision {
+                        url: existing.key().clone(),
+                        skipped_path: source.path,
+                        kept_path: existing.get().clone(),
+                    });
+                    None
+                }
+                Entry::Vacant(slot) => {
+                    let url = slot.key().clone();
+                    slot.insert(source.path.clone());
+                    Some(SourceFile {
+                        url,
+                        path: source.path,
+                        contents: Arc::new(source.contents),
+                        ty: SourceFileType::Source,
+                        headers: BTreeMap::new(),
+                        messages: vec![],
+                        already_uploaded: false,
+                    })
+                }
+            }
+        })
+        .collect();
+    (files, collisions)
 }
 
 /// Safe to exclude globally — can never be valid JVM package names.
@@ -190,49 +246,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .respect_ignores(true)
         .collect_files()?;
 
-    // Android build variants commonly contribute the same FQCN from
-    // different source sets (e.g. `src/main/` and `src/debug/` both
-    // defining `com.example.Foo`). After stripping, both map to the same
-    // URL — drop all but the first and tell the user how to scope the bundle.
-    let mut seen_urls: HashMap<String, PathBuf> = HashMap::new();
-    let files: Vec<SourceFile> = sources
-        .into_iter()
-        .filter_map(|source| {
-            let local_path = source.path.strip_prefix(&source.base_path).unwrap();
-            if is_in_ambiguous_build_dir(local_path) {
-                debug!("excluding (build output): {}", source.path.display());
-                return None;
-            }
-            let url = build_source_url(local_path);
-
-            match seen_urls.entry(url) {
-                Entry::Occupied(existing) => {
-                    warn!(
-                        "URL collision on {}: skipping '{}' (already bundled from '{}'). \
-                         Use --exclude to drop the unwanted source set \
-                         (e.g. --exclude='**src/debug/**').",
-                        existing.key(),
-                        source.path.display(),
-                        existing.get().display(),
-                    );
-                    None
-                }
-                Entry::Vacant(slot) => {
-                    let url = slot.key().clone();
-                    slot.insert(source.path.clone());
-                    Some(SourceFile {
-                        url,
-                        path: source.path,
-                        contents: Arc::new(source.contents),
-                        ty: SourceFileType::Source,
-                        headers: BTreeMap::new(),
-                        messages: vec![],
-                        already_uploaded: false,
-                    })
-                }
-            }
-        })
-        .collect();
+    let (files, collisions) = build_source_files(sources);
+    for c in &collisions {
+        warn!(
+            "URL collision on {}: skipping '{}' (already bundled from '{}'). \
+             Use --exclude to drop the unwanted source set \
+             (e.g. --exclude='**src/debug/**').",
+            c.url,
+            c.skipped_path.display(),
+            c.kept_path.display(),
+        );
+    }
 
     let tempfile = source_bundle::build(context, files, Some(*debug_id))
         .context("Unable to create source bundle")?;
@@ -404,5 +428,51 @@ mod tests {
         assert!(!is_in_ambiguous_build_dir(Path::new(
             "app/src/main/java/Foo.java"
         )));
+    }
+
+    fn fake_source(base: &str, relative: &str) -> ReleaseFileMatch {
+        ReleaseFileMatch {
+            base_path: PathBuf::from(base),
+            path: PathBuf::from(base).join(relative),
+            contents: Vec::new(),
+        }
+    }
+
+    #[test]
+    fn test_build_source_files_records_collision_for_android_variants() {
+        let sources = vec![
+            fake_source("/app", "src/main/java/com/example/Config.java"),
+            fake_source("/app", "src/debug/java/com/example/Config.java"),
+        ];
+        let (files, collisions) = build_source_files(sources);
+
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].url, "~/com/example/Config.jvm");
+        assert_eq!(
+            files[0].path,
+            Path::new("/app/src/main/java/com/example/Config.java")
+        );
+
+        assert_eq!(collisions.len(), 1);
+        assert_eq!(collisions[0].url, "~/com/example/Config.jvm");
+        assert_eq!(
+            collisions[0].skipped_path,
+            Path::new("/app/src/debug/java/com/example/Config.java")
+        );
+        assert_eq!(
+            collisions[0].kept_path,
+            Path::new("/app/src/main/java/com/example/Config.java")
+        );
+    }
+
+    #[test]
+    fn test_build_source_files_keeps_distinct_urls() {
+        let sources = vec![
+            fake_source("/app", "src/main/java/com/example/Foo.java"),
+            fake_source("/app", "src/main/java/com/example/Bar.java"),
+        ];
+        let (files, collisions) = build_source_files(sources);
+        assert_eq!(files.len(), 2);
+        assert!(collisions.is_empty());
     }
 }
