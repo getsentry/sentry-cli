@@ -26,7 +26,7 @@ const JVM_EXTENSIONS: &[&str] = &[
 /// Directory names that mark the root of a JVM source set (i.e. the parent of
 /// the package hierarchy). Matches the Gradle/Maven convention
 /// `src/<sourceset>/<lang>/<package>/...`.
-const SOURCE_SET_LANGS: &[&str] = &["java", "kotlin", "scala", "groovy"];
+const SOURCE_SET_LANGS: &[&str] = &["java", "kotlin", "scala", "groovy", "clojure"];
 
 /// Strips the `[<module>/]src/<sourceset>/<lang>/` prefix from a relative source
 /// path so the remaining portion matches what Symbolicator looks up by URL
@@ -385,6 +385,18 @@ mod tests {
         assert_eq!(
             strip_source_set_prefix(Path::new("mod/src/main/groovy/com/example/Foo.groovy")),
             Path::new("com/example/Foo.groovy")
+        );
+    }
+
+    #[test]
+    fn test_strip_source_set_prefix_supports_clojure() {
+        assert_eq!(
+            strip_source_set_prefix(Path::new("mod/src/main/clojure/com/example/foo.clj")),
+            Path::new("com/example/foo.clj")
+        );
+        assert_eq!(
+            strip_source_set_prefix(Path::new("mod/src/main/clojure/com/example/foo.cljc")),
+            Path::new("com/example/foo.cljc")
         );
     }
 
