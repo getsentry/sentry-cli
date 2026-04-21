@@ -244,6 +244,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .extensions(JVM_EXTENSIONS.iter().copied())
         .ignores(all_excludes)
         .respect_ignores(true)
+        .sort_entries(true)
         .collect_files()?;
 
     let (files, collisions) = build_source_files(sources);
@@ -452,9 +453,11 @@ mod tests {
 
     #[test]
     fn test_build_source_files_records_collision_for_android_variants() {
+        // Sources arrive pre-sorted from `ReleaseFileSearch` (which configures
+        // `WalkBuilder::sort_by_file_name`); the first-seen wins in the dedup.
         let sources = vec![
-            fake_source("/app", "src/main/java/com/example/Config.java"),
             fake_source("/app", "src/debug/java/com/example/Config.java"),
+            fake_source("/app", "src/main/java/com/example/Config.java"),
         ];
         let (files, collisions) = build_source_files(sources);
 
@@ -462,18 +465,18 @@ mod tests {
         assert_eq!(files[0].url, "~/com/example/Config.jvm");
         assert_eq!(
             files[0].path,
-            Path::new("/app/src/main/java/com/example/Config.java")
+            Path::new("/app/src/debug/java/com/example/Config.java")
         );
 
         assert_eq!(collisions.len(), 1);
         assert_eq!(collisions[0].url, "~/com/example/Config.jvm");
         assert_eq!(
             collisions[0].skipped_path,
-            Path::new("/app/src/debug/java/com/example/Config.java")
+            Path::new("/app/src/main/java/com/example/Config.java")
         );
         assert_eq!(
             collisions[0].kept_path,
-            Path::new("/app/src/main/java/com/example/Config.java")
+            Path::new("/app/src/debug/java/com/example/Config.java")
         );
     }
 
