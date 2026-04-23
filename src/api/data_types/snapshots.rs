@@ -40,8 +40,8 @@ pub struct SnapshotsManifest<'a> {
 // Keep in sync with https://github.com/getsentry/sentry/blob/master/src/sentry/preprod/snapshots/manifest.py
 /// Metadata for a single image in a snapshot manifest.
 ///
-/// CLI-managed fields (`image_file_name`, `width`, `height`) override any
-/// identically named fields provided by user sidecar metadata.
+/// CLI-managed fields (`width`, `height`) override any identically named
+/// fields provided by user sidecar metadata.
 #[derive(Debug, Serialize)]
 pub struct ImageMetadata {
     #[serde(flatten)]
