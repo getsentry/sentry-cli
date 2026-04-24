@@ -9,6 +9,7 @@ use crate::utils::source_bundle::{self, BundleContext};
 use anyhow::{bail, Context as _, Result};
 use clap::{Arg, ArgAction, ArgMatches, Command};
 use log::{debug, warn};
+use regex::Regex;
 use sentry::types::DebugId;
 use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, HashMap};
@@ -16,7 +17,7 @@ use std::ffi::OsStr;
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::str::FromStr as _;
-use std::sync::Arc;
+use std::sync::{Arc, LazyLock};
 use symbolic::debuginfo::sourcebundle::SourceFileType;
 
 const JVM_EXTENSIONS: &[&str] = &[
@@ -28,6 +29,14 @@ const JVM_EXTENSIONS: &[&str] = &[
 /// `src/<sourceset>/<lang>/<package>/...`.
 const SOURCE_SET_LANGS: &[&str] = &["java", "kotlin", "scala", "groovy", "clojure"];
 
+static SOURCE_SET_PREFIX_RE: LazyLock<Regex> = LazyLock::new(|| {
+    let langs = SOURCE_SET_LANGS.join("|");
+    Regex::new(&format!(
+        r"(?:^|[/\\])src[/\\][^/\\]+[/\\](?:{langs})[/\\](.+)$"
+    ))
+    .expect("valid regex")
+});
+
 /// Strips the `[<module>/]src/<sourceset>/<lang>/` prefix from a relative source
 /// path so the remaining portion matches what Symbolicator looks up by URL
 /// (e.g. `io/sentry/android/core/ANRWatchDog.java`). This is needed because
@@ -36,21 +45,11 @@ const SOURCE_SET_LANGS: &[&str] = &["java", "kotlin", "scala", "groovy", "clojur
 ///
 /// Returns the path unchanged if no `src/<sourceset>/<lang>/` segment is found.
 fn strip_source_set_prefix(relative_path: &Path) -> PathBuf {
-    let mut iter = relative_path.components();
-    let mut src_two_back = false;
-    let mut src_one_back = false;
-    while let Some(curr) = iter.next() {
-        let curr_is_lang = curr
-            .as_os_str()
-            .to_str()
-            .is_some_and(|s| SOURCE_SET_LANGS.contains(&s));
-        if src_two_back && curr_is_lang {
-            return iter.collect();
-        }
-        src_two_back = src_one_back;
-        src_one_back = curr.as_os_str() == "src";
-    }
-    relative_path.to_path_buf()
+    relative_path
+        .to_str()
+        .and_then(|s| SOURCE_SET_PREFIX_RE.captures(s))
+        .map(|caps| PathBuf::from(&caps[1]))
+        .unwrap_or_else(|| relative_path.to_path_buf())
 }
 
 /// Builds the Symbolicator-compatible URL for a relative source path
@@ -77,43 +76,44 @@ struct UrlCollision {
 /// After stripping, both map to the same URL — this keeps the first-seen
 /// entry and records the rest as collisions so the caller can warn the user.
 fn build_source_files(sources: Vec<ReleaseFileMatch>) -> (Vec<SourceFile>, Vec<UrlCollision>) {
-    let mut seen_urls: HashMap<String, PathBuf> = HashMap::new();
-    let mut collisions: Vec<UrlCollision> = Vec::new();
-    let files = sources
-        .into_iter()
-        .filter_map(|source| {
-            let local_path = source.path.strip_prefix(&source.base_path).unwrap();
-            if is_in_ambiguous_build_dir(local_path) {
-                debug!("excluding (build output): {}", source.path.display());
-                return None;
-            }
-            let url = build_source_url(local_path);
+    let candidates = sources.into_iter().filter_map(|source| {
+        let local_path = source.path.strip_prefix(&source.base_path).unwrap();
+        if is_in_ambiguous_build_dir(local_path) {
+            debug!("excluding (build output): {}", source.path.display());
+            return None;
+        }
+        let url = build_source_url(local_path);
+        Some((url, source))
+    });
 
-            match seen_urls.entry(url) {
-                Entry::Occupied(existing) => {
-                    collisions.push(UrlCollision {
-                        url: existing.key().clone(),
-                        skipped_path: source.path,
-                        kept_path: existing.get().clone(),
-                    });
-                    None
-                }
-                Entry::Vacant(slot) => {
-                    let url = slot.key().clone();
-                    slot.insert(source.path.clone());
-                    Some(SourceFile {
-                        url,
-                        path: source.path,
-                        contents: Arc::new(source.contents),
-                        ty: SourceFileType::Source,
-                        headers: BTreeMap::new(),
-                        messages: vec![],
-                        already_uploaded: false,
-                    })
-                }
+    let mut seen_urls: HashMap<String, usize> = HashMap::new();
+    let mut files: Vec<SourceFile> = Vec::new();
+    let mut collisions: Vec<UrlCollision> = Vec::new();
+
+    for (url, source) in candidates {
+        match seen_urls.entry(url) {
+            Entry::Occupied(existing) => {
+                collisions.push(UrlCollision {
+                    url: existing.key().clone(),
+                    skipped_path: source.path,
+                    kept_path: files[*existing.get()].path.clone(),
+                });
             }
-        })
-        .collect();
+            Entry::Vacant(slot) => {
+                let url = slot.key().clone();
+                slot.insert(files.len());
+                files.push(SourceFile {
+                    url,
+                    path: source.path,
+                    contents: Arc::new(source.contents),
+                    ty: SourceFileType::Source,
+                    headers: BTreeMap::new(),
+                    messages: vec![],
+                    already_uploaded: false,
+                });
+            }
+        }
+    }
     (files, collisions)
 }
 
