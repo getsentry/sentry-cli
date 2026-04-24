@@ -252,7 +252,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         warn!(
             "URL collision on {}: skipping '{}' (already bundled from '{}'). \
              Use --exclude to drop the unwanted source set \
-             (e.g. --exclude='**src/debug/**').",
+             (e.g. --exclude='**/src/debug/**').",
             c.url,
             c.skipped_path.display(),
             c.kept_path.display(),
