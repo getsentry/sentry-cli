@@ -186,16 +186,11 @@ impl<'a> FileUpload<'a> {
     }
 
     pub fn upload(&self) -> Result<()> {
-        upload_files_chunked(self.context, &self.files, self.context.chunk_upload_options)
+        upload_files_chunked(self.context, &self.files)
     }
 }
 
-fn poll_assemble(
-    checksum: Digest,
-    chunks: &[Digest],
-    context: &UploadContext,
-    options: &ChunkServerOptions,
-) -> Result<()> {
+fn poll_assemble(checksum: Digest, chunks: &[Digest], context: &UploadContext) -> Result<()> {
     let progress_style = ProgressStyle::default_spinner().template("{spinner} Processing files...");
 
     let pb = ProgressBar::new_spinner();
@@ -203,7 +198,7 @@ fn poll_assemble(
     pb.set_style(progress_style);
 
     let assemble_start = Instant::now();
-    let options_max_wait = match options.max_wait {
+    let options_max_wait = match context.chunk_upload_options.max_wait {
         0 => DEFAULT_MAX_WAIT,
         secs => Duration::from_secs(secs),
     };
@@ -263,11 +258,8 @@ fn poll_assemble(
     Ok(())
 }
 
-fn upload_files_chunked(
-    context: &UploadContext,
-    files: &SourceFiles,
-    options: &ChunkServerOptions,
-) -> Result<()> {
+fn upload_files_chunked(context: &UploadContext, files: &SourceFiles) -> Result<()> {
+    let options = context.chunk_upload_options;
     let archive = source_bundle::build(context, files.values(), None)?;
 
     let progress_style =
@@ -313,7 +305,7 @@ fn upload_files_chunked(
             style(">").dim()
         );
     }
-    poll_assemble(checksum, &checksums, context, options)
+    poll_assemble(checksum, &checksums, context)
 }
 
 fn print_upload_context_details(context: &UploadContext) {
