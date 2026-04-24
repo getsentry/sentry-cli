@@ -492,18 +492,16 @@ mod tests {
         // `WalkBuilder::sort_by_file_name`); the first-seen wins in the dedup.
         log_capture::setup();
 
-        let sources = vec![
-            fake_source("/app", "src/debug/java/com/example/Config.java"),
-            fake_source("/app", "src/main/java/com/example/Config.java"),
-        ];
-        let files = build_source_files(sources);
+        let debug_src = fake_source("/app", "src/debug/java/com/example/Config.java");
+        let main_src = fake_source("/app", "src/main/java/com/example/Config.java");
+        let kept_display = debug_src.path.display().to_string();
+        let skipped_display = main_src.path.display().to_string();
+
+        let files = build_source_files(vec![debug_src, main_src]);
 
         assert_eq!(files.len(), 1);
         assert_eq!(files[0].url, "~/com/example/Config.jvm");
-        assert_eq!(
-            files[0].path,
-            Path::new("/app/src/debug/java/com/example/Config.java")
-        );
+        assert_eq!(files[0].path.display().to_string(), kept_display);
 
         let warnings = log_capture::warnings();
         assert_eq!(warnings.len(), 1);
@@ -513,12 +511,12 @@ mod tests {
             "{msg}"
         );
         assert!(
-            msg.contains("/app/src/main/java/com/example/Config.java"),
-            "missing skipped path in: {msg}"
+            msg.contains(&skipped_display),
+            "missing skipped path '{skipped_display}' in: {msg}"
         );
         assert!(
-            msg.contains("/app/src/debug/java/com/example/Config.java"),
-            "missing kept path in: {msg}"
+            msg.contains(&kept_display),
+            "missing kept path '{kept_display}' in: {msg}"
         );
     }
 
