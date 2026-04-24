@@ -60,22 +60,14 @@ fn build_source_url(relative_path: &Path) -> String {
     format!("~/{}", path_as_url(&package_path_jvm_ext))
 }
 
-/// Records a dropped duplicate file whose URL was already seen.
-#[derive(Debug, PartialEq, Eq)]
-struct UrlCollision {
-    url: String,
-    skipped_path: PathBuf,
-    kept_path: PathBuf,
-}
-
 /// Turns walked source files into `SourceFile`s for bundling, filtering out
 /// build-output directories and deduplicating by URL.
 ///
 /// Android build variants can contribute the same FQCN from different source
 /// sets (e.g. `src/main/` and `src/debug/` both defining `com.example.Foo`).
 /// After stripping, both map to the same URL — this keeps the first-seen
-/// entry and records the rest as collisions so the caller can warn the user.
-fn build_source_files(sources: Vec<ReleaseFileMatch>) -> (Vec<SourceFile>, Vec<UrlCollision>) {
+/// entry and warns the user about the rest.
+fn build_source_files(sources: Vec<ReleaseFileMatch>) -> Vec<SourceFile> {
     let candidates = sources.into_iter().filter_map(|source| {
         let local_path = source.path.strip_prefix(&source.base_path).unwrap();
         if is_in_ambiguous_build_dir(local_path) {
@@ -88,16 +80,18 @@ fn build_source_files(sources: Vec<ReleaseFileMatch>) -> (Vec<SourceFile>, Vec<U
 
     let mut seen_urls: HashMap<String, usize> = HashMap::new();
     let mut files: Vec<SourceFile> = Vec::new();
-    let mut collisions: Vec<UrlCollision> = Vec::new();
 
     for (url, source) in candidates {
         match seen_urls.entry(url) {
             Entry::Occupied(existing) => {
-                collisions.push(UrlCollision {
-                    url: existing.key().clone(),
-                    skipped_path: source.path,
-                    kept_path: files[*existing.get()].path.clone(),
-                });
+                warn!(
+                    "URL collision on {}: skipping '{}' (already bundled from '{}'). \
+                     Use --exclude to drop the unwanted source set \
+                     (e.g. --exclude='**/src/debug/**').",
+                    existing.key(),
+                    source.path.display(),
+                    files[*existing.get()].path.display(),
+                );
             }
             Entry::Vacant(slot) => {
                 let url = slot.key().clone();
@@ -114,7 +108,7 @@ fn build_source_files(sources: Vec<ReleaseFileMatch>) -> (Vec<SourceFile>, Vec<U
             }
         }
     }
-    (files, collisions)
+    files
 }
 
 /// Safe to exclude globally — can never be valid JVM package names.
@@ -247,17 +241,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .sort_entries(true)
         .collect_files()?;
 
-    let (files, collisions) = build_source_files(sources);
-    for c in &collisions {
-        warn!(
-            "URL collision on {}: skipping '{}' (already bundled from '{}'). \
-             Use --exclude to drop the unwanted source set \
-             (e.g. --exclude='**/src/debug/**').",
-            c.url,
-            c.skipped_path.display(),
-            c.kept_path.display(),
-        );
-    }
+    let files = build_source_files(sources);
 
     let tempfile = source_bundle::build(context, files, Some(*debug_id))
         .context("Unable to create source bundle")?;
@@ -266,6 +250,57 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     println!("Created {}", out.display());
 
     Ok(())
+}
+
+#[cfg(test)]
+mod log_capture {
+    use log::{Level, LevelFilter, Log, Metadata, Record};
+    use std::cell::RefCell;
+    use std::sync::Once;
+
+    thread_local! {
+        static BUFFER: RefCell<Vec<(Level, String)>> = const { RefCell::new(Vec::new()) };
+    }
+
+    struct CaptureLogger;
+
+    impl Log for CaptureLogger {
+        fn enabled(&self, _: &Metadata) -> bool {
+            true
+        }
+
+        fn log(&self, record: &Record) {
+            BUFFER.with(|b| {
+                b.borrow_mut()
+                    .push((record.level(), record.args().to_string()))
+            });
+        }
+
+        fn flush(&self) {}
+    }
+
+    static LOGGER: CaptureLogger = CaptureLogger;
+
+    /// Installs the capture logger (once per process) and clears this
+    /// thread's buffer so a test starts from a clean slate.
+    pub fn setup() {
+        static ONCE: Once = Once::new();
+        ONCE.call_once(|| {
+            let _ = log::set_logger(&LOGGER);
+            log::set_max_level(LevelFilter::Trace);
+        });
+        BUFFER.with(|b| b.borrow_mut().clear());
+    }
+
+    pub fn warnings() -> Vec<String> {
+        BUFFER.with(|b| {
+            b.borrow()
+                .iter()
+                .filter(|(lvl, _)| *lvl == Level::Warn)
+                .map(|(_, msg)| msg.clone())
+                .collect()
+        })
+    }
 }
 
 #[cfg(test)]
@@ -452,14 +487,16 @@ mod tests {
     }
 
     #[test]
-    fn test_build_source_files_records_collision_for_android_variants() {
+    fn test_build_source_files_warns_on_collision_for_android_variants() {
         // Sources arrive pre-sorted from `ReleaseFileSearch` (which configures
         // `WalkBuilder::sort_by_file_name`); the first-seen wins in the dedup.
+        log_capture::setup();
+
         let sources = vec![
             fake_source("/app", "src/debug/java/com/example/Config.java"),
             fake_source("/app", "src/main/java/com/example/Config.java"),
         ];
-        let (files, collisions) = build_source_files(sources);
+        let files = build_source_files(sources);
 
         assert_eq!(files.len(), 1);
         assert_eq!(files[0].url, "~/com/example/Config.jvm");
@@ -468,26 +505,33 @@ mod tests {
             Path::new("/app/src/debug/java/com/example/Config.java")
         );
 
-        assert_eq!(collisions.len(), 1);
-        assert_eq!(collisions[0].url, "~/com/example/Config.jvm");
-        assert_eq!(
-            collisions[0].skipped_path,
-            Path::new("/app/src/main/java/com/example/Config.java")
+        let warnings = log_capture::warnings();
+        assert_eq!(warnings.len(), 1);
+        let msg = &warnings[0];
+        assert!(
+            msg.contains("URL collision on ~/com/example/Config.jvm"),
+            "{msg}"
         );
-        assert_eq!(
-            collisions[0].kept_path,
-            Path::new("/app/src/debug/java/com/example/Config.java")
+        assert!(
+            msg.contains("/app/src/main/java/com/example/Config.java"),
+            "missing skipped path in: {msg}"
+        );
+        assert!(
+            msg.contains("/app/src/debug/java/com/example/Config.java"),
+            "missing kept path in: {msg}"
         );
     }
 
     #[test]
     fn test_build_source_files_keeps_distinct_urls() {
+        log_capture::setup();
+
         let sources = vec![
             fake_source("/app", "src/main/java/com/example/Foo.java"),
             fake_source("/app", "src/main/java/com/example/Bar.java"),
         ];
-        let (files, collisions) = build_source_files(sources);
+        let files = build_source_files(sources);
         assert_eq!(files.len(), 2);
-        assert!(collisions.is_empty());
+        assert!(log_capture::warnings().is_empty());
     }
 }
