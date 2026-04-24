@@ -21,6 +21,7 @@ pub struct ReleaseFileSearch {
     ignore_file: Option<String>,
     decompress: bool,
     respect_ignores: bool,
+    sort_entries: bool,
 }
 
 #[derive(Eq, PartialEq, Hash)]
@@ -39,6 +40,7 @@ impl ReleaseFileSearch {
             ignores: BTreeSet::new(),
             decompress: false,
             respect_ignores: false,
+            sort_entries: false,
         }
     }
 
@@ -85,6 +87,14 @@ impl ReleaseFileSearch {
         self
     }
 
+    /// When enabled, directory entries are yielded in sorted order, making
+    /// the walk deterministic across filesystems. Opt-in because callers that
+    /// don't care about order pay no sort cost.
+    pub fn sort_entries(&mut self, sort: bool) -> &mut Self {
+        self.sort_entries = sort;
+        self
+    }
+
     pub fn collect_file(path: PathBuf) -> Result<ReleaseFileMatch> {
         // NOTE: `collect_file` currently do not handle gzip decompression,
         // as its mostly used for 3rd tools like xcode or gradle.
@@ -113,6 +123,10 @@ impl ReleaseFileSearch {
 
         let mut builder = WalkBuilder::new(&self.path);
         builder.follow_links(true);
+
+        if self.sort_entries {
+            builder.sort_by_file_name(|a, b| a.cmp(b));
+        }
 
         if !self.respect_ignores {
             builder.git_exclude(false).git_ignore(false).ignore(false);
