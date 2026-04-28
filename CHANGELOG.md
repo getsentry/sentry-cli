@@ -1,5 +1,15 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- (bundle-jvm) Warn and skip subsequent duplicates when multiple files strip to the same URL (e.g. Android build variants contributing the same FQCN). The warning points users at `--exclude` to scope the bundle to a single variant ([#3275](https://github.com/getsentry/sentry-cli/pull/3275)).
+
+### Fixes
+
+- (bundle-jvm) Strip the `[<module>/]src/<sourceset>/<lang>/` prefix from bundle URLs so Symbolicator can resolve them from package-based stack traces (e.g. `sentry-android-core/src/main/java/io/sentry/android/core/ANRWatchDog.java` → `~/io/sentry/android/core/ANRWatchDog.jvm`) ([#3275](https://github.com/getsentry/sentry-cli/pull/3275)).
+
 ## 3.4.0
 
 ### Features
