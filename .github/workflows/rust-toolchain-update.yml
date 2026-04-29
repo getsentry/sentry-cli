@@ -77,12 +77,19 @@ jobs:
       - name: Create pull request
         if: steps.rust-check.outputs.needs_update == 'true'
         uses: actions/github-script@ed597411d8f924073f98dfc5c65a23a2325f34cd # 8.0.0
+        env:
+          NEW_VERSION: ${{ steps.rust-check.outputs.new_version }}
+          FULL_VERSION: ${{ steps.rust-check.outputs.full_version }}
+          BRANCH_NAME: ${{ steps.rust-update.outputs.branch_name }}
+          COMMIT_TITLE: ${{ steps.rust-update.outputs.commit_title }}
+          BASE_REF: ${{ github.ref_name }}
         with:
           script: |
-            const newVersion = '${{ steps.rust-check.outputs.new_version }}';
-            const fullVersion = '${{ steps.rust-check.outputs.full_version }}';
-            const branchName = '${{ steps.rust-update.outputs.branch_name }}';
-            const commitTitle = '${{ steps.rust-update.outputs.commit_title }}';
+            const newVersion = process.env.NEW_VERSION;
+            const fullVersion = process.env.FULL_VERSION;
+            const branchName = process.env.BRANCH_NAME;
+            const commitTitle = process.env.COMMIT_TITLE;
+            const baseRef = process.env.BASE_REF;
 
             // Check if PR already exists
             try {
@@ -107,7 +114,7 @@ jobs:
               repo: context.repo.repo,
               title: commitTitle,
               head: branchName,
-              base: '${{ github.ref_name }}',
+              base: baseRef,
               body: `Update Rust toolchain to ${newVersion} (${fullVersion}).
 
               **Changes:**
