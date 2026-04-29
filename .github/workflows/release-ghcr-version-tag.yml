@@ -16,7 +16,10 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Tag release version
+        env:
+          REF_NAME: ${{ github.ref_name }}
+          SHA: ${{ github.sha }}
         run: |
           docker buildx imagetools create \
-            -t ghcr.io/getsentry/sentry-cli:${{ github.ref_name }} \
-            ghcr.io/getsentry/sentry-cli:${{ github.sha }}
+            -t ghcr.io/getsentry/sentry-cli:"$REF_NAME" \
+            ghcr.io/getsentry/sentry-cli:"$SHA"
