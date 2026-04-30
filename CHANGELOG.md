@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Security
+
+- (snapshots) Stop sending Sentry auth token to external objectstore hosts during build snapshot uploads ([#3286](https://github.com/getsentry/sentry-cli/pull/3286))
+
 ## 3.4.1
 
 ### Improvements
