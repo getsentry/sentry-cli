@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- (snapshots) Stop sending Sentry auth token to Objectstore ([#3286](https://github.com/getsentry/sentry-cli/pull/3286))
+
 ## 3.4.1
 
 ### Improvements

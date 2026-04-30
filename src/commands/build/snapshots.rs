@@ -18,7 +18,7 @@ use sha2::{Digest as _, Sha256};
 use walkdir::WalkDir;
 
 use crate::api::{Api, CreateSnapshotResponse, ImageMetadata, SnapshotsManifest};
-use crate::config::{Auth, Config};
+use crate::config::Config;
 use crate::utils::args::ArgExt as _;
 use crate::utils::build_vcs::collect_git_metadata;
 use crate::utils::ci::is_ci;
@@ -336,22 +336,8 @@ fn upload_images(
     if let Some(token) = options.objectstore.auth_token {
         builder = builder.token(token.expose_secret().to_owned());
     }
-    let builder = builder;
-
-    let sentry_token = match authenticated_api.auth() {
-        Auth::Token(token) => token.raw().expose_secret().to_owned(),
-    };
-    let sentry_token = format!("Bearer {sentry_token}")
-        .parse()
-        // Ignore original error to avoid leaking the token (even though it's invalid)
-        .map_err(|_| anyhow::anyhow!("Invalid auth token"))?;
     let client = builder
-        .configure_reqwest(|r| {
-            let mut headers = http::HeaderMap::new();
-            headers.insert(http::header::AUTHORIZATION, sentry_token);
-            r.connect_timeout(Duration::from_secs(10))
-                .default_headers(headers)
-        })
+        .configure_reqwest(|r| r.connect_timeout(Duration::from_secs(10)))
         .build()?;
 
     let scopes = options.objectstore.scopes;
