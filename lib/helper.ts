@@ -234,7 +234,11 @@ function serializeOptions(schema: OptionsSchema, options: Record<string, unknown
       return newOptions;
     }
 
-    return newOptions.concat(paramName, paramValue);
+    if (typeof paramValue !== 'string' && typeof paramValue !== 'number') {
+      throw new Error(`${option} should be a string or number`);
+    }
+
+    return newOptions.concat([paramName, String(paramValue)]);
   }, []);
 }
 
