@@ -5,6 +5,7 @@
 ### Fixes
 
 - (snapshots) Stop sending Sentry auth token to Objectstore ([#3286](https://github.com/getsentry/sentry-cli/pull/3286))
+- (js) Fix argument injection in JavaScript API's `serializeOptions`. String/number options now validate input types and prevent `Array.prototype.concat()` from flattening array values into separate CLI arguments. ([#3287](https://github.com/getsentry/sentry-cli/pull/3287))
 
 ## 3.4.1
 
