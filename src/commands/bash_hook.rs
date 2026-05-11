@@ -208,6 +208,10 @@ fn send_event(
     Ok(())
 }
 
+fn shell_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', r"'\''"))
+}
+
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let release = Config::current().get_release(matches).ok();
 
@@ -235,15 +239,18 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut script = BASH_SCRIPT
         .replace(
             "___SENTRY_TRACEBACK_FILE___",
-            &traceback.display().to_string(),
+            &shell_quote(&traceback.display().to_string()),
         )
-        .replace("___SENTRY_LOG_FILE___", &log.display().to_string());
+        .replace(
+            "___SENTRY_LOG_FILE___",
+            &shell_quote(&log.display().to_string()),
+        );
 
     script = script.replace(
         " ___SENTRY_TAGS___",
         &tags
             .iter()
-            .map(|tag| format!(" --tag \"{tag}\""))
+            .map(|tag| format!(" --tag {}", shell_quote(tag)))
             .collect::<Vec<_>>()
             .join(""),
     );
@@ -251,20 +258,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     script = match release {
         Some(release) => script.replace(
             " ___SENTRY_RELEASE___",
-            format!(" --release \"{release}\"").as_str(),
+            format!(" --release {}", shell_quote(&release)).as_str(),
         ),
         None => script.replace(" ___SENTRY_RELEASE___", ""),
     };
 
     script = script.replace(
         "___SENTRY_CLI___",
-        matches
-            .get_one::<String>("cli")
-            .map_or_else(
-                || env::current_exe().unwrap().display().to_string(),
-                String::clone,
-            )
-            .as_str(),
+        &shell_quote(&matches.get_one::<String>("cli").map_or_else(
+            || env::current_exe().unwrap().display().to_string(),
+            String::clone,
+        )),
     );
 
     if matches.get_flag("no_environ") {
@@ -278,4 +282,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
     println!("{script}");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::shell_quote;
+
+    #[test]
+    fn shell_quote_handles_special_characters() {
+        assert_eq!(
+            shell_quote("it's $(unsafe); && ok"),
+            "'it'\\''s $(unsafe); && ok'"
+        );
+    }
 }

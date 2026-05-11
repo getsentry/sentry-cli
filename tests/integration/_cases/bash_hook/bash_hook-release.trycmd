@@ -3,8 +3,8 @@ $ sentry-cli bash-hook --release "0.1.0"
 ? success
 set -e
 
-_SENTRY_TRACEBACK_FILE="[..].traceback"
-_SENTRY_LOG_FILE="[..].out"
+_SENTRY_TRACEBACK_FILE='[..].traceback'
+_SENTRY_LOG_FILE='[..].out'
 
 if [ "${SENTRY_CLI_NO_EXIT_TRAP-0}" != 1 ]; then
   trap _sentry_exit_trap EXIT
@@ -37,7 +37,7 @@ _sentry_err_trap() {
   echo "@exit_code:${_exit_code}" >> "$_SENTRY_TRACEBACK_FILE"
 
   : >> "$_SENTRY_LOG_FILE"
-  export SENTRY_LAST_EVENT=$([..] bash-hook --send-event --traceback "$_SENTRY_TRACEBACK_FILE" --release "0.1.0" --log "$_SENTRY_LOG_FILE" )
+  export SENTRY_LAST_EVENT=$([..] bash-hook --send-event --traceback "$_SENTRY_TRACEBACK_FILE" --release '0.1.0' --log "$_SENTRY_LOG_FILE" )
   rm -f "$_SENTRY_TRACEBACK_FILE" "$_SENTRY_LOG_FILE"
 }
 
