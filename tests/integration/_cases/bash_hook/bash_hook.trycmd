@@ -3,8 +3,8 @@ $ sentry-cli bash-hook
 ? success
 set -e
 
-_SENTRY_TRACEBACK_FILE="[..].traceback"
-_SENTRY_LOG_FILE="[..].out"
+_SENTRY_TRACEBACK_FILE='[..].traceback'
+_SENTRY_LOG_FILE='[..].out'
 
 if [ "${SENTRY_CLI_NO_EXIT_TRAP-0}" != 1 ]; then
   trap _sentry_exit_trap EXIT
