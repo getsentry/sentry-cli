@@ -118,6 +118,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // Always collect git metadata, but only perform automatic inference when enabled
     let vcs_info = collect_git_metadata(matches, &config, should_collect_git_metadata);
 
+    if vcs_info.pr_number.is_some() && vcs_info.base_sha.is_none() {
+        anyhow::bail!(
+            "A PR number was provided but no base SHA could be determined. \
+             Snapshot comparisons require a base SHA to identify the base build. \
+             Pass --base-sha explicitly or ensure your CI environment exposes the merge base."
+        );
+    }
+
     debug!("Scanning for images in: {}", dir_path.display());
     debug!("Organization: {org}");
     debug!("Project: {project}");
