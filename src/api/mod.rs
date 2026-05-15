@@ -242,6 +242,12 @@ impl Api {
         handle.ssl_verify_host(self.config.should_verify_ssl())?;
         handle.ssl_verify_peer(self.config.should_verify_ssl())?;
 
+        if let Ok(ca_bundle) = std::env::var("SSL_CERT_FILE") {
+            handle.cainfo(&ca_bundle)?;
+        } else if let Ok(ca_bundle) = std::env::var("CURL_CA_BUNDLE") {
+            handle.cainfo(&ca_bundle)?;
+        }
+
         let env = self.config.get_pipeline_env();
         let headers = self.config.get_headers();
 
