@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
@@ -8,9 +8,10 @@ use std::time::Duration;
 use anyhow::{Context as _, Result};
 use clap::{Arg, ArgMatches, Command};
 use console::style;
+use futures_util::StreamExt as _;
 use itertools::Itertools as _;
 use log::{debug, warn};
-use objectstore_client::{ClientBuilder, ExpirationPolicy, Usecase};
+use objectstore_client::{ClientBuilder, ExpirationPolicy, OperationResult, Usecase};
 use rayon::prelude::*;
 use secrecy::ExposeSecret as _;
 use serde_json::Value;
@@ -146,9 +147,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     validate_image_sizes(&images)?;
 
-    // Upload image files to objectstore
     println!(
-        "{} Uploading {} image {}",
+        "{} Processing {} image {}",
         style(">").dim(),
         style(images.len()).yellow(),
         if images.len() == 1 { "file" } else { "files" }
@@ -416,33 +416,69 @@ fn upload_images(
 
     let total_count = uploads.len();
 
-    let mut many_builder = session.many();
-    for prepared in uploads {
-        many_builder = many_builder.push(
-            session
-                .put_path(prepared.path.clone())
-                .key(&prepared.key)
-                .expiration_policy(expiration),
+    let existing_keys: HashSet<String> = runtime.block_on(async {
+        let mut head_builder = session.many();
+        for prepared in &uploads {
+            head_builder = head_builder.push(session.head(&prepared.key));
+        }
+
+        let mut results = head_builder.send().await;
+        let mut existing = HashSet::new();
+        while let Some(result) = results.next().await {
+            if let OperationResult::Head(key, Ok(Some(_))) = result {
+                existing.insert(key);
+            }
+        }
+        existing
+    });
+
+    let missing_uploads: Vec<_> = uploads
+        .into_iter()
+        .filter(|p| !existing_keys.contains(&p.key))
+        .collect();
+    let skipped = total_count - missing_uploads.len();
+    let upload_count = missing_uploads.len();
+
+    if skipped > 0 {
+        println!(
+            "{} {} of {total_count} {} already uploaded, uploading {} new",
+            style(">").dim(),
+            style(skipped).yellow(),
+            if total_count == 1 { "image" } else { "images" },
+            style(upload_count).yellow(),
         );
     }
 
-    let result = runtime.block_on(async { many_builder.send().await.error_for_failures().await });
-    if let Err(errors) = result {
-        let errors: Vec<_> = errors.collect();
-        let error_count = errors.len();
-        eprintln!("There were errors uploading images:");
-        for error in errors {
-            let error = anyhow::Error::new(error);
-            eprintln!("  {}", style(format!("{error:#}")).red());
+    if upload_count > 0 {
+        let mut many_builder = session.many();
+        for prepared in missing_uploads {
+            many_builder = many_builder.push(
+                session
+                    .put_path(prepared.path.clone())
+                    .key(&prepared.key)
+                    .expiration_policy(expiration),
+            );
         }
-        anyhow::bail!("Failed to upload {error_count} images");
+
+        let result =
+            runtime.block_on(async { many_builder.send().await.error_for_failures().await });
+        if let Err(errors) = result {
+            let errors: Vec<_> = errors.collect();
+            let error_count = errors.len();
+            eprintln!("There were errors uploading images:");
+            for error in errors {
+                let error = anyhow::Error::new(error);
+                eprintln!("  {}", style(format!("{error:#}")).red());
+            }
+            anyhow::bail!("Failed to upload {error_count} images");
+        }
     }
 
     println!(
-        "{} Uploaded {} image {}",
+        "{} Uploaded {} new image {}",
         style(">").dim(),
-        style(total_count).yellow(),
-        if total_count == 1 { "file" } else { "files" }
+        style(upload_count).yellow(),
+        if upload_count == 1 { "file" } else { "files" }
     );
     Ok(manifest_entries)
 }
