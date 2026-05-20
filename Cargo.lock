@@ -2300,9 +2300,9 @@ dependencies = [
 
 [[package]]
 name = "objectstore-client"
-version = "0.1.6"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "f99caa869461b61decd1985c029d7e1462d1bde8e2448040db27d567165fcc1e"
+checksum = "754d0120cf9036efad549de3d65223998b5b7ab00943686dd96acdb926a0cfe6"
 dependencies = [
  "async-compression",
  "bytes",
@@ -2323,9 +2323,9 @@ dependencies = [
 
 [[package]]
 name = "objectstore-types"
-version = "0.1.6"
+version = "0.1.9"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c375bccef8773d1739eabb7e2b1bbd7e9a9071c8f9557e3b50dce7220e8c8736"
+checksum = "75d2e3c60712032c880ec7fc56cd01856eb438968957b4c136acd4e6d66f3580"
 dependencies = [
  "http",
  "humantime",
@@ -3410,6 +3410,7 @@ dependencies = [
  "dotenvy",
  "elementtree",
  "flate2",
+ "futures-util",
  "git2",
  "glob",
  "http",

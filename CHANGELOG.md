@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Performance
+
+- (snapshots) Skip uploading images that already exist in objectstore by batch-checking with HEAD requests first ([#3305](https://github.com/getsentry/sentry-cli/pull/3305))
+
 ### Fixes
 
 - (snapshots) Reject snapshot uploads that have a PR number but no base SHA, since comparisons cannot work without a base reference ([#3300](https://github.com/getsentry/sentry-cli/pull/3300))
