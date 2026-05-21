@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.4.3
 
 ### Security Fixes
 
