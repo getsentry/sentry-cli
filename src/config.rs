@@ -3,7 +3,7 @@ use std::env;
 use std::env::VarError;
 use std::fs;
 use std::fs::OpenOptions;
-use std::io;
+use std::io::{self, Write as _};
 use std::num::ParseIntError;
 use std::path::{Path, PathBuf};
 use std::sync::Arc;
@@ -16,6 +16,7 @@ use log::{debug, info, set_max_level, warn};
 use parking_lot::Mutex;
 use secrecy::ExposeSecret as _;
 use sentry::types::Dsn;
+use uuid::Uuid;
 
 use crate::constants::CONFIG_INI_FILE_PATH;
 use crate::constants::DEFAULT_MAX_DIF_ITEM_SIZE;
@@ -154,8 +155,17 @@ impl Config {
 
     /// Write the current config state back into the file.
     pub fn save(&self) -> Result<()> {
+        // Make a unique temp path, containing a random UUID
+        let temp_path = self
+            .filename
+            .clone()
+            .with_added_extension(Uuid::new_v4().to_string());
+
         let mut options = OpenOptions::new();
-        options.write(true).truncate(true).create(true);
+
+        // Set options so that the file fails to be written if it already exists. It should not
+        // exist, because the path contains a random UUID.
+        options.write(true).create_new(true);
 
         // Remove all non-user permissions for the newly created file
         #[cfg(not(windows))]
@@ -164,9 +174,17 @@ impl Config {
             options.mode(0o600);
         }
 
-        let mut file = options.open(&self.filename)?;
-        self.ini.write_to(&mut file)?;
-        Ok(())
+        {
+            let mut file = options.open(&temp_path)?;
+            self.ini.write_to(&mut file).and_then(|()| file.flush())
+            // drop file handle
+        }
+        .and_then(|()| fs::rename(&temp_path, &self.filename))
+        .inspect_err(|_| {
+            // Best-effort cleanup attempt of the temporary file; errors intentionally ignored.
+            let _ = fs::remove_file(&temp_path);
+        })
+        .map_err(Into::into)
     }
 
     /// Returns the auth info
@@ -772,6 +790,26 @@ mod tests {
     use log::LevelFilter;
 
     use super::*;
+
+    #[cfg(not(windows))]
+    #[test]
+    fn save_restricts_existing_file_permissions() {
+        use std::os::unix::fs::PermissionsExt as _;
+
+        let dir = tempfile::tempdir().unwrap();
+        let filename = dir.path().join(".sentryclirc");
+        fs::write(&filename, "[defaults]\nurl=https://sentry.io/\n").unwrap();
+        fs::set_permissions(&filename, fs::Permissions::from_mode(0o644)).unwrap();
+
+        Config::from_file(filename.clone(), Ini::new())
+            .save()
+            .unwrap();
+
+        assert_eq!(
+            fs::metadata(filename).unwrap().permissions().mode() & 0o777,
+            0o600
+        );
+    }
 
     #[test]
     fn test_get_api_endpoint() {
