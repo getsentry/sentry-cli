@@ -10,6 +10,7 @@ mod data_types;
 mod encoding;
 mod errors;
 mod pagination;
+mod updating;
 
 use std::borrow::Cow;
 use std::cell::RefCell;
@@ -62,6 +63,7 @@ use encoding::{PathArg, QueryArg};
 use errors::{ApiError, ApiErrorKind, ApiResult, SentryError};
 
 pub use self::data_types::*;
+pub use crate::api::updating::ReleaseRegistryFile;
 
 lazy_static! {
     static ref API: Mutex<Option<Arc<Api>>> = Mutex::new(None);
@@ -344,13 +346,13 @@ impl Api {
 
         if resp.status() == 200 {
             let info: RegistryRelease = resp.convert()?;
-            for (filename, _download_url) in info.file_urls {
+            for (filename, _download_url) in info.files {
                 info!("Found asset {filename}");
                 if filename == ref_name {
                     return Ok(Some(SentryCliRelease {
                         version: info.version,
                         #[cfg(not(feature = "managed"))]
-                        download_url: _download_url,
+                        download_info: _download_url,
                     }));
                 }
             }
@@ -2199,17 +2201,17 @@ pub struct ReleaseCommit {
     pub id: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Deserialize)]
 struct RegistryRelease {
     version: String,
-    file_urls: HashMap<String, String>,
+    files: HashMap<String, ReleaseRegistryFile>,
 }
 
 /// Information about sentry CLI releases
 pub struct SentryCliRelease {
     pub version: String,
     #[cfg(not(feature = "managed"))]
-    pub download_url: String,
+    pub download_info: ReleaseRegistryFile,
 }
 
 #[derive(Debug, Deserialize, Default)]

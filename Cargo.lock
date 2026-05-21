@@ -2781,6 +2781,7 @@ dependencies = [
  "serde_json",
  "serial_test",
  "sha1_smol",
+ "sha2",
  "sourcemap",
  "symbolic",
  "tempfile",
@@ -3446,9 +3447,9 @@ dependencies = [
 
 [[package]]
 name = "typenum"
-version = "1.18.0"
+version = "1.20.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "1dccffe3ce07af9386bfd29e80c0ab1a8205a2fc34e4bcd40364df902cfa8f3f"
+checksum = "40ce102ab67701b8526c123c1bab5cbe42d7040ccfd0f64af1a385808d2f43de"
 
 [[package]]
 name = "ucd-trie"
