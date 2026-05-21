@@ -18,6 +18,8 @@ use log::{debug, info};
 use semver::Version;
 use serde::{Deserialize, Serialize};
 
+#[cfg(not(feature = "managed"))]
+use crate::api::ReleaseRegistryFile;
 use crate::api::{Api, SentryCliRelease};
 use crate::config::Config;
 use crate::constants::{APP_NAME, VERSION};
@@ -148,9 +150,9 @@ impl SentryCliUpdateInfo {
     }
 
     #[cfg(not(feature = "managed"))]
-    pub fn download_url(&self) -> Result<&str> {
+    pub fn download_info(&self) -> Result<&ReleaseRegistryFile> {
         if let Some(ref rel) = self.latest_release {
-            Ok(rel.download_url.as_str())
+            Ok(&rel.download_info)
         } else {
             bail!("Could not get download URL for latest release.");
         }
@@ -158,6 +160,11 @@ impl SentryCliUpdateInfo {
 
     #[cfg(not(feature = "managed"))]
     pub fn download(&self) -> Result<()> {
+        use std::fs::OpenOptions;
+        use std::io::{Seek as _, SeekFrom};
+
+        use sha2::{Digest as _, Sha256};
+
         let exe = env::current_exe()?;
         let elevate = !is_writable(&exe);
         info!("expecting elevation for update: {elevate}");
@@ -166,15 +173,33 @@ impl SentryCliUpdateInfo {
         } else {
             exe.parent().unwrap().join(".sentry-cli.part")
         };
-        let mut f = fs::File::create(&tmp_path)?;
+        let mut f = OpenOptions::new()
+            .create(true)
+            .write(true)
+            .read(true)
+            .truncate(true)
+            .open(&tmp_path)?;
+
         let api = Api::current();
-        match api.download_with_progress(self.download_url()?, &mut f) {
+        let ReleaseRegistryFile { url, checksum } = self.download_info()?;
+        match api.download_with_progress(url, &mut f) {
             Ok(_) => {}
             Err(err) => {
                 fs::remove_file(tmp_path).ok();
                 bail!(err);
             }
         };
+        f.flush()?;
+
+        f.seek(SeekFrom::Start(0))?;
+        let mut hasher = Sha256::new();
+        io::copy(&mut f, &mut hasher)?;
+        let hash = hasher.finalize();
+
+        if *checksum != hash {
+            fs::remove_file(tmp_path).ok();
+            bail!("checksum mismatch");
+        }
 
         #[cfg(not(windows))]
         set_executable_mode(&tmp_path)?;

@@ -11,7 +11,7 @@ impl DefaultTags for Vec<(String, String)> {
         let contains_release = self.iter().any(|(key, _)| key == "release");
         let contains_environment = self.iter().any(|(key, _)| key == "environment");
         if !contains_release {
-            if let Ok(release) = releases::detect_release_name() {
+            if let Ok(release) = releases::detect_release_name(false) {
                 self.push(("release".into(), release));
             }
         }

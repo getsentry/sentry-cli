@@ -68,6 +68,16 @@ pub fn validate_distribution(v: &str) -> Result<String, String> {
     }
 }
 
+pub fn allow_xcode_infoplist_preprocessing_arg() -> Arg {
+    Arg::new("allow_xcode_infoplist_preprocessing")
+        .long("allow-xcode-infoplist-preprocessing")
+        .action(ArgAction::SetTrue)
+        .help(
+            "Allow Xcode Info.plist preprocessing with cc. This passes Xcode project settings to \
+            the compiler. Do not use with untrusted code!",
+        )
+}
+
 pub fn get_timestamp(value: &str) -> Result<DateTime<Utc>> {
     if let Ok(int) = value.parse::<i64>() {
         #[expect(clippy::unwrap_used, reason = "legacy code")]

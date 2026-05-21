@@ -1,5 +1,16 @@
 # Changelog
 
+## Unreleased
+
+### Security Fixes
+
+- **Behavior-breaking**: Disable Xcode `Info.plist` preprocessing by default to avoid passing project-controlled compiler settings to `cc` during release auto-discovery. This affects `sentry-cli releases propose-version`, `sentry-cli send-event` and `sentry-cli bash-hook --send-event` release inference, and `sentry-cli react-native xcode` auto-release detection. Use `--allow-xcode-infoplist-preprocessing` only for trusted projects that require preprocessing.
+- Ensure restrictive file permissions maintained when `sentry-cli login` updates existing config files.
+- Disable TLS verification only when `http.verify_ssl` is set to `false`, case-insensitively.
+- Shell-escape generated `bash-hook` arguments, including paths, tags, release names, and the CLI path.
+- Stop sending environment variables in `sentry-cli bash-hook` events.
+- Verify the downloaded binary checksum before replacing the current executable in `sentry-cli update`.
+
 ## 2.58.5
 
 ### Fixes

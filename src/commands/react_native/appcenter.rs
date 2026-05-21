@@ -14,7 +14,9 @@ use crate::api::Api;
 use crate::config::Config;
 use crate::constants::DEFAULT_MAX_WAIT;
 use crate::utils::appcenter::{get_appcenter_package, get_react_native_appcenter_release};
-use crate::utils::args::{validate_distribution, ArgExt as _};
+use crate::utils::args::{
+    allow_xcode_infoplist_preprocessing_arg, validate_distribution, ArgExt as _,
+};
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::sourcemaps::SourceMapProcessor;
@@ -108,6 +110,7 @@ pub fn make_command(command: Command) -> Command {
                      but at most for the given number of seconds.",
                 ),
         )
+        .arg(allow_xcode_infoplist_preprocessing_arg())
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -146,6 +149,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         matches
             .get_one::<String>("release_name")
             .map(String::as_str),
+        matches.get_flag("allow_xcode_infoplist_preprocessing"),
     )?;
     if print_release_name {
         println!("{release}");

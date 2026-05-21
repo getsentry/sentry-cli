@@ -76,6 +76,10 @@ Options:
       --logfile <PATH>
           Send a logfile as breadcrumbs with the event (last 100 records)
 
+      --allow-xcode-infoplist-preprocessing
+          Allow Xcode Info.plist preprocessing with cc. This passes Xcode project settings to the
+          compiler. Do not use with untrusted code!
+
       --with-categories
           When logfile is provided, this flag will try to assign correct level to extracted log
           breadcrumbs. It uses standard log format of "category: message". eg. "INFO: Something

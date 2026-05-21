@@ -1,6 +1,11 @@
 use crate::integration::{ServerBehavior, TestManager};
 
 #[test]
+fn xcode_help() {
+    TestManager::new().register_trycmd_test("react_native/xcode-help.trycmd");
+}
+
+#[test]
 fn xcode_upload_source_maps_missing_plist() {
     TestManager::new()
         .mock_common_upload_endpoints(ServerBehavior::Modern, Default::default())

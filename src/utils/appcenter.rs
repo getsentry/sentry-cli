@@ -149,6 +149,7 @@ pub fn get_react_native_appcenter_release(
     bundle_id_override: Option<&str>,
     version_name_override: Option<&str>,
     release_name_override: Option<&str>,
+    allow_xcode_infoplist_preprocessing: bool,
 ) -> Result<String> {
     let bundle_id_ovrr = bundle_id_override.unwrap_or("");
     let version_name_ovrr = version_name_override.unwrap_or("");
@@ -175,8 +176,12 @@ pub fn get_react_native_appcenter_release(
 
         for entry in (glob_with("ios/*.xcodeproj", opts)?).flatten() {
             let pi = XcodeProjectInfo::from_path(entry)?;
-            if let Some(ipl) = InfoPlist::from_project_info(&pi)? {
-                if let Some(release_name) = get_xcode_release_name(Some(ipl))? {
+            if let Some(ipl) =
+                InfoPlist::from_project_info(&pi, allow_xcode_infoplist_preprocessing)?
+            {
+                if let Some(release_name) =
+                    get_xcode_release_name(Some(ipl), allow_xcode_infoplist_preprocessing)?
+                {
                     let vec: Vec<&str> = release_name.split('@').collect();
                     let bundle_id = if bundle_id_ovrr.is_empty() {
                         vec[0]
