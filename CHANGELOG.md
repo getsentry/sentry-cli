@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- (bash-hook) We no longer send environment variables in `sentry-cli bash-hook`.
+
 ## 2.58.5
 
 ### Fixes

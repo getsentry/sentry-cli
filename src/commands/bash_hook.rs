@@ -11,7 +11,7 @@ use anyhow::{format_err, Result};
 use clap::{builder::ArgPredicate, Arg, ArgAction, ArgMatches, Command};
 use lazy_static::lazy_static;
 use regex::Regex;
-use sentry::protocol::{Event, Exception, Frame, Stacktrace, User, Value};
+use sentry::protocol::{Event, Exception, Frame, Stacktrace, User};
 use uuid::Uuid;
 
 use crate::commands::send_event;
@@ -40,8 +40,9 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("no_environ")
                 .long("no-environ")
+                .hide(true)
                 .action(ArgAction::SetTrue)
-                .help("Do not send environment variables along"),
+                .help("No-op, as we never send envrionment variables."),
         )
         .arg(
             Arg::new("cli")
@@ -87,7 +88,6 @@ fn send_event(
     logfile: &str,
     tags: &[&String],
     release: Option<String>,
-    environ: bool,
 ) -> Result<()> {
     let config = Config::current();
 
@@ -110,13 +110,6 @@ fn send_event(
             .next()
             .ok_or_else(|| format_err!("missing tag value"))?;
         event.tags.insert(key.into(), value.into());
-    }
-
-    if environ {
-        event.extra.insert(
-            "environ".into(),
-            Value::Object(env::vars().map(|(k, v)| (k, Value::String(v))).collect()),
-        );
     }
 
     let mut cmd = "unknown".to_owned();
@@ -226,7 +219,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             matches.get_one::<String>("log").unwrap(),
             &tags,
             release,
-            !matches.get_flag("no_environ"),
         );
     }
 
@@ -270,12 +262,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             String::clone,
         )),
     );
-
-    if matches.get_flag("no_environ") {
-        script = script.replace("___SENTRY_NO_ENVIRON___", "--no-environ");
-    } else {
-        script = script.replace("___SENTRY_NO_ENVIRON___", "");
-    }
 
     if !matches.get_flag("no_exit") {
         script.insert_str(0, "set -e\n\n");
