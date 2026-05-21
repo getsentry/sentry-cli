@@ -4,6 +4,7 @@
 
 ### Fixes
 
+- **Behavior-breaking**: Disable Xcode `Info.plist` preprocessing by default to avoid passing project-controlled compiler settings to `cc` during release auto-discovery. This affects `sentry-cli releases propose-version`, `sentry-cli send-event` and `sentry-cli bash-hook --send-event` release inference, and `sentry-cli react-native xcode` auto-release detection. Use `--allow-xcode-infoplist-preprocessing` only for trusted projects that require preprocessing.
 - (bash-hook) We no longer send environment variables in `sentry-cli bash-hook`.
 
 ## 2.58.5
