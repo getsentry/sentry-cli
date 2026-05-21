@@ -302,12 +302,14 @@ impl Config {
     }
 
     /// Indicates whether SSL verification should be on or off.
+    ///
+    /// Parses the `verify_ssl` key fron the `http` section. Returns `false` only when the key
+    /// equals `"false"` on a case-insensitive basis; returns `true` otherwise.
     pub fn should_verify_ssl(&self) -> bool {
-        let val = self.ini.get_from(Some("http"), "verify_ssl");
-        match val {
-            None => true,
-            Some(val) => val == "true",
-        }
+        self.ini
+            .get_from(Some("http"), "verify_ssl")
+            .map(|val| !val.eq_ignore_ascii_case("false"))
+            .unwrap_or(true)
     }
 
     /// Controls the SSL revocation check on windows.  This can be used as a
