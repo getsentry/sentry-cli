@@ -44,10 +44,14 @@ pub fn get_cordova_release_name(path: Option<PathBuf>) -> Result<Option<String>>
     }
 }
 
-pub fn get_xcode_release_name(plist: Option<InfoPlist>) -> Result<Option<String>> {
-    // if we are executed from within xcode, then we can use the environment
-    // based discovery to get a release name without any interpolation.
-    if let Some(plist) = plist.or(InfoPlist::discover_from_env()?) {
+pub fn get_xcode_release_name(
+    plist: Option<InfoPlist>,
+    allow_xcode_infoplist_preprocessing: bool,
+) -> Result<Option<String>> {
+    // If we are executed from within Xcode, use environment-based discovery.
+    if let Some(plist) = plist.or(InfoPlist::discover_from_env(
+        allow_xcode_infoplist_preprocessing,
+    )?) {
         return Ok(Some(plist.get_release_name()));
     }
 
@@ -86,7 +90,7 @@ pub fn infer_gradle_release_name(path: Option<PathBuf>) -> Result<Option<String>
 }
 
 /// Detects the release name for the current working directory.
-pub fn detect_release_name() -> Result<String> {
+pub fn detect_release_name(allow_xcode_infoplist_preprocessing: bool) -> Result<String> {
     // try SENTRY_RELEASE environment variable
     if let Ok(release) = env::var("SENTRY_RELEASE") {
         if !release.is_empty() {
@@ -145,7 +149,7 @@ pub fn detect_release_name() -> Result<String> {
     // xcodebuild which does not exist anywhere but there.
     if_chain! {
         if cfg!(target_os="macos");
-        if let Some(release) = get_xcode_release_name(None)?;
+        if let Some(release) = get_xcode_release_name(None, allow_xcode_infoplist_preprocessing)?;
         then {
             return Ok(release)
         }

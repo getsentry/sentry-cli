@@ -189,15 +189,18 @@ impl XcodeProjectInfo {
 
 impl InfoPlist {
     /// Loads a processed plist file.
-    pub fn discover_from_env() -> Result<Option<InfoPlist>> {
-        // if we are loaded directly from xcode we can trust the os environment
-        // and pass those variables to the processor.
+    pub fn discover_from_env(allow_infoplist_preprocessing: bool) -> Result<Option<InfoPlist>> {
+        // If we are loaded directly from Xcode, use the environment for plist discovery.
         if env::var("XCODE_VERSION_ACTUAL").is_ok() {
             let vars: HashMap<_, _> = env::vars().collect();
             if let Some(filename) = vars.get("INFOPLIST_FILE") {
                 let base = vars.get("PROJECT_DIR").map(String::as_str).unwrap_or(".");
                 let path = env::current_dir().unwrap().join(base).join(filename);
-                Ok(Some(InfoPlist::load_and_process(path, &vars)?))
+                Ok(Some(InfoPlist::load_and_process(
+                    path,
+                    &vars,
+                    allow_infoplist_preprocessing,
+                )?))
             } else if let Ok(default_plist) = InfoPlist::from_env_vars(&vars) {
                 Ok(Some(default_plist))
             } else {
@@ -212,7 +215,7 @@ impl InfoPlist {
                 if let Ok(here) = env::current_dir();
                 if let Some(pi) = get_xcode_project_info(&here)?;
                 then {
-                    InfoPlist::from_project_info(&pi)
+                    InfoPlist::from_project_info(&pi, allow_infoplist_preprocessing)
                 } else {
                     Ok(None)
                 }
@@ -221,7 +224,10 @@ impl InfoPlist {
     }
 
     /// Loads an info plist from a given project info
-    pub fn from_project_info(pi: &XcodeProjectInfo) -> Result<Option<InfoPlist>> {
+    pub fn from_project_info(
+        pi: &XcodeProjectInfo,
+        allow_infoplist_preprocessing: bool,
+    ) -> Result<Option<InfoPlist>> {
         if_chain! {
             if let Some(config) = pi.get_configuration("release")
                 .or_else(|| pi.get_configuration("debug"));
@@ -234,7 +240,11 @@ impl InfoPlist {
                     let base = vars.get("PROJECT_DIR").map(Path::new)
                         .unwrap_or_else(|| pi.base_path());
                     let path = base.join(path);
-                    return Ok(Some(InfoPlist::load_and_process(path, &vars)?))
+                    return Ok(Some(InfoPlist::load_and_process(
+                        path,
+                        &vars,
+                        allow_infoplist_preprocessing,
+                    )?))
                 }
             }
         }
@@ -245,9 +255,12 @@ impl InfoPlist {
     pub fn load_and_process<P: AsRef<Path>>(
         path: P,
         vars: &HashMap<String, String>,
+        allow_infoplist_preprocessing: bool,
     ) -> Result<InfoPlist> {
         // do we want to preprocess the plist file?
-        let plist = if vars.get("INFOPLIST_PREPROCESS").map(String::as_str) == Some("YES") {
+        let should_preprocess = allow_infoplist_preprocessing
+            && vars.get("INFOPLIST_PREPROCESS").map(String::as_str) == Some("YES");
+        let plist = if should_preprocess {
             let mut c = process::Command::new("cc");
             c.arg("-xc").arg("-P").arg("-E");
             if let Some(defs) = vars.get("INFOPLIST_OTHER_PREPROCESSOR_FLAGS") {

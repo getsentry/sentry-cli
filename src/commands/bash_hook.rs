@@ -11,11 +11,12 @@ use anyhow::{format_err, Result};
 use clap::{builder::ArgPredicate, Arg, ArgAction, ArgMatches, Command};
 use lazy_static::lazy_static;
 use regex::Regex;
-use sentry::protocol::{Event, Exception, Frame, Stacktrace, User, Value};
+use sentry::protocol::{Event, Exception, Frame, Stacktrace, User};
 use uuid::Uuid;
 
 use crate::commands::send_event;
 use crate::config::Config;
+use crate::utils::args::allow_xcode_infoplist_preprocessing_arg;
 use crate::utils::event::{attach_logfile, get_sdk_info};
 use crate::utils::releases::detect_release_name;
 
@@ -40,8 +41,9 @@ pub fn make_command(command: Command) -> Command {
         .arg(
             Arg::new("no_environ")
                 .long("no-environ")
+                .hide(true)
                 .action(ArgAction::SetTrue)
-                .help("Do not send environment variables along"),
+                .help("No-op, as we never send envrionment variables."),
         )
         .arg(
             Arg::new("cli")
@@ -49,6 +51,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("CMD")
                 .help("Explicitly set/override the sentry-cli command"),
         )
+        .arg(allow_xcode_infoplist_preprocessing_arg())
         .arg(
             Arg::new("send_event")
                 .long("send-event")
@@ -87,13 +90,15 @@ fn send_event(
     logfile: &str,
     tags: &[&String],
     release: Option<String>,
-    environ: bool,
+    allow_xcode_infoplist_preprocessing: bool,
 ) -> Result<()> {
     let config = Config::current();
 
     let mut event = Event {
         environment: config.get_environment().map(Into::into),
-        release: release.or(detect_release_name().ok()).map(Into::into),
+        release: release
+            .or(detect_release_name(allow_xcode_infoplist_preprocessing).ok())
+            .map(Into::into),
         sdk: Some(get_sdk_info()),
         user: whoami::fallible::username().ok().map(|n| User {
             username: Some(n),
@@ -110,13 +115,6 @@ fn send_event(
             .next()
             .ok_or_else(|| format_err!("missing tag value"))?;
         event.tags.insert(key.into(), value.into());
-    }
-
-    if environ {
-        event.extra.insert(
-            "environ".into(),
-            Value::Object(env::vars().map(|(k, v)| (k, Value::String(v))).collect()),
-        );
     }
 
     let mut cmd = "unknown".to_owned();
@@ -208,6 +206,10 @@ fn send_event(
     Ok(())
 }
 
+fn shell_quote(value: &str) -> String {
+    format!("'{}'", value.replace('\'', r"'\''"))
+}
+
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let release = Config::current().get_release(matches).ok();
 
@@ -222,7 +224,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             matches.get_one::<String>("log").unwrap(),
             &tags,
             release,
-            !matches.get_flag("no_environ"),
+            matches.get_flag("allow_xcode_infoplist_preprocessing"),
         );
     }
 
@@ -235,15 +237,18 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let mut script = BASH_SCRIPT
         .replace(
             "___SENTRY_TRACEBACK_FILE___",
-            &traceback.display().to_string(),
+            &shell_quote(&traceback.display().to_string()),
         )
-        .replace("___SENTRY_LOG_FILE___", &log.display().to_string());
+        .replace(
+            "___SENTRY_LOG_FILE___",
+            &shell_quote(&log.display().to_string()),
+        );
 
     script = script.replace(
         " ___SENTRY_TAGS___",
         &tags
             .iter()
-            .map(|tag| format!(" --tag \"{tag}\""))
+            .map(|tag| format!(" --tag {}", shell_quote(tag)))
             .collect::<Vec<_>>()
             .join(""),
     );
@@ -251,26 +256,26 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     script = match release {
         Some(release) => script.replace(
             " ___SENTRY_RELEASE___",
-            format!(" --release \"{release}\"").as_str(),
+            format!(" --release {}", shell_quote(&release)).as_str(),
         ),
         None => script.replace(" ___SENTRY_RELEASE___", ""),
     };
 
     script = script.replace(
         "___SENTRY_CLI___",
-        matches
-            .get_one::<String>("cli")
-            .map_or_else(
-                || env::current_exe().unwrap().display().to_string(),
-                String::clone,
-            )
-            .as_str(),
+        &shell_quote(&matches.get_one::<String>("cli").map_or_else(
+            || env::current_exe().unwrap().display().to_string(),
+            String::clone,
+        )),
     );
 
-    if matches.get_flag("no_environ") {
-        script = script.replace("___SENTRY_NO_ENVIRON___", "--no-environ");
+    if matches.get_flag("allow_xcode_infoplist_preprocessing") {
+        script = script.replace(
+            " ___SENTRY_ALLOW_XCODE_INFOPLIST_PREPROCESSING___",
+            " --allow-xcode-infoplist-preprocessing",
+        );
     } else {
-        script = script.replace("___SENTRY_NO_ENVIRON___", "");
+        script = script.replace(" ___SENTRY_ALLOW_XCODE_INFOPLIST_PREPROCESSING___", "");
     }
 
     if !matches.get_flag("no_exit") {
@@ -278,4 +283,17 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
     println!("{script}");
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::shell_quote;
+
+    #[test]
+    fn shell_quote_handles_special_characters() {
+        assert_eq!(
+            shell_quote("it's $(unsafe); && ok"),
+            "'it'\\''s $(unsafe); && ok'"
+        );
+    }
 }

@@ -18,7 +18,9 @@ use serde_json::Value;
 use crate::api::Api;
 use crate::config::Config;
 use crate::constants::DEFAULT_MAX_WAIT;
-use crate::utils::args::{validate_distribution, ArgExt as _};
+use crate::utils::args::{
+    allow_xcode_infoplist_preprocessing_arg, validate_distribution, ArgExt as _,
+};
 use crate::utils::file_search::ReleaseFileSearch;
 use crate::utils::file_upload::UploadContext;
 use crate::utils::fs::TempFile;
@@ -122,6 +124,7 @@ pub fn make_command(command: Command) -> Command {
                      but at most for the given number of seconds.",
                 ),
         )
+        .arg(allow_xcode_infoplist_preprocessing_arg())
         .arg(
             Arg::new("no_auto_release")
                 .long("no-auto-release")
@@ -358,7 +361,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             (Err(_), Err(_)) => {
                 // Neither environment variable is present, attempt to parse Info.plist
                 info!("Parsing Info.plist");
-                match InfoPlist::discover_from_env() {
+                match InfoPlist::discover_from_env(
+                    matches.get_flag("allow_xcode_infoplist_preprocessing"),
+                ) {
                     Ok(Some(plist)) => {
                         // Successfully discovered and parsed Info.plist
                         let dist_string = plist.build().to_owned();
