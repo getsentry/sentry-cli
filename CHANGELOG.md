@@ -9,6 +9,7 @@
 ### Fixes
 
 - (snapshots) Reject snapshot uploads that have a PR number but no base SHA, since comparisons cannot work without a base reference ([#3300](https://github.com/getsentry/sentry-cli/pull/3300))
+- (bash-hook) We no longer send environment variables in `sentry-cli bash-hook`.
 
 ## 3.4.2
 
