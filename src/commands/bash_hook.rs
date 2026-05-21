@@ -16,6 +16,7 @@ use uuid::Uuid;
 
 use crate::commands::send_event;
 use crate::config::Config;
+use crate::utils::args::allow_xcode_infoplist_preprocessing_arg;
 use crate::utils::event::{attach_logfile, get_sdk_info};
 use crate::utils::releases::detect_release_name;
 
@@ -50,6 +51,7 @@ pub fn make_command(command: Command) -> Command {
                 .value_name("CMD")
                 .help("Explicitly set/override the sentry-cli command"),
         )
+        .arg(allow_xcode_infoplist_preprocessing_arg())
         .arg(
             Arg::new("send_event")
                 .long("send-event")
@@ -88,12 +90,15 @@ fn send_event(
     logfile: &str,
     tags: &[&String],
     release: Option<String>,
+    allow_xcode_infoplist_preprocessing: bool,
 ) -> Result<()> {
     let config = Config::current();
 
     let mut event = Event {
         environment: config.get_environment().map(Into::into),
-        release: release.or(detect_release_name().ok()).map(Into::into),
+        release: release
+            .or(detect_release_name(allow_xcode_infoplist_preprocessing).ok())
+            .map(Into::into),
         sdk: Some(get_sdk_info()),
         user: whoami::fallible::username().ok().map(|n| User {
             username: Some(n),
@@ -219,6 +224,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             matches.get_one::<String>("log").unwrap(),
             &tags,
             release,
+            matches.get_flag("allow_xcode_infoplist_preprocessing"),
         );
     }
 
@@ -262,6 +268,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             String::clone,
         )),
     );
+
+    if matches.get_flag("allow_xcode_infoplist_preprocessing") {
+        script = script.replace(
+            " ___SENTRY_ALLOW_XCODE_INFOPLIST_PREPROCESSING___",
+            " --allow-xcode-infoplist-preprocessing",
+        );
+    } else {
+        script = script.replace(" ___SENTRY_ALLOW_XCODE_INFOPLIST_PREPROCESSING___", "");
+    }
 
     if !matches.get_flag("no_exit") {
         script.insert_str(0, "set -e\n\n");

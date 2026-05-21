@@ -1,0 +1,61 @@
+```
+$ sentry-cli react-native xcode --help
+? success
+Upload react-native projects in a Xcode build step.
+
+Usage: sentry-cli react-native xcode [OPTIONS] [BUILD_SCRIPT] [-- <ARGS>...]
+
+Arguments:
+  [BUILD_SCRIPT]  Optional path to the build script.
+                  This is the path to the `react-native-xcode.sh` script you want to use.  By
+                  default the bundled build script is used.
+  [ARGS]...       Optional arguments to pass to the build script.
+
+Options:
+  -o, --org <ORG>
+          The organization ID or slug.
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
+  -p, --project <PROJECT>
+          The project ID or slug.
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
+  -f, --force
+          Force the script to run, even in debug configuration.
+          This rarely does what you want because the default build script does not actually produce
+          any information that the sentry build tool could pick up on.
+      --allow-fetch
+          Enable sourcemap fetching from the packager.
+          If this is enabled the react native packager needs to run and sourcemaps are downloade
+          from it if the simulator platform is detected.
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+      --fetch-from <URL>
+          Set the URL to fetch sourcemaps from.
+          The default is http://127.0.0.1:8081/, where the react-native packager runs by default.
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands. [aliases: --silent]
+      --force-foreground
+          Wait for the process to finish.
+          By default part of the build process will when triggered from Xcode detach and continue in
+          the background.  When an error happens, a dialog is shown.  If this parameter is passed,
+          Xcode will wait for the process to finish before the build finishes and output will be
+          shown in the Xcode build output.
+      --dist <DISTRIBUTION>
+          The names of the distributions to publish. Can be supplied multiple times.
+      --wait
+          Wait for the server to fully process uploaded files.
+      --wait-for <SECS>
+          Wait for the server to fully process uploaded files, but at most for the given number of
+          seconds.
+      --allow-xcode-infoplist-preprocessing
+          Allow Xcode Info.plist preprocessing with cc. This passes Xcode project settings to the
+          compiler. Do not use with untrusted code!
+      --no-auto-release
+          Don't try to automatically read release from Xcode project files.
+  -h, --help
+          Print help
+
+```

@@ -16,7 +16,9 @@ use serde_json::Value;
 
 use crate::api::envelopes_api::EnvelopesApi;
 use crate::constants::USER_AGENT;
-use crate::utils::args::{get_timestamp, validate_distribution};
+use crate::utils::args::{
+    allow_xcode_infoplist_preprocessing_arg, get_timestamp, validate_distribution,
+};
 use crate::utils::event::{attach_logfile, get_sdk_info};
 use crate::utils::releases::detect_release_name;
 
@@ -148,6 +150,7 @@ pub fn make_command(command: Command) -> Command {
                 .long("logfile")
                 .help(format!("Send a logfile as breadcrumbs with the event (last {MAX_BREADCRUMBS} records)")),
         )
+        .arg(allow_xcode_infoplist_preprocessing_arg())
         .arg(
             Arg::new("with_categories")
                 .long("with-categories")
@@ -231,7 +234,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         release: matches
             .get_one::<String>("release")
             .map(|s| Cow::Owned(s.clone()))
-            .or_else(|| detect_release_name().ok().map(Cow::from)),
+            .or_else(|| {
+                detect_release_name(matches.get_flag("allow_xcode_infoplist_preprocessing"))
+                    .ok()
+                    .map(Cow::from)
+            }),
         dist: matches
             .get_one::<String>("dist")
             .map(|s| Cow::Owned(s.clone())),
