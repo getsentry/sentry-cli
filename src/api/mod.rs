@@ -1036,6 +1036,49 @@ impl AuthenticatedApi<'_> {
         );
         self.get(&path)?.convert()
     }
+
+    pub fn get_latest_base_snapshot(
+        &self,
+        org: &str,
+        app_id: &str,
+        branch: Option<&str>,
+        project: Option<&str>,
+    ) -> ApiResult<Option<LatestBaseSnapshotResponse>> {
+        let mut path = format!(
+            "/organizations/{}/preprodartifacts/snapshots/latest-base/?app_id={}",
+            PathArg(org),
+            QueryArg(app_id),
+        );
+        if let Some(branch) = branch {
+            path.push_str(&format!("&branch={}", QueryArg(branch)));
+        }
+        if let Some(project) = project {
+            path.push_str(&format!("&project={}", QueryArg(project)));
+        }
+        let resp = self.get(&path)?;
+        if resp.status() == 404 {
+            Ok(None)
+        } else {
+            resp.convert()
+        }
+    }
+
+    pub fn download_snapshot_zip(
+        &self,
+        org: &str,
+        snapshot_id: &str,
+        dst: &mut std::fs::File,
+    ) -> ApiResult<ApiResponse> {
+        let path = format!(
+            "/organizations/{}/preprodartifacts/snapshots/{}/download/",
+            PathArg(org),
+            PathArg(snapshot_id),
+        );
+        self.request(Method::Get, &path)?
+            .follow_location(true)?
+            .progress_bar_mode(ProgressBarMode::Response)
+            .send_into(dst)
+    }
 }
 
 /// Available datasets for fetching organization events
@@ -2050,6 +2093,12 @@ pub struct LogEntry {
     pub severity: Option<String>,
     pub timestamp: String,
     pub message: Option<String>,
+}
+
+#[derive(Deserialize)]
+pub struct LatestBaseSnapshotResponse {
+    pub head_artifact_id: String,
+    pub image_count: u64,
 }
 
 /// Upload options returned by the snapshots upload-options endpoint.

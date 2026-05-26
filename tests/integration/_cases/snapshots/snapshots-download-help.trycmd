@@ -1,0 +1,54 @@
+```
+$ sentry-cli snapshots download --help
+? success
+Download baseline snapshot images from Sentry's preprod system to a local directory.
+
+Use --snapshot-id to download a specific snapshot, or --app-id to resolve the latest baseline (org
+auth tokens require --project with a numeric project ID for --app-id).
+
+[EXPERIMENTAL] The "snapshots download" command is experimental. The command is subject to breaking
+changes, including removal, in any Sentry CLI release.
+
+Usage: sentry-cli[EXE] snapshots download [OPTIONS]
+
+Options:
+  -o, --org <ORG>
+          The organization ID or slug.
+
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
+
+  -p, --project <PROJECT>
+          The project ID or slug.
+
+      --app-id <APP_ID>
+          App identifier (e.g. sentry-frontend). Mutually exclusive with --snapshot-id.
+
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
+
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+
+      --snapshot-id <ID>
+          Direct snapshot artifact ID. Mutually exclusive with --app-id.
+
+      --branch <NAME>
+          Git branch filter (only with --app-id).
+
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands.
+          
+          [aliases: --silent]
+
+      --output <DIR>
+          Directory for extracted images.
+          
+          [default: ./snapshots-base/]
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+```
