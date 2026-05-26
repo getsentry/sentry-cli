@@ -17,6 +17,7 @@ pub mod fs;
 pub mod http;
 pub mod logging;
 pub mod non_empty;
+pub mod odiff;
 pub mod progress;
 pub mod proguard;
 pub mod releases;

@@ -23,19 +23,18 @@ use crate::config::Config;
 use crate::utils::args::ArgExt as _;
 use crate::utils::build_vcs::collect_git_metadata;
 use crate::utils::ci::is_ci;
+use crate::utils::fs::IMAGE_EXTENSIONS;
 
 const EXPERIMENTAL_WARNING: &str =
-    "[EXPERIMENTAL] The \"build snapshots\" command is experimental. \
+    "[EXPERIMENTAL] The \"snapshots upload\" command is experimental. \
     The command is subject to breaking changes, including removal, in any Sentry CLI release.";
-
-const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg"];
 const MAX_PIXELS_PER_IMAGE: u64 = 40_000_000;
 
 pub fn make_command(command: Command) -> Command {
     command
-        .about("[EXPERIMENTAL] Upload build snapshots to a project.")
+        .about("[EXPERIMENTAL] Upload snapshots to a project.")
         .long_about(format!(
-            "Upload build snapshots to a project.\n\n{EXPERIMENTAL_WARNING}"
+            "Upload snapshots to a project.\n\n{EXPERIMENTAL_WARNING}"
         ))
         .org_arg()
         .project_arg(false)

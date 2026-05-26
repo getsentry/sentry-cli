@@ -31,6 +31,7 @@ Commands:
   repos            Manage repositories on Sentry.
   send-event       Send a manual event to Sentry.
   send-envelope    Send a stored envelope to Sentry.
+  snapshots        [EXPERIMENTAL] Manage and compare snapshots.
   sourcemaps       Manage sourcemaps for Sentry releases.
   dart-symbol-map  Manage Dart/Flutter symbol maps for Sentry.
   upload-proguard  Upload ProGuard mapping files to a project.
