@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Respect `CURL_CA_BUNDLE` and `SSL_CERT_FILE` when configuring TLS certificate authorities ([#3301](https://github.com/getsentry/sentry-cli/pull/3301)).
+
 ## 3.4.3
 
 ### Security Fixes
