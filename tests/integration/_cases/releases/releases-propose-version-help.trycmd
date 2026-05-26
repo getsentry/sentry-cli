@@ -1,0 +1,29 @@
+```
+$ sentry-cli releases propose-version --help
+? success
+Propose a version name for a new release.
+
+Usage: sentry-cli[EXE] releases propose-version [OPTIONS]
+
+Options:
+      --allow-xcode-infoplist-preprocessing
+          Allow Xcode Info.plist preprocessing with cc. This passes Xcode project settings to the
+          compiler. Do not use with untrusted code!
+  -o, --org <ORG>
+          The organization ID or slug.
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
+  -p, --project <PROJECT>
+          The project ID or slug.
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands. [aliases: --silent]
+  -h, --help
+          Print help
+
+```
