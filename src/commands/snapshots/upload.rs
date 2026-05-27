@@ -250,9 +250,16 @@ fn split_and_trim(input: &str, separator: char) -> Vec<String> {
         .collect()
 }
 
+fn normalize_image_names(names: Vec<String>) -> Vec<String> {
+    names
+        .into_iter()
+        .map(|s| s.strip_prefix("./").unwrap_or(&s).to_string())
+        .collect()
+}
+
 fn parse_all_image_file_names(matches: &ArgMatches) -> Result<Option<Vec<String>>> {
     if let Some(names_str) = matches.get_one::<String>("all_image_file_names") {
-        let names = split_and_trim(names_str, ',');
+        let names = normalize_image_names(split_and_trim(names_str, ','));
         if names.is_empty() {
             anyhow::bail!("--all-image-file-names must not be empty");
         }
@@ -262,7 +269,7 @@ fn parse_all_image_file_names(matches: &ArgMatches) -> Result<Option<Vec<String>
     if let Some(file_path) = matches.get_one::<String>("all_image_file_names_file") {
         let content = std::fs::read_to_string(file_path)
             .with_context(|| format!("Failed to read --all-image-file-names-file: {file_path}"))?;
-        let names = split_and_trim(&content, '\n');
+        let names = normalize_image_names(split_and_trim(&content, '\n'));
         if names.is_empty() {
             anyhow::bail!(
                 "--all-image-file-names-file is empty or contains only blank lines: {file_path}"
@@ -602,6 +609,19 @@ mod tests {
         assert_eq!(
             split_and_trim("a.png\nb.png\n\nc.png\n", '\n'),
             vec!["a.png", "b.png", "c.png"]
+        );
+    }
+
+    #[test]
+    fn test_normalize_image_names_strips_dot_slash() {
+        let input = vec![
+            "./img/a.png".to_string(),
+            "./img/b.png".to_string(),
+            "img/c.png".to_string(),
+        ];
+        assert_eq!(
+            normalize_image_names(input),
+            vec!["img/a.png", "img/b.png", "img/c.png"]
         );
     }
 }
