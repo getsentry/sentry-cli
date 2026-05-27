@@ -49,9 +49,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
     each_subcommand!(execute_subcommand);
     if let Some(sub_matches) = matches.subcommand_matches("snapshots") {
-        eprintln!(
-            "WARNING: `sentry-cli build snapshots` is deprecated. \
-             Use `sentry-cli snapshots upload` instead."
+        log::warn!(
+            "`sentry-cli build snapshots` is deprecated. Use `sentry-cli snapshots upload` instead."
         );
         return crate::commands::snapshots::upload::execute(sub_matches);
     }
