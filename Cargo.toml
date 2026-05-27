@@ -69,7 +69,6 @@ sha1_smol = { version = "1.0.0", features = ["serde", "std"] }
 sha2 = "0.10.9"
 sourcemap = { version = "9.3.0", features = ["ram_bundle"] }
 symbolic = { version = "12.13.3", features = ["debuginfo-serde", "il2cpp"] }
-tar = "0.4"
 thiserror = "1.0.38"
 tokio = { version = "1.47", features = ["rt"] }
 url = "2.3.1"
