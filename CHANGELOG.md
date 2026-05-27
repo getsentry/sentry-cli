@@ -5,6 +5,7 @@
 ### Features
 
 - (snapshots) Add `snapshots diff` command for locally comparing directories of PNG snapshot images using odiff ([#3306](https://github.com/getsentry/sentry-cli/pull/3306))
+- (snapshots) Add `snapshots download` command for downloading baseline snapshot images from Sentry ([#3310](https://github.com/getsentry/sentry-cli/pull/3310))
 
 ### Fixes
 

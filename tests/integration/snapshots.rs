@@ -11,6 +11,11 @@ fn command_snapshots_diff_missing_dir() {
 }
 
 #[test]
+fn command_snapshots_download_help() {
+    TestManager::new().register_trycmd_test("snapshots/snapshots-download-help.trycmd");
+}
+
+#[test]
 fn command_snapshots_upload_help() {
     TestManager::new().register_trycmd_test("snapshots/snapshots-upload-help.trycmd");
 }

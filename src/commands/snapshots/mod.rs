@@ -2,11 +2,13 @@ use anyhow::Result;
 use clap::{ArgMatches, Command};
 
 pub mod diff;
+pub mod download;
 pub mod upload;
 
 macro_rules! each_subcommand {
     ($mac:ident) => {
         $mac!(diff);
+        $mac!(download);
         $mac!(upload);
     };
 }
