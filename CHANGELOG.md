@@ -4,6 +4,7 @@
 
 ### Fixes
 
+- Improve error message when organization slug is missing from config ([#3311](https://github.com/getsentry/sentry-cli/pull/3311))
 - Respect `CURL_CA_BUNDLE` and `SSL_CERT_FILE` when configuring TLS certificate authorities ([#3301](https://github.com/getsentry/sentry-cli/pull/3301)).
 
 ## 3.4.3

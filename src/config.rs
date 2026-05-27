@@ -355,7 +355,7 @@ impl Config {
                 .get_from(Some("defaults"), "org")
                 .map(str::to_owned)
                 .ok_or_else(|| {
-                    format_err!("An organization ID or slug is required (provide with --org)")
+                    format_err!("An organization ID or slug is required (provide with --org, set SENTRY_ORG, or use an org-scoped auth token)")
                 }),
             (None, Some(cli_org)) => Ok(cli_org),
             (Some(token_org), None) => Ok(token_org.clone()),
