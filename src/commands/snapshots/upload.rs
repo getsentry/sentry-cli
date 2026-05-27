@@ -77,6 +77,30 @@ pub fn make_command(command: Command) -> Command {
                      Removals and renames cannot be detected on PRs.",
                 ),
         )
+        .arg(
+            Arg::new("all_image_file_names")
+                .long("all-image-file-names")
+                .value_name("NAMES")
+                .conflicts_with("all_image_file_names_file")
+                .help(
+                    "Comma-separated list of all image names (including subdirectory paths) \
+                     in the full test suite. \
+                     Used with selective uploads to detect image removals and renames. \
+                     Implicitly enables --selective.",
+                ),
+        )
+        .arg(
+            Arg::new("all_image_file_names_file")
+                .long("all-image-file-names-file")
+                .value_name("PATH")
+                .conflicts_with("all_image_file_names")
+                .help(
+                    "Path to a file containing all image names (including subdirectory paths), \
+                     one per line. \
+                     Used with selective uploads to detect image removals and renames. \
+                     Implicitly enables --selective.",
+                ),
+        )
         .git_metadata_args()
 }
 
@@ -146,6 +170,26 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     validate_image_sizes(&images)?;
 
+    let all_image_file_names = parse_all_image_file_names(matches)?;
+
+    let selective = matches.get_flag("selective") || all_image_file_names.is_some();
+
+    if let Some(ref all_names) = all_image_file_names {
+        let all_names_set: HashSet<&str> = all_names.iter().map(|s| s.as_str()).collect();
+        let mut unknown: Vec<String> = images
+            .iter()
+            .map(|img| crate::utils::fs::path_as_url(&img.relative_path))
+            .filter(|k| !all_names_set.contains(k.as_str()))
+            .collect();
+        if !unknown.is_empty() {
+            unknown.sort();
+            anyhow::bail!(
+                "The following uploaded images are not in --all-image-file-names: {}",
+                unknown.join(", ")
+            );
+        }
+    }
+
     println!(
         "{} Processing {} image {}",
         style(">").dim(),
@@ -158,13 +202,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // Build manifest from discovered images
     let diff_threshold = matches.get_one::<f64>("diff_threshold").copied();
 
-    let selective = matches.get_flag("selective");
-
     let manifest = SnapshotsManifest {
         app_id: app_id.clone(),
         images: manifest_entries,
         diff_threshold,
         selective,
+        all_image_file_names,
         vcs_info,
     };
 
@@ -197,6 +240,38 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     Ok(())
+}
+
+fn split_and_trim(input: &str, separator: char) -> Vec<String> {
+    input
+        .split(separator)
+        .map(|s| s.trim().to_owned())
+        .filter(|s| !s.is_empty())
+        .collect()
+}
+
+fn parse_all_image_file_names(matches: &ArgMatches) -> Result<Option<Vec<String>>> {
+    if let Some(names_str) = matches.get_one::<String>("all_image_file_names") {
+        let names = split_and_trim(names_str, ',');
+        if names.is_empty() {
+            anyhow::bail!("--all-image-file-names must not be empty");
+        }
+        return Ok(Some(names));
+    }
+
+    if let Some(file_path) = matches.get_one::<String>("all_image_file_names_file") {
+        let content = std::fs::read_to_string(file_path)
+            .with_context(|| format!("Failed to read --all-image-file-names-file: {file_path}"))?;
+        let names = split_and_trim(&content, '\n');
+        if names.is_empty() {
+            anyhow::bail!(
+                "--all-image-file-names-file is empty or contains only blank lines: {file_path}"
+            );
+        }
+        return Ok(Some(names));
+    }
+
+    Ok(None)
 }
 
 fn collect_images(dir: &Path) -> Vec<ImageInfo> {
@@ -504,5 +579,29 @@ mod tests {
     fn test_validate_image_sizes_over_limit_fails() {
         let err = validate_image_sizes(&[make_image(8001, 5000)]).unwrap_err();
         assert!(err.to_string().contains("exceed the maximum pixel limit"));
+    }
+
+    #[test]
+    fn test_split_and_trim_comma_separated() {
+        assert_eq!(
+            split_and_trim("a.png, b.png, c.png", ','),
+            vec!["a.png", "b.png", "c.png"]
+        );
+    }
+
+    #[test]
+    fn test_split_and_trim_whitespace_and_empty() {
+        assert_eq!(
+            split_and_trim("  a.png , b.png ,  ", ','),
+            vec!["a.png", "b.png"]
+        );
+    }
+
+    #[test]
+    fn test_split_and_trim_newline_separated() {
+        assert_eq!(
+            split_and_trim("a.png\nb.png\n\nc.png\n", '\n'),
+            vec!["a.png", "b.png", "c.png"]
+        );
     }
 }
