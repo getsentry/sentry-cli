@@ -56,7 +56,8 @@ fn prompt_npm_install() -> Result<PathBuf> {
     let mut input = String::new();
     io::stdin().read_line(&mut input)?;
 
-    if !matches!(input.trim().to_lowercase().as_str(), "y" | "yes") {
+    let trimmed_input = input.trim();
+    if !trimmed_input.eq_ignore_ascii_case("y") && !trimmed_input.eq_ignore_ascii_case("yes") {
         bail!(
             "`odiff` is required but not installed. \
              Install it with: npm install -g odiff-bin"
