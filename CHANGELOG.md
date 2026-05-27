@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Features
+
+- (snapshots) Add `snapshots diff` command for locally comparing directories of PNG snapshot images using odiff ([#3306](https://github.com/getsentry/sentry-cli/pull/3306))
+
 ### Fixes
 
 - Improve error message when organization slug is missing from config ([#3311](https://github.com/getsentry/sentry-cli/pull/3311))

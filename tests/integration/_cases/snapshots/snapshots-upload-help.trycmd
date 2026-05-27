@@ -1,12 +1,12 @@
 ```
-$ sentry-cli build snapshots --help
+$ sentry-cli snapshots upload --help
 ? success
-Upload build snapshots to a project.
+Upload snapshots to a project.
 
-[EXPERIMENTAL] The "build snapshots" command is experimental. The command is subject to breaking
+[EXPERIMENTAL] The "snapshots upload" command is experimental. The command is subject to breaking
 changes, including removal, in any Sentry CLI release.
 
-Usage: sentry-cli[EXE] build snapshots [OPTIONS] --app-id <APP_ID> <PATH>
+Usage: sentry-cli[EXE] snapshots upload [OPTIONS] --app-id <APP_ID> <PATH>
 
 Arguments:
   <PATH>
@@ -91,4 +91,3 @@ Options:
           Print help (see a summary with '-h')
 
 ```
-

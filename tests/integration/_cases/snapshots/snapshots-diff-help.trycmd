@@ -1,0 +1,57 @@
+```
+$ sentry-cli snapshots diff --help
+? success
+Compare two directories of snapshot images locally using odiff.
+
+[EXPERIMENTAL] The "snapshots diff" command is experimental. The command is subject to breaking
+changes, including removal, in any Sentry CLI release.
+
+Usage: sentry-cli[EXE] snapshots diff [OPTIONS] <BASE_DIR> <HEAD_DIR>
+
+Arguments:
+  <BASE_DIR>
+          Path to baseline image directory.
+
+  <HEAD_DIR>
+          Path to head image directory.
+
+Options:
+  -o, --output <DIR>
+          Directory for diff mask images.
+          
+          [default: ./diff-output/]
+
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
+
+      --threshold <FLOAT>
+          Pixel color difference threshold (0.0-1.0).
+          
+          [default: 0.01]
+
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
+
+      --no-antialiasing
+          Disable antialiasing detection.
+
+      --fail-on-diff
+          Exit with code 1 if any diffs are found.
+
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands.
+          
+          [aliases: --silent]
+
+      --selective
+          Treat missing base images as skipped instead of removed.
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+```

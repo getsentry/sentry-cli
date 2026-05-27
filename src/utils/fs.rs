@@ -184,6 +184,8 @@ pub fn path_as_url(path: &Path) -> String {
     path.display().to_string()
 }
 
+pub const IMAGE_EXTENSIONS: &[&str] = &["png", "jpg", "jpeg"];
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -40,6 +40,7 @@ mod releases;
 mod repos;
 mod send_envelope;
 mod send_event;
+mod snapshots;
 mod sourcemaps;
 #[cfg(not(feature = "managed"))]
 mod uninstall;
@@ -70,6 +71,7 @@ macro_rules! each_subcommand {
         $mac!(repos);
         $mac!(send_event);
         $mac!(send_envelope);
+        $mac!(snapshots);
         $mac!(sourcemaps);
         $mac!(dart_symbol_map);
         #[cfg(not(feature = "managed"))]
