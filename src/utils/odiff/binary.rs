@@ -77,10 +77,26 @@ fn prompt_npm_install() -> Result<PathBuf> {
         bail!("npm install failed. Please install odiff manually: npm install -g odiff-bin");
     }
 
-    which::which("odiff").context(
-        "odiff was installed but could not be found on PATH. \
-         You may need to restart your shell.",
-    )
+    match which::which("odiff") {
+        Ok(path) => Ok(path),
+        Err(_) => {
+            let hint = Command::new("npm")
+                .args(["prefix", "-g"])
+                .output()
+                .ok()
+                .filter(|o| o.status.success())
+                .map(|o| {
+                    let prefix = String::from_utf8_lossy(&o.stdout).trim().to_owned();
+                    format!(" npm global prefix: {prefix}")
+                })
+                .unwrap_or_default();
+
+            bail!(
+                "odiff was installed but could not be found on PATH.{hint}\n\
+                 You may need to restart your shell."
+            );
+        }
+    }
 }
 
 pub fn ensure_binary() -> Result<PathBuf> {
