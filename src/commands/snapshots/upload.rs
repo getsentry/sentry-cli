@@ -253,7 +253,7 @@ fn split_and_trim(input: &str, separator: char) -> Vec<String> {
 fn normalize_image_names(names: Vec<String>) -> Vec<String> {
     names
         .into_iter()
-        .map(|s| s.strip_prefix("./").unwrap_or(&s).to_string())
+        .map(|s| s.strip_prefix("./").unwrap_or(&s).replace('\\', "/"))
         .collect()
 }
 
@@ -615,9 +615,9 @@ mod tests {
     #[test]
     fn test_normalize_image_names_strips_dot_slash() {
         let input = vec![
-            "./img/a.png".to_string(),
-            "./img/b.png".to_string(),
-            "img/c.png".to_string(),
+            "./img/a.png".to_owned(),
+            "./img/b.png".to_owned(),
+            "img/c.png".to_owned(),
         ];
         assert_eq!(
             normalize_image_names(input),
