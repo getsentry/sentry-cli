@@ -335,9 +335,13 @@ fn parse_all_image_names(matches: &ArgMatches) -> Result<Option<AllImageNames>> 
     Ok(None)
 }
 
+fn anchor_pattern(p: &str) -> String {
+    format!("^(?:{p})$")
+}
+
 fn validate_regex_patterns(patterns: &[String]) -> Result<()> {
     for p in patterns {
-        Regex::new(p).with_context(|| format!("Invalid regex pattern: {p}"))?;
+        Regex::new(&anchor_pattern(p)).with_context(|| format!("Invalid regex pattern: {p}"))?;
     }
     Ok(())
 }
@@ -362,9 +366,9 @@ fn validate_uploaded_images(images: &[ImageInfo], all_names: &AllImageNames) -> 
             // the literal variant's exact-match semantics.
             let compiled: Vec<Regex> = patterns
                 .iter()
-                .map(|p| Regex::new(&format!("^(?:{p})$")))
+                .map(|p| Regex::new(&anchor_pattern(p)))
                 .collect::<std::result::Result<Vec<_>, _>>()
-                .expect("regex patterns were validated at parse time");
+                .expect("anchored patterns were validated at parse time");
             let unmatched = image_keys
                 .into_iter()
                 .filter(|name| !compiled.iter().any(|re| re.is_match(name)))
@@ -739,6 +743,15 @@ mod tests {
         let patterns = vec!["valid".to_owned(), "[invalid".to_owned()];
         let err = validate_regex_patterns(&patterns).unwrap_err();
         assert!(err.to_string().contains("Invalid regex pattern: [invalid"));
+    }
+
+    #[test]
+    fn test_validate_regex_patterns_rejects_verbose_comment_that_breaks_anchor() {
+        // (?x) enables verbose mode where # starts a comment. When anchored
+        // as ^(?:(?x)foo # comment)$, the comment consumes the closing ")$",
+        // producing an invalid pattern. Validation must catch this.
+        let patterns = vec!["(?x)foo # comment".to_owned()];
+        assert!(validate_regex_patterns(&patterns).is_err());
     }
 
     #[test]
