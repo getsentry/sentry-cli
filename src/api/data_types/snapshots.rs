@@ -35,6 +35,8 @@ pub struct SnapshotsManifest<'a> {
     pub selective: bool,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub all_image_file_names: Option<Vec<String>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub all_image_file_names_as_regex: Option<Vec<String>>,
     #[serde(flatten)]
     pub vcs_info: VcsInfo<'a>,
 }
@@ -86,6 +88,7 @@ mod tests {
             diff_threshold: None,
             selective: false,
             all_image_file_names: None,
+            all_image_file_names_as_regex: None,
             vcs_info: empty_vcs_info(),
         };
         let json = serde_json::to_value(&manifest).unwrap();
@@ -100,6 +103,7 @@ mod tests {
             diff_threshold: None,
             selective: true,
             all_image_file_names: None,
+            all_image_file_names_as_regex: None,
             vcs_info: empty_vcs_info(),
         };
         let json = serde_json::to_value(&manifest).unwrap();
@@ -114,6 +118,7 @@ mod tests {
             diff_threshold: None,
             selective: true,
             all_image_file_names: None,
+            all_image_file_names_as_regex: None,
             vcs_info: empty_vcs_info(),
         };
         let json = serde_json::to_value(&manifest).unwrap();
@@ -131,10 +136,47 @@ mod tests {
             diff_threshold: None,
             selective: true,
             all_image_file_names: Some(vec!["a.png".into(), "b.png".into()]),
+            all_image_file_names_as_regex: None,
             vcs_info: empty_vcs_info(),
         };
         let json = serde_json::to_value(&manifest).unwrap();
         assert_eq!(json["all_image_file_names"], json!(["a.png", "b.png"]));
+    }
+
+    #[test]
+    fn manifest_omits_all_image_file_names_as_regex_when_none() {
+        let manifest = SnapshotsManifest {
+            app_id: "app".into(),
+            images: HashMap::new(),
+            diff_threshold: None,
+            selective: true,
+            all_image_file_names: None,
+            all_image_file_names_as_regex: None,
+            vcs_info: empty_vcs_info(),
+        };
+        let json = serde_json::to_value(&manifest).unwrap();
+        assert!(!json
+            .as_object()
+            .unwrap()
+            .contains_key("all_image_file_names_as_regex"));
+    }
+
+    #[test]
+    fn manifest_includes_all_image_file_names_as_regex_when_some() {
+        let manifest = SnapshotsManifest {
+            app_id: "app".into(),
+            images: HashMap::new(),
+            diff_threshold: None,
+            selective: true,
+            all_image_file_names: None,
+            all_image_file_names_as_regex: Some(vec![".*\\.png".into(), "screens/.*".into()]),
+            vcs_info: empty_vcs_info(),
+        };
+        let json = serde_json::to_value(&manifest).unwrap();
+        assert_eq!(
+            json["all_image_file_names_as_regex"],
+            json!([".*\\.png", "screens/.*"])
+        );
     }
 
     #[test]

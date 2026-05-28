@@ -6,13 +6,14 @@ use std::str::FromStr as _;
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
-use clap::{Arg, ArgMatches, Command};
+use clap::{Arg, ArgGroup, ArgMatches, Command};
 use console::style;
 use futures_util::StreamExt as _;
 use itertools::Itertools as _;
 use log::{debug, warn};
 use objectstore_client::{ClientBuilder, ExpirationPolicy, OperationResult, Usecase};
 use rayon::prelude::*;
+use regex::Regex;
 use secrecy::ExposeSecret as _;
 use serde_json::Value;
 use sha2::{Digest as _, Sha256};
@@ -81,7 +82,6 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("all_image_file_names")
                 .long("all-image-file-names")
                 .value_name("NAMES")
-                .conflicts_with("all_image_file_names_file")
                 .help(
                     "Comma-separated list of all image names (including subdirectory paths) \
                      in the full test suite. \
@@ -93,13 +93,44 @@ pub fn make_command(command: Command) -> Command {
             Arg::new("all_image_file_names_file")
                 .long("all-image-file-names-file")
                 .value_name("PATH")
-                .conflicts_with("all_image_file_names")
                 .help(
                     "Path to a file containing all image names (including subdirectory paths), \
                      one per line. \
                      Used with selective uploads to detect image removals and renames. \
                      Implicitly enables --selective.",
                 ),
+        )
+        .arg(
+            Arg::new("all_image_file_names_as_regex")
+                .long("all-image-file-names-as-regex")
+                .value_name("PATTERNS")
+                .help(
+                    "Comma-separated list of regex patterns matching all image names \
+                     (including subdirectory paths) in the full test suite. \
+                     Used with selective uploads to detect image removals and renames. \
+                     Implicitly enables --selective.",
+                ),
+        )
+        .arg(
+            Arg::new("all_image_file_names_as_regex_file")
+                .long("all-image-file-names-as-regex-file")
+                .value_name("PATH")
+                .help(
+                    "Path to a file containing regex patterns matching all image names \
+                     (including subdirectory paths), one per line. \
+                     Used with selective uploads to detect image removals and renames. \
+                     Implicitly enables --selective.",
+                ),
+        )
+        .group(
+            ArgGroup::new("all_image_names_group")
+                .args([
+                    "all_image_file_names",
+                    "all_image_file_names_file",
+                    "all_image_file_names_as_regex",
+                    "all_image_file_names_as_regex_file",
+                ])
+                .required(false),
         )
         .git_metadata_args()
 }
@@ -170,24 +201,12 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     validate_image_sizes(&images)?;
 
-    let all_image_file_names = parse_all_image_file_names(matches)?;
+    let all_image_names = parse_all_image_names(matches)?;
 
-    let selective = matches.get_flag("selective") || all_image_file_names.is_some();
+    let selective = matches.get_flag("selective") || all_image_names.is_some();
 
-    if let Some(ref all_names) = all_image_file_names {
-        let all_names_set: HashSet<&str> = all_names.iter().map(|s| s.as_str()).collect();
-        let mut unknown: Vec<String> = images
-            .iter()
-            .map(|img| crate::utils::fs::path_as_url(&img.relative_path))
-            .filter(|k| !all_names_set.contains(k.as_str()))
-            .collect();
-        if !unknown.is_empty() {
-            unknown.sort();
-            anyhow::bail!(
-                "The following uploaded images are not in --all-image-file-names: {}",
-                unknown.join(", ")
-            );
-        }
+    if let Some(ref names) = all_image_names {
+        validate_uploaded_images(&images, names)?;
     }
 
     println!(
@@ -202,12 +221,19 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // Build manifest from discovered images
     let diff_threshold = matches.get_one::<f64>("diff_threshold").copied();
 
+    let (all_image_file_names, all_image_file_names_as_regex) = match all_image_names {
+        Some(AllImageNames::Literal(names)) => (Some(names), None),
+        Some(AllImageNames::Regex(patterns)) => (None, Some(patterns)),
+        None => (None, None),
+    };
+
     let manifest = SnapshotsManifest {
         app_id: app_id.clone(),
         images: manifest_entries,
         diff_threshold,
         selective,
         all_image_file_names,
+        all_image_file_names_as_regex,
         vcs_info,
     };
 
@@ -257,13 +283,18 @@ fn normalize_image_names(names: Vec<String>) -> Vec<String> {
         .collect()
 }
 
-fn parse_all_image_file_names(matches: &ArgMatches) -> Result<Option<Vec<String>>> {
+enum AllImageNames {
+    Literal(Vec<String>),
+    Regex(Vec<String>),
+}
+
+fn parse_all_image_names(matches: &ArgMatches) -> Result<Option<AllImageNames>> {
     if let Some(names_str) = matches.get_one::<String>("all_image_file_names") {
         let names = normalize_image_names(split_and_trim(names_str, ','));
         if names.is_empty() {
             anyhow::bail!("--all-image-file-names must not be empty");
         }
-        return Ok(Some(names));
+        return Ok(Some(AllImageNames::Literal(names)));
     }
 
     if let Some(file_path) = matches.get_one::<String>("all_image_file_names_file") {
@@ -275,10 +306,82 @@ fn parse_all_image_file_names(matches: &ArgMatches) -> Result<Option<Vec<String>
                 "--all-image-file-names-file is empty or contains only blank lines: {file_path}"
             );
         }
-        return Ok(Some(names));
+        return Ok(Some(AllImageNames::Literal(names)));
+    }
+
+    if let Some(patterns_str) = matches.get_one::<String>("all_image_file_names_as_regex") {
+        let patterns = split_and_trim(patterns_str, ',');
+        if patterns.is_empty() {
+            anyhow::bail!("--all-image-file-names-as-regex must not be empty");
+        }
+        validate_regex_patterns(&patterns)?;
+        return Ok(Some(AllImageNames::Regex(patterns)));
+    }
+
+    if let Some(file_path) = matches.get_one::<String>("all_image_file_names_as_regex_file") {
+        let content = std::fs::read_to_string(file_path).with_context(|| {
+            format!("Failed to read --all-image-file-names-as-regex-file: {file_path}")
+        })?;
+        let patterns = split_and_trim(&content, '\n');
+        if patterns.is_empty() {
+            anyhow::bail!(
+                "--all-image-file-names-as-regex-file is empty or contains only blank lines: {file_path}"
+            );
+        }
+        validate_regex_patterns(&patterns)?;
+        return Ok(Some(AllImageNames::Regex(patterns)));
     }
 
     Ok(None)
+}
+
+fn validate_regex_patterns(patterns: &[String]) -> Result<()> {
+    for p in patterns {
+        Regex::new(p).with_context(|| format!("Invalid regex pattern: {p}"))?;
+    }
+    Ok(())
+}
+
+fn validate_uploaded_images(images: &[ImageInfo], all_names: &AllImageNames) -> Result<()> {
+    let image_keys: Vec<String> = images
+        .iter()
+        .map(|img| crate::utils::fs::path_as_url(&img.relative_path))
+        .collect();
+
+    let (mut unmatched, flag_name) = match all_names {
+        AllImageNames::Literal(names) => {
+            let set: HashSet<&str> = names.iter().map(|s| s.as_str()).collect();
+            let unmatched: Vec<String> = image_keys
+                .into_iter()
+                .filter(|k| !set.contains(k.as_str()))
+                .collect();
+            (unmatched, "--all-image-file-names")
+        }
+        AllImageNames::Regex(patterns) => {
+            // Anchor patterns to match the full image name, consistent with
+            // the literal variant's exact-match semantics.
+            let compiled: Vec<Regex> = patterns
+                .iter()
+                .map(|p| Regex::new(&format!("^(?:{p})$")))
+                .collect::<std::result::Result<Vec<_>, _>>()
+                .expect("regex patterns were validated at parse time");
+            let unmatched = image_keys
+                .into_iter()
+                .filter(|name| !compiled.iter().any(|re| re.is_match(name)))
+                .collect();
+            (unmatched, "--all-image-file-names-as-regex")
+        }
+    };
+
+    if !unmatched.is_empty() {
+        unmatched.sort();
+        anyhow::bail!(
+            "The following uploaded images are not matched by {flag_name}: {}",
+            unmatched.join(", ")
+        );
+    }
+
+    Ok(())
 }
 
 fn collect_images(dir: &Path) -> Vec<ImageInfo> {
@@ -623,5 +726,79 @@ mod tests {
             normalize_image_names(input),
             vec!["img/a.png", "img/b.png", "img/c.png"]
         );
+    }
+
+    #[test]
+    fn test_validate_regex_patterns_valid() {
+        let patterns = vec![".*\\.png".to_owned(), "screens/.*".to_owned()];
+        assert!(validate_regex_patterns(&patterns).is_ok());
+    }
+
+    #[test]
+    fn test_validate_regex_patterns_invalid() {
+        let patterns = vec!["valid".to_owned(), "[invalid".to_owned()];
+        let err = validate_regex_patterns(&patterns).unwrap_err();
+        assert!(err.to_string().contains("Invalid regex pattern: [invalid"));
+    }
+
+    #[test]
+    fn test_validate_uploaded_images_literal_all_matched() {
+        let images = vec![
+            make_image_with_path("a.png"),
+            make_image_with_path("sub/b.png"),
+        ];
+        let names = AllImageNames::Literal(vec!["a.png".into(), "sub/b.png".into()]);
+        assert!(validate_uploaded_images(&images, &names).is_ok());
+    }
+
+    #[test]
+    fn test_validate_uploaded_images_literal_unmatched() {
+        let images = vec![
+            make_image_with_path("a.png"),
+            make_image_with_path("unknown.png"),
+        ];
+        let names = AllImageNames::Literal(vec!["a.png".into()]);
+        let err = validate_uploaded_images(&images, &names).unwrap_err();
+        assert!(err.to_string().contains("unknown.png"));
+        assert!(err.to_string().contains("--all-image-file-names"));
+    }
+
+    #[test]
+    fn test_validate_uploaded_images_regex_all_matched() {
+        let images = vec![
+            make_image_with_path("screens/login.png"),
+            make_image_with_path("screens/home.png"),
+        ];
+        let names = AllImageNames::Regex(vec!["screens/.*\\.png".into()]);
+        assert!(validate_uploaded_images(&images, &names).is_ok());
+    }
+
+    #[test]
+    fn test_validate_uploaded_images_regex_unmatched() {
+        let images = vec![
+            make_image_with_path("screens/login.png"),
+            make_image_with_path("other/widget.png"),
+        ];
+        let names = AllImageNames::Regex(vec!["screens/.*".into()]);
+        let err = validate_uploaded_images(&images, &names).unwrap_err();
+        assert!(err.to_string().contains("other/widget.png"));
+        assert!(err.to_string().contains("--all-image-file-names-as-regex"));
+    }
+
+    #[test]
+    fn test_validate_uploaded_images_regex_is_anchored() {
+        let images = vec![make_image_with_path("prefix_foo_suffix.png")];
+        // "foo" would substring-match, but anchored it should NOT match
+        let names = AllImageNames::Regex(vec!["foo".into()]);
+        assert!(validate_uploaded_images(&images, &names).is_err());
+    }
+
+    fn make_image_with_path(relative: &str) -> ImageInfo {
+        ImageInfo {
+            path: PathBuf::from(relative),
+            relative_path: PathBuf::from(relative),
+            width: 100,
+            height: 100,
+        }
     }
 }

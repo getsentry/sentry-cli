@@ -56,6 +56,16 @@ Options:
           Used with selective uploads to detect image removals and renames. Implicitly enables
           --selective.
 
+      --all-image-file-names-as-regex <PATTERNS>
+          Comma-separated list of regex patterns matching all image names (including subdirectory
+          paths) in the full test suite. Used with selective uploads to detect image removals and
+          renames. Implicitly enables --selective.
+
+      --all-image-file-names-as-regex-file <PATH>
+          Path to a file containing regex patterns matching all image names (including subdirectory
+          paths), one per line. Used with selective uploads to detect image removals and renames.
+          Implicitly enables --selective.
+
       --head-sha <head_sha>
           The VCS commit sha to use for the upload. If not provided, the current commit sha will be
           used.
