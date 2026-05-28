@@ -33,6 +33,8 @@ pub struct SnapshotsManifest<'a> {
     /// Removals and renames will not be detected on PRs.
     #[serde(skip_serializing_if = "std::ops::Not::not")]
     pub selective: bool,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub all_image_file_names: Option<Vec<String>>,
     #[serde(flatten)]
     pub vcs_info: VcsInfo<'a>,
 }
@@ -83,6 +85,7 @@ mod tests {
             images: HashMap::new(),
             diff_threshold: None,
             selective: false,
+            all_image_file_names: None,
             vcs_info: empty_vcs_info(),
         };
         let json = serde_json::to_value(&manifest).unwrap();
@@ -96,10 +99,42 @@ mod tests {
             images: HashMap::new(),
             diff_threshold: None,
             selective: true,
+            all_image_file_names: None,
             vcs_info: empty_vcs_info(),
         };
         let json = serde_json::to_value(&manifest).unwrap();
         assert_eq!(json["selective"], json!(true));
+    }
+
+    #[test]
+    fn manifest_omits_all_image_file_names_when_none() {
+        let manifest = SnapshotsManifest {
+            app_id: "app".into(),
+            images: HashMap::new(),
+            diff_threshold: None,
+            selective: true,
+            all_image_file_names: None,
+            vcs_info: empty_vcs_info(),
+        };
+        let json = serde_json::to_value(&manifest).unwrap();
+        assert!(!json
+            .as_object()
+            .unwrap()
+            .contains_key("all_image_file_names"));
+    }
+
+    #[test]
+    fn manifest_includes_all_image_file_names_when_some() {
+        let manifest = SnapshotsManifest {
+            app_id: "app".into(),
+            images: HashMap::new(),
+            diff_threshold: None,
+            selective: true,
+            all_image_file_names: Some(vec!["a.png".into(), "b.png".into()]),
+            vcs_info: empty_vcs_info(),
+        };
+        let json = serde_json::to_value(&manifest).unwrap();
+        assert_eq!(json["all_image_file_names"], json!(["a.png", "b.png"]));
     }
 
     #[test]
