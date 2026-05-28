@@ -8,6 +8,11 @@
   </a>
 </p>
 
+> [!NOTE]
+> **A new Sentry CLI is in active development** and is planned to take over from this one.
+> It already supports several features from `sentry-cli` (including source maps), and is built from the ground up for AI-powered workflows — with built-in AI skills and first-class support for use by agents.
+> If that sounds like what you need, check it out: [cli.sentry.dev](https://cli.sentry.dev/).
+
 # Sentry CLI
 
 This is the repository for Sentry CLI, the official command line interface for Sentry.
