@@ -11,7 +11,7 @@
 > [!NOTE]
 > We're building a [new Sentry CLI](https://cli.sentry.dev/) with AI-powered workflows, built-in AI skills, and first-class support for use by agents. It already covers several `sentry-cli` features (including source maps) and is planned to become the next major version — the APIs are closely aligned, so migration will be smooth when the time comes.
 >
-> **If you're using `sentry-cli` in CI/CD pipelines today, you're in the right place — nothing is changing yet.** If you want AI capabilities or agent integration, give the new CLI a try.
+> **If you're using `sentry-cli` in CI/CD pipelines today, you're in the right place — nothing is changing yet.** If you want AI capabilities or agent integration, give the [new CLI](https://cli.sentry.dev/) a try.
 
 # Sentry CLI
 
