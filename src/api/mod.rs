@@ -1374,7 +1374,6 @@ impl ApiRequest {
     }
 
     /// enables or disables redirects.  The default is off.
-    #[cfg(any(target_os = "macos", not(feature = "managed")))]
     pub fn follow_location(mut self, val: bool) -> ApiResult<Self> {
         debug!("follow redirects: {val}");
         self.handle.follow_location(val)?;
