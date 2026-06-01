@@ -8,6 +8,7 @@
 - (snapshots) Add `snapshots download` command for downloading baseline snapshot images from Sentry ([#3310](https://github.com/getsentry/sentry-cli/pull/3310))
 - (snapshots) Add `--all-image-file-names` and `--all-image-file-names-file` flags to `snapshots upload` for detecting image removals and renames in selective builds ([#3312](https://github.com/getsentry/sentry-cli/pull/3312))
 - Add PE DWARF companion support ([#3240](https://github.com/getsentry/sentry-cli/pull/3240))
+- Add Windows ARM64 PE unwind support ([#3240](https://github.com/getsentry/sentry-cli/pull/3240))
 
 ### Fixes
 
