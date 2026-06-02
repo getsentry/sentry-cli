@@ -7,11 +7,17 @@
 - (snapshots) Add `snapshots diff` command for locally comparing directories of PNG snapshot images using odiff ([#3306](https://github.com/getsentry/sentry-cli/pull/3306))
 - (snapshots) Add `snapshots download` command for downloading baseline snapshot images from Sentry ([#3310](https://github.com/getsentry/sentry-cli/pull/3310))
 - (snapshots) Add `--all-image-file-names` and `--all-image-file-names-file` flags to `snapshots upload` for detecting image removals and renames in selective builds ([#3312](https://github.com/getsentry/sentry-cli/pull/3312))
+- Add PE DWARF companion support ([#3240](https://github.com/getsentry/sentry-cli/pull/3240))
+- Add Windows ARM64 PE unwind support ([#3240](https://github.com/getsentry/sentry-cli/pull/3240))
 
 ### Fixes
 
 - Improve error message when organization slug is missing from config ([#3311](https://github.com/getsentry/sentry-cli/pull/3311))
 - Respect `CURL_CA_BUNDLE` and `SSL_CERT_FILE` when configuring TLS certificate authorities ([#3301](https://github.com/getsentry/sentry-cli/pull/3301)).
+
+### Internal changes
+
+- Bump `symbolic` to [`13.1.1`](https://github.com/getsentry/symbolic/releases/tag/13.1.1) ([#3240](https://github.com/getsentry/sentry-cli/pull/3240))
 
 ## 3.4.3
 
