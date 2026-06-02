@@ -1,6 +1,6 @@
 {
   "name": "@sentry/cli-darwin",
-  "version": "3.4.3",
+  "version": "3.4.4-snapshot.20260602.8b6f051",
   "description": "The darwin distribution of the Sentry CLI binary.",
   "repository": "https://github.com/getsentry/sentry-cli",
   "license": "FSL-1.1-MIT",
