@@ -38,7 +38,7 @@ Users who are using Sentry Self-Hosted versions older than 24.11.1 are encourage
 | **Sentry Self-Hosted Version** | **Newest Compatible Sentry CLI Version**                              |
 | ------------------------------ | --------------------------------------------------------------------- |
 | ≥ 24.11.1                      | [latest](https://github.com/getsentry/sentry-cli/releases/latest)     |
-| < 24.11.1                      | [2.58.5](https://github.com/getsentry/sentry-cli/releases/tag/2.58.5) |
+| < 24.11.1                      | [2.58.6](https://github.com/getsentry/sentry-cli/releases/tag/2.58.6) |
 
 Note that we can only provide support for officially-supported Sentry Self-Hosted versions. We will not backport fixes for older Sentry CLI versions, even if they should be compatible with your self-hosted version.
 
