@@ -476,15 +476,17 @@ where
         if let Some(err) = classified.unattributed.into_iter().last() {
             last_unattributed = Some(err);
         }
-        let fatal_keys: HashSet<String> =
-            classified.fatal.iter().map(|(key, _)| key.clone()).collect();
+        let fatal_keys: HashSet<String> = classified
+            .fatal
+            .iter()
+            .map(|(key, _)| key.clone())
+            .collect();
         for (key, err) in classified.fatal {
             last_error.remove(&key);
             failures.push(anyhow::Error::new(err).context(format!("failed to upload {key}")));
         }
 
-        pending
-            .retain(|p| !classified.succeeded.contains(&p.key) && !fatal_keys.contains(&p.key));
+        pending.retain(|p| !classified.succeeded.contains(&p.key) && !fatal_keys.contains(&p.key));
 
         if pending.is_empty() || unattributed_is_fatal {
             break;
@@ -782,10 +784,14 @@ mod tests {
     #[test]
     fn test_retry_all_succeed_first_attempt() {
         let mut attempts = 0;
-        let failures = upload_with_retry(vec![prepared("a"), prepared("b")], std::iter::empty(), |p| {
-            attempts += 1;
-            p.iter().map(|img| put_ok(&img.key)).collect()
-        });
+        let failures = upload_with_retry(
+            vec![prepared("a"), prepared("b")],
+            std::iter::empty(),
+            |p| {
+                attempts += 1;
+                p.iter().map(|img| put_ok(&img.key)).collect()
+            },
+        );
         assert!(failures.is_empty());
         assert_eq!(attempts, 1);
     }
@@ -793,14 +799,18 @@ mod tests {
     #[test]
     fn test_retry_recovers_after_rate_limit() {
         let mut attempts = 0;
-        let failures = upload_with_retry(vec![prepared("a")], std::iter::repeat(Duration::ZERO), |p| {
-            attempts += 1;
-            if attempts == 1 {
-                p.iter().map(|img| put_err(&img.key, 429)).collect()
-            } else {
-                p.iter().map(|img| put_ok(&img.key)).collect()
-            }
-        });
+        let failures = upload_with_retry(
+            vec![prepared("a")],
+            std::iter::repeat(Duration::ZERO),
+            |p| {
+                attempts += 1;
+                if attempts == 1 {
+                    p.iter().map(|img| put_err(&img.key, 429)).collect()
+                } else {
+                    p.iter().map(|img| put_ok(&img.key)).collect()
+                }
+            },
+        );
         assert!(failures.is_empty());
         assert_eq!(attempts, 2);
     }
@@ -808,10 +818,14 @@ mod tests {
     #[test]
     fn test_retry_fatal_error_is_not_retried() {
         let mut attempts = 0;
-        let failures = upload_with_retry(vec![prepared("a")], std::iter::repeat(Duration::ZERO), |p| {
-            attempts += 1;
-            p.iter().map(|img| put_err(&img.key, 404)).collect()
-        });
+        let failures = upload_with_retry(
+            vec![prepared("a")],
+            std::iter::repeat(Duration::ZERO),
+            |p| {
+                attempts += 1;
+                p.iter().map(|img| put_err(&img.key, 404)).collect()
+            },
+        );
         assert_eq!(failures.len(), 1);
         assert_eq!(attempts, 1);
     }
@@ -822,7 +836,9 @@ mod tests {
         let delays = std::iter::repeat_n(Duration::ZERO, 5);
         let failures = upload_with_retry(vec![prepared("a")], delays, |_| {
             attempts += 1;
-            vec![OperationResult::Error(Error::MalformedResponse("bad".to_owned()))]
+            vec![OperationResult::Error(Error::MalformedResponse(
+                "bad".to_owned(),
+            ))]
         });
         assert_eq!(attempts, 1);
         assert_eq!(failures.len(), 1);
