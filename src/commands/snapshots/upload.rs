@@ -472,6 +472,7 @@ where
         for (key, err) in classified.retryable {
             last_error.insert(key, err);
         }
+        let unattributed_is_fatal = classified.unattributed.iter().any(|err| !is_retryable(err));
         if let Some(err) = classified.unattributed.into_iter().last() {
             last_unattributed = Some(err);
         }
@@ -485,7 +486,7 @@ where
         pending
             .retain(|p| !classified.succeeded.contains(&p.key) && !fatal_keys.contains(&p.key));
 
-        if pending.is_empty() {
+        if pending.is_empty() || unattributed_is_fatal {
             break;
         }
         let Some(delay) = delays.next() else {
@@ -813,6 +814,18 @@ mod tests {
         });
         assert_eq!(failures.len(), 1);
         assert_eq!(attempts, 1);
+    }
+
+    #[test]
+    fn test_retry_stops_on_non_retryable_unattributed_error() {
+        let mut attempts = 0;
+        let delays = std::iter::repeat_n(Duration::ZERO, 5);
+        let failures = upload_with_retry(vec![prepared("a")], delays, |_| {
+            attempts += 1;
+            vec![OperationResult::Error(Error::MalformedResponse("bad".to_owned()))]
+        });
+        assert_eq!(attempts, 1);
+        assert_eq!(failures.len(), 1);
     }
 
     #[test]
