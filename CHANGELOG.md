@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- (snapshots) Retry rate-limited image uploads with backoff ([#3326](https://github.com/getsentry/sentry-cli/pull/3326))
+
 ## 3.5.0
 
 ### Features

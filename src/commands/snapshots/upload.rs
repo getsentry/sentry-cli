@@ -3,15 +3,17 @@ use std::fs::File;
 use std::io::BufReader;
 use std::path::{Path, PathBuf};
 use std::str::FromStr as _;
+use std::thread;
 use std::time::Duration;
 
 use anyhow::{Context as _, Result};
+use backon::BackoffBuilder as _;
 use clap::{Arg, ArgMatches, Command};
 use console::style;
 use futures_util::StreamExt as _;
 use itertools::Itertools as _;
 use log::{debug, warn};
-use objectstore_client::{ClientBuilder, ExpirationPolicy, OperationResult, Usecase};
+use objectstore_client::{ClientBuilder, Error, ExpirationPolicy, OperationResult, Usecase};
 use rayon::prelude::*;
 use secrecy::ExposeSecret as _;
 use serde_json::Value;
@@ -24,6 +26,7 @@ use crate::utils::args::ArgExt as _;
 use crate::utils::build_vcs::collect_git_metadata;
 use crate::utils::ci::is_ci;
 use crate::utils::fs::IMAGE_EXTENSIONS;
+use crate::utils::retry::{get_default_backoff, DurationAsMilliseconds as _};
 
 const EXPERIMENTAL_WARNING: &str =
     "[EXPERIMENTAL] The \"snapshots upload\" command is experimental. \
@@ -409,6 +412,105 @@ struct PreparedImage {
     key: String,
 }
 
+fn is_retryable(err: &Error) -> bool {
+    match err {
+        Error::OperationFailure { status, .. } => *status == 429 || *status == 503,
+        Error::Reqwest(e) => match e.status() {
+            Some(status) => status.as_u16() == 429 || status.as_u16() == 503,
+            None => e.is_timeout() || e.is_connect(),
+        },
+        Error::Batch(inner) => is_retryable(inner),
+        _ => false,
+    }
+}
+
+#[derive(Default)]
+struct ClassifiedResults {
+    succeeded: HashSet<String>,
+    fatal: Vec<(String, Error)>,
+    retryable: Vec<(String, Error)>,
+    unattributed: Vec<Error>,
+}
+
+fn classify_results(results: Vec<OperationResult>) -> ClassifiedResults {
+    let mut classified = ClassifiedResults::default();
+    for result in results {
+        match result {
+            OperationResult::Put(key, Ok(_)) => {
+                classified.succeeded.insert(key);
+            }
+            OperationResult::Put(key, Err(err)) if is_retryable(&err) => {
+                classified.retryable.push((key, err));
+            }
+            OperationResult::Put(key, Err(err)) => {
+                classified.fatal.push((key, err));
+            }
+            OperationResult::Error(err) => {
+                classified.unattributed.push(err);
+            }
+            _ => {}
+        }
+    }
+    classified
+}
+
+fn upload_with_retry<F>(
+    mut pending: Vec<PreparedImage>,
+    mut delays: impl Iterator<Item = Duration>,
+    mut send_batch: F,
+) -> Vec<anyhow::Error>
+where
+    F: FnMut(&[PreparedImage]) -> Vec<OperationResult>,
+{
+    let mut failures: Vec<anyhow::Error> = Vec::new();
+    let mut last_error: HashMap<String, Error> = HashMap::new();
+    let mut last_unattributed: Option<Error> = None;
+
+    loop {
+        let classified = classify_results(send_batch(&pending));
+
+        for (key, err) in classified.retryable {
+            last_error.insert(key, err);
+        }
+        if let Some(err) = classified.unattributed.into_iter().last() {
+            last_unattributed = Some(err);
+        }
+        let fatal_keys: HashSet<String> =
+            classified.fatal.iter().map(|(key, _)| key.clone()).collect();
+        for (key, err) in classified.fatal {
+            last_error.remove(&key);
+            failures.push(anyhow::Error::new(err).context(format!("failed to upload {key}")));
+        }
+
+        pending
+            .retain(|p| !classified.succeeded.contains(&p.key) && !fatal_keys.contains(&p.key));
+
+        if pending.is_empty() {
+            break;
+        }
+        let Some(delay) = delays.next() else {
+            break;
+        };
+        debug!(
+            "{} snapshot image upload(s) pending, retrying in {} ms",
+            pending.len(),
+            delay.as_milliseconds()
+        );
+        thread::sleep(delay);
+    }
+
+    for prepared in pending {
+        let err = last_error
+            .remove(&prepared.key)
+            .map(anyhow::Error::new)
+            .or_else(|| last_unattributed.take().map(anyhow::Error::new))
+            .unwrap_or_else(|| anyhow::anyhow!("operation failed after exhausting retries"));
+        failures.push(err.context(format!("failed to upload {}", prepared.key)));
+    }
+
+    failures
+}
+
 fn upload_images(
     images: Vec<ImageInfo>,
     org: &str,
@@ -531,24 +633,35 @@ fn upload_images(
     }
 
     if upload_count > 0 {
-        let mut many_builder = session.many();
-        for prepared in missing_uploads {
-            many_builder = many_builder.push(
-                session
-                    .put_path(prepared.path.clone())
-                    .key(&prepared.key)
-                    .expiration_policy(expiration),
-            );
-        }
+        let delays = get_default_backoff()
+            .with_max_times(Config::current().max_retries() as usize)
+            .build();
 
-        let result =
-            runtime.block_on(async { many_builder.send().await.error_for_failures().await });
-        if let Err(errors) = result {
-            let errors: Vec<_> = errors.collect();
-            let error_count = errors.len();
+        let failures = upload_with_retry(missing_uploads, delays, |pending| {
+            runtime.block_on(async {
+                let mut many_builder = session.many();
+                for prepared in pending {
+                    many_builder = many_builder.push(
+                        session
+                            .put_path(prepared.path.clone())
+                            .key(&prepared.key)
+                            .expiration_policy(expiration),
+                    );
+                }
+
+                let mut stream = many_builder.send().await;
+                let mut out = Vec::new();
+                while let Some(result) = stream.next().await {
+                    out.push(result);
+                }
+                out
+            })
+        });
+
+        if !failures.is_empty() {
+            let error_count = failures.len();
             eprintln!("There were errors uploading images:");
-            for error in errors {
-                let error = anyhow::Error::new(error);
+            for error in failures {
                 eprintln!("  {}", style(format!("{error:#}")).red());
             }
             anyhow::bail!("Failed to upload {error_count} images");
@@ -575,6 +688,144 @@ mod tests {
             width,
             height,
         }
+    }
+
+    #[test]
+    fn test_is_retryable_operation_failure_429() {
+        let err = Error::OperationFailure {
+            status: 429,
+            message: "rate limited".to_owned(),
+        };
+        assert!(is_retryable(&err));
+    }
+
+    #[test]
+    fn test_is_retryable_operation_failure_503() {
+        let err = Error::OperationFailure {
+            status: 503,
+            message: "unavailable".to_owned(),
+        };
+        assert!(is_retryable(&err));
+    }
+
+    #[test]
+    fn test_is_not_retryable_operation_failure_404() {
+        let err = Error::OperationFailure {
+            status: 404,
+            message: "not found".to_owned(),
+        };
+        assert!(!is_retryable(&err));
+    }
+
+    #[test]
+    fn test_is_retryable_batch_wrapping_429() {
+        let err = Error::Batch(std::sync::Arc::new(Error::OperationFailure {
+            status: 429,
+            message: "rate limited".to_owned(),
+        }));
+        assert!(is_retryable(&err));
+    }
+
+    #[test]
+    fn test_is_not_retryable_malformed_response() {
+        let err = Error::MalformedResponse("bad".to_owned());
+        assert!(!is_retryable(&err));
+    }
+
+    fn put_ok(key: &str) -> OperationResult {
+        OperationResult::Put(
+            key.to_owned(),
+            Ok(objectstore_client::PutResponse {
+                key: key.to_owned(),
+            }),
+        )
+    }
+
+    fn put_err(key: &str, status: u16) -> OperationResult {
+        OperationResult::Put(
+            key.to_owned(),
+            Err(Error::OperationFailure {
+                status,
+                message: format!("status {status}"),
+            }),
+        )
+    }
+
+    fn prepared(key: &str) -> PreparedImage {
+        PreparedImage {
+            path: PathBuf::from(format!("{key}.png")),
+            key: key.to_owned(),
+        }
+    }
+
+    #[test]
+    fn test_classify_results_partitions_results() {
+        let results = vec![
+            put_ok("ok-key"),
+            put_err("rl-key", 429),
+            put_err("fatal-key", 404),
+            OperationResult::Error(Error::MalformedResponse("bad".to_owned())),
+        ];
+
+        let classified = classify_results(results);
+
+        assert_eq!(classified.succeeded.len(), 1);
+        assert!(classified.succeeded.contains("ok-key"));
+        assert_eq!(classified.fatal.len(), 1);
+        assert_eq!(classified.fatal[0].0, "fatal-key");
+        assert_eq!(classified.retryable.len(), 1);
+        assert_eq!(classified.retryable[0].0, "rl-key");
+        assert_eq!(classified.unattributed.len(), 1);
+    }
+
+    #[test]
+    fn test_retry_all_succeed_first_attempt() {
+        let mut attempts = 0;
+        let failures = upload_with_retry(vec![prepared("a"), prepared("b")], std::iter::empty(), |p| {
+            attempts += 1;
+            p.iter().map(|img| put_ok(&img.key)).collect()
+        });
+        assert!(failures.is_empty());
+        assert_eq!(attempts, 1);
+    }
+
+    #[test]
+    fn test_retry_recovers_after_rate_limit() {
+        let mut attempts = 0;
+        let failures = upload_with_retry(vec![prepared("a")], std::iter::repeat(Duration::ZERO), |p| {
+            attempts += 1;
+            if attempts == 1 {
+                p.iter().map(|img| put_err(&img.key, 429)).collect()
+            } else {
+                p.iter().map(|img| put_ok(&img.key)).collect()
+            }
+        });
+        assert!(failures.is_empty());
+        assert_eq!(attempts, 2);
+    }
+
+    #[test]
+    fn test_retry_fatal_error_is_not_retried() {
+        let mut attempts = 0;
+        let failures = upload_with_retry(vec![prepared("a")], std::iter::repeat(Duration::ZERO), |p| {
+            attempts += 1;
+            p.iter().map(|img| put_err(&img.key, 404)).collect()
+        });
+        assert_eq!(failures.len(), 1);
+        assert_eq!(attempts, 1);
+    }
+
+    #[test]
+    fn test_retry_exhausts_and_reports_with_real_error() {
+        let mut attempts = 0;
+        let delays = std::iter::repeat_n(Duration::ZERO, 2);
+        let failures = upload_with_retry(vec![prepared("a")], delays, |p| {
+            attempts += 1;
+            p.iter().map(|img| put_err(&img.key, 429)).collect()
+        });
+        assert_eq!(attempts, 3);
+        assert_eq!(failures.len(), 1);
+        assert!(format!("{:#}", failures[0]).contains("429"));
     }
 
     #[test]
