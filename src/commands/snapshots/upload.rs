@@ -465,6 +465,7 @@ where
     let mut failures: Vec<anyhow::Error> = Vec::new();
     let mut last_error: HashMap<String, Error> = HashMap::new();
     let mut unattributed_message: Option<String> = None;
+    let mut stopped_on_fatal_unattributed = false;
 
     loop {
         let classified = classify_results(send_batch(&pending));
@@ -493,7 +494,11 @@ where
 
         pending.retain(|p| !classified.succeeded.contains(&p.key) && !fatal_keys.contains(&p.key));
 
-        if pending.is_empty() || unattributed_is_fatal {
+        if pending.is_empty() {
+            break;
+        }
+        if unattributed_is_fatal {
+            stopped_on_fatal_unattributed = true;
             break;
         }
         let Some(delay) = delays.next() else {
@@ -508,7 +513,10 @@ where
     }
 
     for prepared in pending {
-        let err = match last_error.remove(&prepared.key) {
+        let attributed = (!stopped_on_fatal_unattributed)
+            .then(|| last_error.remove(&prepared.key))
+            .flatten();
+        let err = match attributed {
             Some(err) => anyhow::Error::new(err),
             None => match &unattributed_message {
                 Some(message) => anyhow::anyhow!("{message}"),
@@ -864,6 +872,27 @@ mod tests {
         assert!(failures
             .iter()
             .all(|failure| format!("{failure:#}").contains("boom")));
+    }
+
+    #[test]
+    fn test_retry_fatal_unattributed_error_masks_stale_retryable_error() {
+        let mut attempts = 0;
+        let delays = std::iter::repeat_n(Duration::ZERO, 3);
+        let failures = upload_with_retry(vec![prepared("a")], delays, |_| {
+            attempts += 1;
+            if attempts == 1 {
+                vec![put_err("a", 429)]
+            } else {
+                vec![OperationResult::Error(Error::MalformedResponse(
+                    "fatal".to_owned(),
+                ))]
+            }
+        });
+        assert_eq!(attempts, 2);
+        assert_eq!(failures.len(), 1);
+        let message = format!("{:#}", failures[0]);
+        assert!(message.contains("fatal"));
+        assert!(!message.contains("429"));
     }
 
     #[test]
