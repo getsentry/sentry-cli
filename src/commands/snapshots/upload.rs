@@ -464,7 +464,7 @@ where
 {
     let mut failures: Vec<anyhow::Error> = Vec::new();
     let mut last_error: HashMap<String, Error> = HashMap::new();
-    let mut last_unattributed: Option<Error> = None;
+    let mut unattributed_message: Option<String> = None;
 
     loop {
         let classified = classify_results(send_batch(&pending));
@@ -473,8 +473,13 @@ where
             last_error.insert(key, err);
         }
         let unattributed_is_fatal = classified.unattributed.iter().any(|err| !is_retryable(err));
-        if let Some(err) = classified.unattributed.into_iter().last() {
-            last_unattributed = Some(err);
+        if let Some(err) = classified
+            .unattributed
+            .iter()
+            .find(|err| !is_retryable(err))
+            .or_else(|| classified.unattributed.last())
+        {
+            unattributed_message = Some(format!("{err}"));
         }
         let fatal_keys: HashSet<String> = classified
             .fatal
@@ -503,11 +508,13 @@ where
     }
 
     for prepared in pending {
-        let err = last_error
-            .remove(&prepared.key)
-            .map(anyhow::Error::new)
-            .or_else(|| last_unattributed.take().map(anyhow::Error::new))
-            .unwrap_or_else(|| anyhow::anyhow!("operation failed after exhausting retries"));
+        let err = match last_error.remove(&prepared.key) {
+            Some(err) => anyhow::Error::new(err),
+            None => match &unattributed_message {
+                Some(message) => anyhow::anyhow!("{message}"),
+                None => anyhow::anyhow!("operation failed after exhausting retries"),
+            },
+        };
         failures.push(err.context(format!("failed to upload {}", prepared.key)));
     }
 
@@ -842,6 +849,21 @@ mod tests {
         });
         assert_eq!(attempts, 1);
         assert_eq!(failures.len(), 1);
+        assert!(format!("{:#}", failures[0]).contains("bad"));
+    }
+
+    #[test]
+    fn test_retry_unattributed_error_reported_for_all_pending() {
+        let delays = std::iter::repeat_n(Duration::ZERO, 3);
+        let failures = upload_with_retry(vec![prepared("a"), prepared("b")], delays, |_| {
+            vec![OperationResult::Error(Error::MalformedResponse(
+                "boom".to_owned(),
+            ))]
+        });
+        assert_eq!(failures.len(), 2);
+        assert!(failures
+            .iter()
+            .all(|failure| format!("{failure:#}").contains("boom")));
     }
 
     #[test]
