@@ -3,9 +3,6 @@ $ sentry-cli snapshots upload --help
 ? success
 Upload snapshots to a project.
 
-[EXPERIMENTAL] The "snapshots upload" command is experimental. The command is subject to breaking
-changes, including removal, in any Sentry CLI release.
-
 Usage: sentry-cli[EXE] snapshots upload [OPTIONS] --app-id <APP_ID> <PATH>
 
 Arguments:

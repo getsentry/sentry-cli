@@ -3,9 +3,6 @@ $ sentry-cli build download --help
 ? success
 Download a build artifact.
 
-[EXPERIMENTAL] The "build download" command is experimental. The command is subject to breaking
-changes, including removal, in any Sentry CLI release.
-
 Usage: sentry-cli[EXE] build download [OPTIONS] --build-id <build_id>
 
 Options:
