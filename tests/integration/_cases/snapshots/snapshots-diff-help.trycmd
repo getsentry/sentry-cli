@@ -3,9 +3,6 @@ $ sentry-cli snapshots diff --help
 ? success
 Compare two directories of snapshot images locally using odiff.
 
-[EXPERIMENTAL] The "snapshots diff" command is experimental. The command is subject to breaking
-changes, including removal, in any Sentry CLI release.
-
 Usage: sentry-cli[EXE] snapshots diff [OPTIONS] <BASE_DIR> <HEAD_DIR>
 
 Arguments:

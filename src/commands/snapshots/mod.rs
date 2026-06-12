@@ -23,7 +23,7 @@ pub fn make_command(mut command: Command) -> Command {
     }
 
     command = command
-        .about("[EXPERIMENTAL] Manage and compare snapshots.")
+        .about("Manage and compare snapshots.")
         .subcommand_required(true)
         .arg_required_else_help(true);
     each_subcommand!(add_subcommand);

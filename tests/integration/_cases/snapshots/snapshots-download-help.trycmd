@@ -6,9 +6,6 @@ Download baseline snapshot images from Sentry's preprod system to a local direct
 Use --snapshot-id to download a specific snapshot, or --app-id to resolve the latest baseline (org
 auth tokens require --project with a numeric project ID for --app-id).
 
-[EXPERIMENTAL] The "snapshots download" command is experimental. The command is subject to breaking
-changes, including removal, in any Sentry CLI release.
-
 Usage: sentry-cli[EXE] snapshots download [OPTIONS]
 
 Options:

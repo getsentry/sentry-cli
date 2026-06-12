@@ -11,10 +11,6 @@ use crate::utils::fs::{path_as_url, IMAGE_EXTENSIONS};
 use crate::utils::odiff::binary::ensure_binary;
 use crate::utils::odiff::server::{OdiffOptions, OdiffResponse, OdiffServer};
 
-const EXPERIMENTAL_WARNING: &str =
-    "[EXPERIMENTAL] The \"snapshots diff\" command is experimental. \
-    The command is subject to breaking changes, including removal, in any Sentry CLI release.";
-
 #[derive(Serialize)]
 struct DiffReport {
     base_dir: String,
@@ -111,11 +107,8 @@ struct CategorizedImages {
 
 pub fn make_command(command: Command) -> Command {
     command
-        .about("[EXPERIMENTAL] Compare two directories of snapshot images locally using odiff.")
-        .long_about(format!(
-            "Compare two directories of snapshot images locally using odiff.\n\n\
-            {EXPERIMENTAL_WARNING}"
-        ))
+        .about("Compare two directories of snapshot images locally using odiff.")
+        .long_about("Compare two directories of snapshot images locally using odiff.")
         .arg(
             Arg::new("base_dir")
                 .value_name("BASE_DIR")
@@ -171,8 +164,6 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    eprintln!("{EXPERIMENTAL_WARNING}");
-
     let base_dir = PathBuf::from(
         matches
             .get_one::<String>("base_dir")

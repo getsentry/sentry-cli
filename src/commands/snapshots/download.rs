@@ -10,19 +10,14 @@ use crate::config::Config;
 use crate::utils::args::ArgExt as _;
 use crate::utils::fs::{path_as_url, TempFile};
 
-const EXPERIMENTAL_WARNING: &str =
-    "[EXPERIMENTAL] The \"snapshots download\" command is experimental. \
-    The command is subject to breaking changes, including removal, in any Sentry CLI release.";
-
 pub fn make_command(command: Command) -> Command {
     command
-        .about("[EXPERIMENTAL] Download baseline snapshot images from Sentry.")
-        .long_about(format!(
+        .about("Download baseline snapshot images from Sentry.")
+        .long_about(
             "Download baseline snapshot images from Sentry's preprod system to a local directory.\n\n\
             Use --snapshot-id to download a specific snapshot, or --app-id to resolve the latest \
-            baseline (org auth tokens require --project with a numeric project ID for --app-id).\n\n\
-            {EXPERIMENTAL_WARNING}"
-        ))
+            baseline (org auth tokens require --project with a numeric project ID for --app-id).",
+        )
         .org_arg()
         .project_arg(false)
         .arg(
@@ -56,8 +51,6 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-    eprintln!("{EXPERIMENTAL_WARNING}");
-
     let config = Config::current();
     let org = config.get_org(matches)?;
     let api_ref = Api::current();

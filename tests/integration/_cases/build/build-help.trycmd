@@ -6,7 +6,7 @@ Manage builds.
 Usage: sentry-cli[EXE] build [OPTIONS] <COMMAND>
 
 Commands:
-  download  [EXPERIMENTAL] Download a build artifact.
+  download  Download a build artifact.
   upload    Upload builds to a project.
   help      Print this message or the help of the given subcommand(s)
 
