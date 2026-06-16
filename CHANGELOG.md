@@ -1,5 +1,23 @@
 # Changelog
 
+## 3.5.1
+
+### Internal Changes 🔧
+
+#### Deps
+
+- Bump objectstore-client to 0.1.12 by @NicoHinderling in [#3334](https://github.com/getsentry/sentry-cli/pull/3334)
+- Bump shell-quote from 1.8.3 to 1.8.4 by @dependabot in [#3327](https://github.com/getsentry/sentry-cli/pull/3327)
+- Bump docker/login-action from 4.1.0 to 4.2.0 by @dependabot in [#3323](https://github.com/getsentry/sentry-cli/pull/3323)
+- Bump actions/github-script from 8.0.0 to 9.0.0 by @dependabot in [#3325](https://github.com/getsentry/sentry-cli/pull/3325)
+- Bump getsentry/craft from 2.26.3 to 2.26.6 by @dependabot in [#3322](https://github.com/getsentry/sentry-cli/pull/3322)
+- Bump docker/build-push-action from 7.1.0 to 7.2.0 by @dependabot in [#3324](https://github.com/getsentry/sentry-cli/pull/3324)
+
+#### Other
+
+- (npm) 🤖 Bump optional dependencies to 3.5.0 by @sentry-release-bot[bot] in [8c2c0e9a](https://github.com/getsentry/sentry-cli/commit/8c2c0e9a3cc0807e9fc8cd14fbc8456dbd1fd612)
+- Remove experimental flag from snapshots and build commands by @NicoHinderling in [#3329](https://github.com/getsentry/sentry-cli/pull/3329)
+
 ## 3.5.0
 
 ### Features
