@@ -2503,9 +2503,9 @@ dependencies = [
 
 [[package]]
 name = "objectstore-client"
-version = "0.1.9"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "754d0120cf9036efad549de3d65223998b5b7ab00943686dd96acdb926a0cfe6"
+checksum = "2713028097b2f0f00696d7d389a877f7370c02813548124c4422941f669732f3"
 dependencies = [
  "async-compression",
  "bytes",
@@ -2522,16 +2522,18 @@ dependencies = [
  "tokio",
  "tokio-util",
  "url",
+ "zstd-safe",
 ]
 
 [[package]]
 name = "objectstore-types"
-version = "0.1.9"
+version = "0.1.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "75d2e3c60712032c880ec7fc56cd01856eb438968957b4c136acd4e6d66f3580"
+checksum = "c83aedfcc050322caefbfdba0372518f316624995f04f97a1f00cafb08ce1d0c"
 dependencies = [
  "http",
  "humantime",
+ "humantime-serde",
  "mediatype",
  "serde",
  "thiserror 2.0.18",
