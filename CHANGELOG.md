@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- (snapshots) Compress preprod snapshot manifest with zstd ([#3336](https://github.com/getsentry/sentry-cli/pull/3336))
+
 ## 3.5.1
 
 ### Internal Changes 🔧
