@@ -1020,7 +1020,9 @@ impl AuthenticatedApi<'_> {
             PathArg(org),
             PathArg(project)
         );
-        self.post(&path, body)
+        self.request(Method::Post, &path)?
+            .with_zstd_json_body(body)?
+            .send()
     }
 
     /// Fetches upload options for snapshots.
@@ -1357,6 +1359,23 @@ impl ApiRequest {
         debug!("json body: {}", String::from_utf8_lossy(&body_bytes));
         self.body = Some(body_bytes);
         self.headers.append("Content-Type: application/json")?;
+        Ok(self)
+    }
+
+    pub fn with_zstd_json_body<S: Serialize>(mut self, body: &S) -> ApiResult<Self> {
+        let mut body_bytes: Vec<u8> = vec![];
+        serde_json::to_writer(&mut body_bytes, &body)
+            .map_err(|err| ApiError::with_source(ApiErrorKind::CannotSerializeAsJson, err))?;
+        let compressed = zstd::encode_all(body_bytes.as_slice(), 0)
+            .map_err(|err| ApiError::with_source(ApiErrorKind::CompressionFailed, err))?;
+        debug!(
+            "zstd json body: {} bytes compressed to {} bytes",
+            body_bytes.len(),
+            compressed.len()
+        );
+        self.body = Some(compressed);
+        self.headers.append("Content-Type: application/json")?;
+        self.headers.append("Content-Encoding: zstd")?;
         Ok(self)
     }
 
