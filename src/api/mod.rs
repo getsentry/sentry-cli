@@ -42,6 +42,7 @@ use symbolic::common::DebugId;
 use symbolic::debuginfo::ObjectKind;
 use url::Url;
 use uuid::Uuid;
+use zstd::Encoder as ZstdEncoder;
 
 use crate::api::errors::{ProjectRenamedError, RetryError};
 use crate::config::{Auth, Config};
@@ -1020,7 +1021,9 @@ impl AuthenticatedApi<'_> {
             PathArg(org),
             PathArg(project)
         );
-        self.post(&path, body)
+        self.request(Method::Post, &path)?
+            .with_zstd_json_body(body)?
+            .send()
     }
 
     /// Fetches upload options for snapshots.
@@ -1357,6 +1360,30 @@ impl ApiRequest {
         debug!("json body: {}", String::from_utf8_lossy(&body_bytes));
         self.body = Some(body_bytes);
         self.headers.append("Content-Type: application/json")?;
+        Ok(self)
+    }
+
+    pub fn with_zstd_json_body<S: Serialize>(mut self, body: &S) -> ApiResult<Self> {
+        let mut encoder = ZstdEncoder::new(Vec::new(), 0)
+            .map_err(|err| ApiError::with_source(ApiErrorKind::CompressionFailed, err))?;
+
+        serde_json::to_writer(&mut encoder, &body).map_err(|err| {
+            let kind = if err.is_io() {
+                ApiErrorKind::CompressionFailed
+            } else {
+                ApiErrorKind::CannotSerializeAsJson
+            };
+            ApiError::with_source(kind, err)
+        })?;
+
+        let compressed = encoder
+            .finish()
+            .map_err(|err| ApiError::with_source(ApiErrorKind::CompressionFailed, err))?;
+
+        debug!("zstd json body: {} bytes compressed", compressed.len());
+        self.body = Some(compressed);
+        self.headers.append("Content-Type: application/json")?;
+        self.headers.append("Content-Encoding: zstd")?;
         Ok(self)
     }
 
