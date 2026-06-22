@@ -1015,7 +1015,7 @@ impl AuthenticatedApi<'_> {
         org: &str,
         project: &str,
         body: &S,
-    ) -> ApiResult<ApiResponse> {
+    ) -> ApiResult<CreateSnapshotResponse> {
         let path = format!(
             "/projects/{}/{}/preprodartifacts/snapshots/",
             PathArg(org),
@@ -1023,7 +1023,8 @@ impl AuthenticatedApi<'_> {
         );
         self.request(Method::Post, &path)?
             .with_zstd_json_body(body)?
-            .send()
+            .send()?
+            .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
     /// Fetches upload options for snapshots.
@@ -1037,7 +1038,7 @@ impl AuthenticatedApi<'_> {
             PathArg(org),
             PathArg(project)
         );
-        self.get(&path)?.convert()
+        self.get(&path)?.convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
     pub fn get_latest_base_snapshot(
@@ -2160,6 +2161,20 @@ mod tests {
     fn convert_rnf_reports_project_rename() {
         let err = project_renamed_response()
             .convert_rnf::<SnapshotsUploadOptions>(ApiErrorKind::ProjectNotFound)
+            .expect_err("expected a project-renamed error");
+
+        let source = err.source().map(|s| s.to_string()).unwrap_or_default();
+
+        assert!(
+            source.contains("project was renamed to 'new-project-slug'"),
+            "expected rename message in error source, got: {err:?} / source: {source}"
+        );
+    }
+
+    #[test]
+    fn convert_rnf_reports_project_rename_for_create_response() {
+        let err = project_renamed_response()
+            .convert_rnf::<CreateSnapshotResponse>(ApiErrorKind::ProjectNotFound)
             .expect_err("expected a project-renamed error");
 
         let source = err.source().map(|s| s.to_string()).unwrap_or_default();

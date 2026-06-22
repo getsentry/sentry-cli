@@ -18,7 +18,7 @@ use serde_json::Value;
 use sha2::{Digest as _, Sha256};
 use walkdir::WalkDir;
 
-use crate::api::{Api, CreateSnapshotResponse, ImageMetadata, SnapshotsManifest};
+use crate::api::{Api, ImageMetadata, SnapshotsManifest};
 use crate::config::Config;
 use crate::utils::args::ArgExt as _;
 use crate::utils::build_vcs::collect_git_metadata;
@@ -207,10 +207,9 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // POST manifest to API
     println!("{} Creating snapshot...", style(">").dim());
     let api = Api::current();
-    let response: CreateSnapshotResponse = api
+    let response = api
         .authenticated()?
-        .create_preprod_snapshot(&org, &project, &manifest)?
-        .convert()?;
+        .create_preprod_snapshot(&org, &project, &manifest)?;
 
     println!(
         "{} Created snapshot {} with {} {}",
