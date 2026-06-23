@@ -1,0 +1,10 @@
+A region-scoped org token where url (control silo) differs from region_url (the org's
+region host). The region_url governs routing: it is preferred over the token's url and
+overrides --url. Payload: {"url":"http://control.example","region_url":"http://region.example","org":"sentry"}
+```
+$ sentry-cli --auth-token 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 --url http://example.com info
+? failed
+[..]WARN[..] Using http://region.example (embedded in token) rather than manually-configured URL http://example.com. To use http://example.com, please provide an auth token for this URL.
+...
+
+```

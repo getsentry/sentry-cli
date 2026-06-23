@@ -75,7 +75,7 @@ impl Config {
         let manually_configured_url = configured_url(&ini);
         let token_url = token_embedded_data
             .as_ref()
-            .map(|td| td.url.as_str())
+            .map(|td| td.base_url())
             .unwrap_or_default();
 
         let url = if token_url.is_empty() {
@@ -201,7 +201,7 @@ impl Config {
             Some(Auth::Token(ref val)) => {
                 self.cached_token_data = val.payload().cloned();
 
-                if let Some(token_url) = self.cached_token_data.as_ref().map(|td| td.url.as_str()) {
+                if let Some(token_url) = self.cached_token_data.as_ref().map(|td| td.base_url()) {
                     self.cached_base_url = token_url.to_owned();
                 }
 
@@ -232,7 +232,7 @@ impl Config {
         let token_url = self
             .cached_token_data
             .as_ref()
-            .map(|td| td.url.as_str())
+            .map(|td| td.base_url())
             .unwrap_or_default();
 
         if !token_url.is_empty() && url != token_url {

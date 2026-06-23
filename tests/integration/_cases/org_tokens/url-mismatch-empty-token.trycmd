@@ -1,8 +1,9 @@
-This auth token has an empty URL. We expect the --url argument to take precedence here
+This token has an empty url but a non-empty region_url. The region_url now governs
+routing, so it overrides the --url argument (the warning references the region_url).
 ```
 $ sentry-cli --auth-token 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 --url https://sentry.example.com info
 ? failed
-Sentry Server: https://sentry.example.com
+[..]WARN[..] Using http://localhost:8000 (embedded in token) rather than manually-configured URL https://sentry.example.com. To use https://sentry.example.com, please provide an auth token for this URL.
 ...
 
 ```

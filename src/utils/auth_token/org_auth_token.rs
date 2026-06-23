@@ -19,6 +19,23 @@ pub struct AuthTokenPayload {
     // URL may be missing from some old auth tokens, see getsentry/sentry#57123
     #[serde(deserialize_with = "url_deserializer")]
     pub url: String,
+
+    // Region URL is the host that actually serves this org's API requests. It is
+    // absent from older tokens, in which case requests fall back to `url`.
+    #[serde(default, deserialize_with = "url_deserializer")]
+    pub region_url: String,
+}
+
+impl AuthTokenPayload {
+    /// Returns the base URL that API requests for this org should target,
+    /// preferring the region URL and falling back to `url` when it is absent.
+    pub fn base_url(&self) -> &str {
+        if self.region_url.is_empty() {
+            &self.url
+        } else {
+            &self.region_url
+        }
+    }
 }
 
 /// Deserializes a URL from a string, returning an empty string if the URL is missing or null.
