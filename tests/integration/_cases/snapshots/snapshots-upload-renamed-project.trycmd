@@ -1,0 +1,15 @@
+```
+$ sentry-cli snapshots upload tests/integration/_fixtures/snapshots --app-id test-app --no-git-metadata
+? failed
+> Found 1 image file
+> Processing 1 image file
+error: Project not found. Ensure that you configured the correct project and organization.
+
+Caused by:
+    project was renamed to 'new-project-slug'
+    Please use this slug in your .sentryclirc file, sentry.properties file or in the CLI --project parameter
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```

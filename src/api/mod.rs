@@ -1015,7 +1015,7 @@ impl AuthenticatedApi<'_> {
         org: &str,
         project: &str,
         body: &S,
-    ) -> ApiResult<ApiResponse> {
+    ) -> ApiResult<CreateSnapshotResponse> {
         let path = format!(
             "/projects/{}/{}/preprodartifacts/snapshots/",
             PathArg(org),
@@ -1023,7 +1023,8 @@ impl AuthenticatedApi<'_> {
         );
         self.request(Method::Post, &path)?
             .with_zstd_json_body(body)?
-            .send()
+            .send()?
+            .convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
     /// Fetches upload options for snapshots.
@@ -1037,7 +1038,7 @@ impl AuthenticatedApi<'_> {
             PathArg(org),
             PathArg(project)
         );
-        self.get(&path)?.convert()
+        self.get(&path)?.convert_rnf(ApiErrorKind::ProjectNotFound)
     }
 
     pub fn get_latest_base_snapshot(
@@ -1606,19 +1607,14 @@ impl ApiResponse {
         match self.status() {
             301 | 302 if res_err == ApiErrorKind::ProjectNotFound => {
                 #[derive(Deserialize, Debug)]
-                struct ErrorDetail {
-                    slug: String,
-                }
-
-                #[derive(Deserialize, Debug)]
                 struct ErrorInfo {
-                    detail: ErrorDetail,
+                    slug: String,
                 }
 
                 match self.convert::<ErrorInfo>() {
                     Ok(info) => Err(ApiError::with_source(
                         res_err,
-                        ProjectRenamedError(info.detail.slug),
+                        ProjectRenamedError(info.slug),
                     )),
                     Err(_) => Err(res_err.into()),
                 }
@@ -2142,4 +2138,50 @@ pub struct ObjectstoreUploadOptions {
     pub scopes: Vec<(String, String)>,
     pub auth_token: Option<SecretString>,
     pub expiration_policy: String,
+}
+
+#[cfg(test)]
+mod tests {
+    use std::error::Error as _;
+
+    use super::*;
+
+    fn project_renamed_response() -> ApiResponse {
+        ApiResponse {
+            status: 302,
+            headers: vec!["content-type: application/json".to_owned()],
+            body: Some(
+                br#"{"slug":"new-project-slug","detail":{"extra":{"url":"/api/0/projects/wat-org/new-project-slug/preprodartifacts/snapshots/upload-options/","slug":"new-project-slug"}}}"#
+                    .to_vec(),
+            ),
+        }
+    }
+
+    #[test]
+    fn convert_rnf_reports_project_rename() {
+        let err = project_renamed_response()
+            .convert_rnf::<SnapshotsUploadOptions>(ApiErrorKind::ProjectNotFound)
+            .expect_err("expected a project-renamed error");
+
+        let source = err.source().map(|s| s.to_string()).unwrap_or_default();
+
+        assert!(
+            source.contains("project was renamed to 'new-project-slug'"),
+            "expected rename message in error source, got: {err:?} / source: {source}"
+        );
+    }
+
+    #[test]
+    fn convert_rnf_reports_project_rename_for_create_response() {
+        let err = project_renamed_response()
+            .convert_rnf::<CreateSnapshotResponse>(ApiErrorKind::ProjectNotFound)
+            .expect_err("expected a project-renamed error");
+
+        let source = err.source().map(|s| s.to_string()).unwrap_or_default();
+
+        assert!(
+            source.contains("project was renamed to 'new-project-slug'"),
+            "expected rename message in error source, got: {err:?} / source: {source}"
+        );
+    }
 }

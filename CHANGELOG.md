@@ -6,6 +6,10 @@
 
 - (snapshots) Compress preprod snapshot manifest with zstd ([#3336](https://github.com/getsentry/sentry-cli/pull/3336))
 
+### Fixes
+
+- (snapshots) Show a clear "project was renamed" error instead of a cryptic JSON parse failure when uploading to a renamed project slug ([#3341](https://github.com/getsentry/sentry-cli/pull/3341))
+
 ## 3.5.1
 
 ### Internal Changes 🔧
