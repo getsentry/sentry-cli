@@ -6,6 +6,10 @@
 
 - (snapshots) Compress preprod snapshot manifest with zstd ([#3336](https://github.com/getsentry/sentry-cli/pull/3336))
 
+### Fixes
+
+- (auth) Route org token requests to region_url ([#3342](https://github.com/getsentry/sentry-cli/pull/3342))
+
 ## 3.5.1
 
 ### Internal Changes 🔧
