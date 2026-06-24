@@ -1,14 +1,19 @@
 use std::fs;
 use std::io;
 use std::path::PathBuf;
+use std::thread::sleep;
+use std::time::{Duration, Instant};
 
 use anyhow::{bail, Result};
 use clap::{Arg, ArgMatches, Command};
 
-use crate::api::Api;
+use crate::api::{Api, AuthenticatedApi};
 use crate::config::Config;
 use crate::utils::args::ArgExt as _;
 use crate::utils::fs::{path_as_url, TempFile};
+
+const POLL_INTERVAL: Duration = Duration::from_secs(2);
+const POLL_TIMEOUT: Duration = Duration::from_secs(300);
 
 pub fn make_command(command: Command) -> Command {
     command
@@ -89,6 +94,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         _ => bail!("Exactly one of --app-id or --snapshot-id must be provided"),
     };
 
+    wait_for_archive(&api, &org, &snapshot_id)?;
+
     eprintln!("Downloading snapshot {snapshot_id}...");
     let tmp = TempFile::create()?;
     let mut tmp_file = tmp.open()?;
@@ -127,6 +134,28 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         "\nDownloaded {extracted} images from snapshot {snapshot_id} to {}",
         path_as_url(&output_dir)
     );
+
+    Ok(())
+}
+
+fn wait_for_archive(api: &AuthenticatedApi, org: &str, snapshot_id: &str) -> Result<()> {
+    if api.get_snapshot_archive_status(org, snapshot_id)?.ready {
+        return Ok(());
+    }
+
+    api.trigger_snapshot_archive_build(org, snapshot_id)?;
+    eprintln!("Building snapshot archive...");
+
+    let start = Instant::now();
+    while !api.get_snapshot_archive_status(org, snapshot_id)?.ready {
+        if start.elapsed() >= POLL_TIMEOUT {
+            bail!(
+                "Snapshot archive was not ready after {}s. The build may still be running; try again shortly.",
+                POLL_TIMEOUT.as_secs()
+            );
+        }
+        sleep(POLL_INTERVAL);
+    }
 
     Ok(())
 }
