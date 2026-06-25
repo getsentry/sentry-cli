@@ -170,11 +170,15 @@ fn resolve_git_remote(repo: &git2::Repository) -> Option<String> {
 /// Finds the remote whose URL matches the given repository name (e.g. "owner/repo").
 fn find_remote_for_repo(repo: &git2::Repository, repo_name: &str) -> Option<String> {
     let remotes = repo.remotes().ok()?;
-    let found = remotes.iter().flatten().find(|name| {
-        vcs::git_repo_remote_url(repo, name)
-            .map(|url| vcs::get_repo_from_remote_preserve_case(&url) == repo_name)
-            .unwrap_or(false)
-    })?;
+    let found = remotes
+        .iter()
+        .filter_map(Result::ok)
+        .flatten()
+        .find(|name| {
+            vcs::git_repo_remote_url(repo, name)
+                .map(|url| vcs::get_repo_from_remote_preserve_case(&url) == repo_name)
+                .unwrap_or(false)
+        })?;
     debug!("Found remote '{found}' matching repo '{repo_name}'");
     Some(found.to_owned())
 }

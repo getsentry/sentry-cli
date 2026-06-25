@@ -255,10 +255,7 @@ pub fn git_repo_remote_url(
     cached_remote: &str,
 ) -> Result<String, git2::Error> {
     let remote = repo.find_remote(cached_remote)?;
-    remote
-        .url()
-        .map(|url| url.to_owned())
-        .ok_or_else(|| git2::Error::from_str("No remote URL found"))
+    remote.url().map(|url| url.to_owned())
 }
 
 pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String> {
@@ -269,7 +266,7 @@ pub fn git_repo_head_ref(repo: &git2::Repository) -> Result<String> {
     if head.is_branch() {
         head.shorthand()
             .map(|s| s.to_owned())
-            .ok_or_else(|| anyhow::anyhow!("No HEAD reference found"))
+            .with_context(|| "No HEAD reference found")
     } else {
         // In detached HEAD state, return an error to indicate no valid branch reference
         Err(anyhow::anyhow!(
@@ -287,7 +284,7 @@ pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<S
     let name = remote_ref
         .resolve()?
         .shorthand()
-        .ok_or(anyhow::anyhow!("Remote branch name is not valid UTF-8"))?
+        .with_context(|| "Remote branch name is not valid UTF-8")?
         .to_owned();
 
     let expected_prefix = format!("{remote_name}/");
@@ -305,7 +302,7 @@ pub fn git_repo_base_ref(repo: &git2::Repository, remote_name: &str) -> Result<S
 /// Prefers "upstream" if it exists, then "origin", otherwise uses the first remote.
 pub fn find_best_remote(repo: &git2::Repository) -> Result<Option<String>> {
     let remotes = repo.remotes()?;
-    let remote_names: Vec<&str> = remotes.iter().flatten().collect();
+    let remote_names: Vec<&str> = remotes.iter().filter_map(Result::ok).flatten().collect();
 
     if remote_names.is_empty() {
         return Ok(None);
@@ -469,7 +466,7 @@ fn find_matching_rev(
             // mode we want to also check for matching URLs.
             if_chain! {
                 if let Ok(remote) = repo.find_remote(&remote_name.unwrap_or_else(|| "origin".to_owned()));
-                if let Some(url) = remote.url();
+                if let Ok(url) = remote.url();
                 then {
                     if !discovery || is_matching_url(url, &reference_url) {
                         debug!("  found match: {url} == {}, {r:?}", &reference_url);
@@ -501,7 +498,7 @@ fn find_matching_submodule(
 ) -> Result<Option<String>> {
     // in discovery mode we want to find that repo in associated submodules.
     for submodule in repo.submodules()? {
-        if let Some(submodule_url) = submodule.url() {
+        if let Ok(Some(submodule_url)) = submodule.url() {
             debug!("  found submodule with URL {submodule_url}");
             if is_matching_url(submodule_url, &reference_url) {
                 debug!(
@@ -792,9 +789,9 @@ pub fn generate_patch_set(
     for (index, commit) in commits.iter().enumerate() {
         let mut git_commit = GitCommit {
             id: commit.id().to_string(),
-            author_name: commit.author().name().map(|s| s.to_owned()),
-            author_email: commit.author().email().map(|s| s.to_owned()),
-            message: commit.message().map(|s| s.to_owned()),
+            author_name: commit.author().name().ok().map(|s| s.to_owned()),
+            author_email: commit.author().email().ok().map(|s| s.to_owned()),
+            message: commit.message().ok().map(|s| s.to_owned()),
             repository: repository.to_owned(),
             timestamp: get_commit_time(commit.author().when()),
             patch_set: vec![],
@@ -1375,7 +1372,7 @@ mod tests {
                 (
                     c.author().name().unwrap().to_owned(),
                     c.author().email().unwrap().to_owned(),
-                    c.summary(),
+                    c.summary().unwrap(),
                 )
             })
             .collect::<Vec<_>>());
