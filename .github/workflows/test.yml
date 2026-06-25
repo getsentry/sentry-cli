@@ -81,7 +81,7 @@ jobs:
           tar xzf $(brew --cache --bottle-tag=sonoma openssl@3) -C $X86_64_APPLE_DARWIN_OPENSSL_DIR --strip-components=2
 
       - name: Cache Dependencies
-        uses: swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # 2.8.2
+        uses: swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # 2.9.1
 
       - name: Run Cargo Tests
         run: cargo test --workspace --target ${{ matrix.target }}
