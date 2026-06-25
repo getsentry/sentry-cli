@@ -1067,6 +1067,29 @@ impl AuthenticatedApi<'_> {
         }
     }
 
+    pub fn get_snapshot_archive_status(
+        &self,
+        org: &str,
+        snapshot_id: &str,
+    ) -> ApiResult<SnapshotArchiveStatus> {
+        let path = format!(
+            "/organizations/{}/preprodartifacts/snapshots/{}/archive/",
+            PathArg(org),
+            PathArg(snapshot_id),
+        );
+        self.get(&path)?.convert()
+    }
+
+    pub fn trigger_snapshot_archive_build(&self, org: &str, snapshot_id: &str) -> ApiResult<()> {
+        let path = format!(
+            "/organizations/{}/preprodartifacts/snapshots/{}/archive/",
+            PathArg(org),
+            PathArg(snapshot_id),
+        );
+        self.request(Method::Post, &path)?.send()?.into_result()?;
+        Ok(())
+    }
+
     pub fn download_snapshot_zip(
         &self,
         org: &str,
@@ -1074,7 +1097,7 @@ impl AuthenticatedApi<'_> {
         dst: &mut std::fs::File,
     ) -> ApiResult<ApiResponse> {
         let path = format!(
-            "/organizations/{}/preprodartifacts/snapshots/{}/download/",
+            "/organizations/{}/preprodartifacts/snapshots/{}/archive/?download",
             PathArg(org),
             PathArg(snapshot_id),
         );
@@ -2121,6 +2144,11 @@ pub struct LogEntry {
 pub struct LatestBaseSnapshotResponse {
     pub head_artifact_id: String,
     pub image_count: u64,
+}
+
+#[derive(Deserialize)]
+pub struct SnapshotArchiveStatus {
+    pub ready: bool,
 }
 
 /// Upload options returned by the snapshots upload-options endpoint.

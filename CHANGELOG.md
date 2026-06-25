@@ -8,6 +8,7 @@
 
 ### Fixes
 
+- (snapshots) Update `snapshots download` to use the new archive endpoint, triggering the archive build and polling until it is ready before downloading ([#3344](https://github.com/getsentry/sentry-cli/pull/3344))
 - (snapshots) Show a clear "project was renamed" error instead of a cryptic JSON parse failure when uploading to a renamed project slug ([#3341](https://github.com/getsentry/sentry-cli/pull/3341))
 
 ## 3.5.1
