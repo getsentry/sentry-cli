@@ -32,7 +32,7 @@ flate2 = { version = "1.0.25", default-features = false, features = [
   "rust_backend",
 ] }
 futures-util = "0.3"
-git2 = { version = "0.20.4", default-features = false }
+git2 = { version = "0.21.0", default-features = false }
 glob = "0.3.1"
 http = "1.4.0"
 if_chain = "1.0.2"
