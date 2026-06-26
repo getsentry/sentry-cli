@@ -109,7 +109,7 @@ impl LastUpdateCheck {
             if let Some(ref release_v) = self.last_fetched_version;
             if let Some(ref check_v) = self.last_check_version;
             then {
-                Version::parse(release_v.as_str()).unwrap() < Version::parse(VERSION).unwrap() &&
+                Version::parse(VERSION).unwrap() < Version::parse(release_v.as_str()).unwrap() &&
                 check_v.as_str() == VERSION
             } else {
                 false
@@ -323,4 +323,41 @@ pub fn run_sentrycli_update_nagger() {
     }
 
     update_nagger_impl().ok();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn check_with_versions(fetched: &str, checked: &str) -> LastUpdateCheck {
+        LastUpdateCheck {
+            last_check_timestamp: Some(Utc::now()),
+            last_check_version: Some(checked.to_owned()),
+            last_fetched_version: Some(fetched.to_owned()),
+        }
+    }
+
+    #[test]
+    fn is_outdated_when_running_version_is_behind_latest() {
+        let check = check_with_versions("99.0.0", VERSION);
+        assert!(check.is_outdated());
+    }
+
+    #[test]
+    fn is_not_outdated_when_running_version_matches_latest() {
+        let check = check_with_versions(VERSION, VERSION);
+        assert!(!check.is_outdated());
+    }
+
+    #[test]
+    fn is_not_outdated_when_latest_is_older_than_running_version() {
+        let check = check_with_versions("0.0.1", VERSION);
+        assert!(!check.is_outdated());
+    }
+
+    #[test]
+    fn is_not_outdated_when_last_check_version_differs_from_running_version() {
+        let check = check_with_versions("99.0.0", "0.0.1");
+        assert!(!check.is_outdated());
+    }
 }
