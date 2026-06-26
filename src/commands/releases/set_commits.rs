@@ -11,7 +11,8 @@ use crate::constants::MAX_COMMIT_SHA_LENGTH;
 use crate::utils::args::ArgExt as _;
 use crate::utils::formatting::Table;
 use crate::utils::vcs::{
-    find_heads, generate_patch_set, get_commits_from_git, get_repo_from_remote, CommitSpec,
+    find_heads, generate_patch_set, get_commits_from_git, get_repo_from_remote,
+    git_repo_remote_url, CommitSpec,
 };
 
 pub fn make_command(command: Command) -> Command {
@@ -199,9 +200,16 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // Find and connect to local git.
         let repo = git2::Repository::open_from_env()?;
 
-        // Parse the git url.
-        let remote = config.get_cached_vcs_remote();
-        let parsed = get_repo_from_remote(&remote);
+        // Resolve the configured VCS remote to a URL before parsing the repository name.
+        // `get_cached_vcs_remote()` returns a remote name (e.g. "origin") by default, but
+        // `get_repo_from_remote()` expects a URL. Fall back to the configured value when it
+        // is already a URL (e.g. via SENTRY_VCS_REMOTE).
+        let remote_name = config.get_cached_vcs_remote();
+        let remote_url = match git_repo_remote_url(&repo, &remote_name) {
+            Ok(url) => url,
+            Err(_) => remote_name.clone(),
+        };
+        let parsed = get_repo_from_remote(&remote_url);
         let ignore_missing = matches.get_flag("ignore-missing");
         // Fetch all the commits upto the `prev_commit` or return the default (20).
         // Will return a tuple of Vec<GitCommits> and the `prev_commit` if it exists in the git tree.

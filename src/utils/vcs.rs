@@ -1054,6 +1054,17 @@ mod tests {
     }
 
     #[test]
+    fn test_get_repo_from_remote_resolves_git_remote_name_to_url() {
+        let dir = git_initialize_repo();
+        let repo = git2::Repository::open(dir.path()).expect("Failed");
+        let remote_url = git_repo_remote_url(&repo, "origin").expect("remote url");
+        let parsed = get_repo_from_remote(&remote_url);
+        assert_eq!(parsed, "getsentry/sentry-cli");
+        // Passing the remote name directly would incorrectly use it as the repository id.
+        assert_eq!(get_repo_from_remote("origin"), "origin");
+    }
+
+    #[test]
     fn test_get_repo_from_remote_preserve_case() {
         // Test that case-preserving function maintains original casing
         assert_eq!(
