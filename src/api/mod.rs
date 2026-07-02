@@ -744,21 +744,18 @@ impl AuthenticatedApi<'_> {
             .send_into(dst)
     }
 
-    /// List all organizations associated with the authenticated token
-    /// in the given `Region`. If no `Region` is provided, we assume
-    /// we're issuing a request to a monolith deployment.
-    pub fn list_organizations(&self, region: Option<&Region>) -> ApiResult<Vec<Organization>> {
+    /// List all organizations associated with the authenticated token.
+    ///
+    /// This hits the control silo organization listing, which returns every
+    /// organization the authenticated user belongs to across all regions in a
+    /// single (paginated) response. Self-hosted/monolith deployments serve the
+    /// same endpoint and return all organizations as well.
+    pub fn list_organizations(&self) -> ApiResult<Vec<Organization>> {
         let mut rv = vec![];
         let mut cursor = "".to_owned();
         loop {
             let current_path = &format!("/organizations/?cursor={}", QueryArg(&cursor));
-            let resp = if let Some(rg) = region {
-                self.api
-                    .request(Method::Get, current_path, Some(&rg.url))?
-                    .send()?
-            } else {
-                self.get(current_path)?
-            };
+            let resp = self.get(current_path)?;
 
             if resp.status() == 404 || (resp.status() == 400 && !cursor.is_empty()) {
                 if rv.is_empty() {
@@ -776,22 +773,6 @@ impl AuthenticatedApi<'_> {
             }
         }
         Ok(rv)
-    }
-
-    pub fn list_available_regions(&self) -> ApiResult<Vec<Region>> {
-        let resp = self.get("/users/me/regions/")?;
-        if resp.status() == 404 {
-            // This endpoint may not exist for self-hosted users, so
-            // returning a default of [] seems appropriate.
-            return Ok(vec![]);
-        }
-
-        if resp.status() == 400 {
-            return Err(ApiErrorKind::ResourceNotFound.into());
-        }
-
-        let region_response = resp.convert::<RegionResponse>()?;
-        Ok(region_response.regions)
     }
 
     /// List all monitors associated with an organization
@@ -1960,9 +1941,9 @@ pub struct Organization {
     pub is_early_adopter: bool,
     #[serde(rename = "require2FA")]
     pub require_2fa: bool,
-    #[serde(rename = "requireEmailVerification")]
-    #[expect(dead_code)]
-    pub require_email_verification: bool,
+    // features was removed from the org listing endpoint; this could be removed too
+    // Same with the get-organizations.json test fixture, the features fields could be removed
+    #[serde(default)]
     #[expect(dead_code)]
     pub features: Vec<String>,
 }
@@ -2109,18 +2090,6 @@ impl fmt::Display for ProcessedEventTag {
         write!(f, "{}: {}", &self.key, &self.value)?;
         Ok(())
     }
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct Region {
-    #[expect(dead_code)]
-    pub name: String,
-    pub url: String,
-}
-
-#[derive(Clone, Debug, Deserialize)]
-pub struct RegionResponse {
-    pub regions: Vec<Region>,
 }
 
 /// Response structure for logs API

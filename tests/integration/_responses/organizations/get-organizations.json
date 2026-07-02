@@ -10,7 +10,6 @@
     "dateCreated": "2020-09-14T17:28:14.933511Z",
     "isEarlyAdopter": true,
     "require2FA": false,
-    "requireEmailVerification": false,
     "avatar": {
       "avatarType": "upload",
       "avatarUuid": "9fe0ee23944145b49c64924dfbca40fe"
@@ -98,7 +97,6 @@
     "dateCreated": "2019-12-18T13:20:09.250550Z",
     "isEarlyAdopter": false,
     "require2FA": false,
-    "requireEmailVerification": false,
     "avatar": {
       "avatarType": "letter_avatar",
       "avatarUuid": null
@@ -147,7 +145,6 @@
     "dateCreated": "2018-04-03T17:51:37.660710Z",
     "isEarlyAdopter": false,
     "require2FA": false,
-    "requireEmailVerification": false,
     "avatar": {
       "avatarType": "letter_avatar",
       "avatarUuid": null
@@ -198,7 +195,6 @@
     "dateCreated": "2015-03-02T23:55:20Z",
     "isEarlyAdopter": true,
     "require2FA": false,
-    "requireEmailVerification": false,
     "avatar": {
       "avatarType": "upload",
       "avatarUuid": "24e94751da694e0fa57947e289048d7e"
@@ -292,7 +288,6 @@
     "dateCreated": "2014-12-15T04:06:24.263571Z",
     "isEarlyAdopter": true,
     "require2FA": false,
-    "requireEmailVerification": false,
     "avatar": {
       "avatarType": "upload",
       "avatarUuid": "24f6f762f7a7473888b259c566da5adb"
