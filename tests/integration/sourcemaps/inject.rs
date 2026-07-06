@@ -125,6 +125,51 @@ fn command_sourcemaps_inject_output_split_ambiguous() {
 }
 
 #[test]
+fn command_sourcemaps_inject_identical_empty_maps_distinct_debug_ids() {
+    let testcase_cwd_path =
+        "tests/integration/_cases/sourcemaps/sourcemaps-inject-identical-empty-maps.in/";
+
+    let testcase_cwd = std::path::Path::new(testcase_cwd_path);
+
+    if testcase_cwd.exists() {
+        remove_dir_all(testcase_cwd).unwrap();
+    }
+    fs::create_dir_all(testcase_cwd).unwrap();
+
+    fs::write(
+        testcase_cwd.join("a.js"),
+        "console.log(1)\n//# sourceMappingURL=a.js.map\n",
+    )
+    .unwrap();
+    fs::write(
+        testcase_cwd.join("b.js"),
+        "console.log(22)\n//# sourceMappingURL=b.js.map\n",
+    )
+    .unwrap();
+
+    let empty_map = r#"{"version":3,"sources":[],"names":[],"mappings":""}"#;
+    fs::write(testcase_cwd.join("a.js.map"), empty_map).unwrap();
+    fs::write(testcase_cwd.join("b.js.map"), empty_map).unwrap();
+
+    TestManager::new()
+        .assert_cmd(vec!["sourcemaps", "inject", testcase_cwd_path])
+        .run_and_assert(AssertCommand::Success);
+
+    let a_js = fs::read_to_string(testcase_cwd.join("a.js")).unwrap();
+    let b_js = fs::read_to_string(testcase_cwd.join("b.js")).unwrap();
+    let a_debug_id = extract_debug_id_from_js(&a_js);
+    let b_debug_id = extract_debug_id_from_js(&b_js);
+
+    assert_ne!(a_debug_id, b_debug_id);
+
+    let a_map_debug_id = extract_debug_id_from_sourcemap(testcase_cwd.join("a.js.map"));
+    let b_map_debug_id = extract_debug_id_from_sourcemap(testcase_cwd.join("b.js.map"));
+
+    assert_eq!(a_debug_id, a_map_debug_id);
+    assert_eq!(b_debug_id, b_map_debug_id);
+}
+
+#[test]
 fn command_sourcemaps_inject_bundlers() {
     let testcase_cwd_path = "tests/integration/_cases/sourcemaps/sourcemaps-inject-bundlers.in/";
     if std::path::Path::new(testcase_cwd_path).exists() {
@@ -262,6 +307,23 @@ fn command_sourcemaps_inject_sourcemap_url_in_string_literal() {
     TestManager::new()
         .assert_cmd(vec!["sourcemaps", "inject", testcase_cwd_path])
         .run_and_assert(AssertCommand::Success);
+}
+
+fn extract_debug_id_from_js(js: &str) -> String {
+    js.lines()
+        .find_map(|line| line.strip_prefix("//# debugId="))
+        .expect("JS file should contain a debugId comment")
+        .to_owned()
+}
+
+fn extract_debug_id_from_sourcemap(path: impl AsRef<Path>) -> String {
+    let contents = fs::read_to_string(path).unwrap();
+    let value: serde_json::Value = serde_json::from_str(&contents).unwrap();
+    value
+        .get("debugId")
+        .and_then(|debug_id| debug_id.as_str())
+        .expect("sourcemap should contain a debugId property")
+        .to_owned()
 }
 
 /// Recursively assert that the contents of two directories are equal.

@@ -330,6 +330,24 @@ pub fn debug_id_from_bytes_hashed(bytes: &[u8]) -> DebugId {
     DebugId::from_uuid(uuid::Builder::from_sha1_bytes(sha1_bytes).into_uuid())
 }
 
+/// Generates a debug ID from generated JS bytes and sourcemap bytes.
+pub fn debug_id_from_js_and_sourcemap_bytes_hashed(
+    js_bytes: &[u8],
+    sourcemap_bytes: &[u8],
+) -> DebugId {
+    let mut hash = sha1_smol::Sha1::new();
+    hash.update(b"js");
+    hash.update(&(js_bytes.len() as u64).to_le_bytes());
+    hash.update(js_bytes);
+    hash.update(b"sourcemap");
+    hash.update(&(sourcemap_bytes.len() as u64).to_le_bytes());
+    hash.update(sourcemap_bytes);
+
+    let mut sha1_bytes = [0u8; 16];
+    sha1_bytes.copy_from_slice(&hash.digest().bytes()[..16]);
+    DebugId::from_uuid(uuid::Builder::from_sha1_bytes(sha1_bytes).into_uuid())
+}
+
 /// Ensures paths are always separated by `/` even on Windows
 pub fn canonicalize_path_sep_to_unix(path: &str) -> String {
     path.replace(std::path::MAIN_SEPARATOR, "/")
@@ -749,6 +767,28 @@ more text
             find_matching_paths(candidates, "project/code/page/index.js.map"),
             &["./project/maps/page/index.js.map"]
         );
+    }
+
+    #[test]
+    fn debug_id_from_js_and_sourcemap_bytes_is_deterministic() {
+        let first = debug_id_from_js_and_sourcemap_bytes_hashed(b"console.log(1);", b"{}");
+        let second = debug_id_from_js_and_sourcemap_bytes_hashed(b"console.log(1);", b"{}");
+        assert_eq!(first, second);
+    }
+
+    #[test]
+    fn debug_id_from_js_and_sourcemap_bytes_changes_with_js() {
+        let first = debug_id_from_js_and_sourcemap_bytes_hashed(b"console.log(1);", b"{}");
+        let second = debug_id_from_js_and_sourcemap_bytes_hashed(b"console.log(2);", b"{}");
+        assert_ne!(first, second);
+    }
+
+    #[test]
+    fn debug_id_from_js_and_sourcemap_bytes_changes_with_sourcemap() {
+        let first = debug_id_from_js_and_sourcemap_bytes_hashed(b"console.log(1);", b"{}");
+        let second =
+            debug_id_from_js_and_sourcemap_bytes_hashed(b"console.log(1);", b"{\"version\":3}");
+        assert_ne!(first, second);
     }
 
     #[test]

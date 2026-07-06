@@ -803,9 +803,19 @@ impl SourceMapProcessor {
                                 format!("Invalid embedded sourcemap in source file {source_url}")
                             })?;
 
-                        let debug_id = sourcemap
-                            .debug_id()
-                            .unwrap_or_else(|| inject::debug_id_from_bytes_hashed(&decoded));
+                        let debug_id = match sourcemap.debug_id() {
+                            Some(debug_id) => debug_id,
+                            None => {
+                                let source_file = self
+                                    .sources
+                                    .get(source_url)
+                                    .expect("source file must exist when processing its sourcemap");
+                                inject::debug_id_from_js_and_sourcemap_bytes_hashed(
+                                    source_file.contents.as_slice(),
+                                    &decoded,
+                                )
+                            }
+                        };
 
                         let source_file = self.sources.get_mut(source_url).unwrap();
 
@@ -896,9 +906,14 @@ impl SourceMapProcessor {
                                 match sm.debug_id() {
                                     Some(debug_id) => (sm, debug_id, false),
                                     None => {
-                                        let debug_id = inject::debug_id_from_bytes_hashed(
-                                            &sourcemap_file.contents,
+                                        let source_file = self.sources.get(source_url).expect(
+                                            "source file must exist when processing its sourcemap",
                                         );
+                                        let debug_id =
+                                            inject::debug_id_from_js_and_sourcemap_bytes_hashed(
+                                                source_file.contents.as_slice(),
+                                                sourcemap_file.contents.as_slice(),
+                                            );
                                         (sm, debug_id, true)
                                     }
                                 }
