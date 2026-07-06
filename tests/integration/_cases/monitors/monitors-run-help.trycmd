@@ -37,6 +37,8 @@ Options:
           --schedule.
       --recovery-threshold <recovery_threshold>
           The number of consecutive successful check-ins that resolve an issue. Requires --schedule.
+      --with-output
+          Capture command output (stdout and stderr combined).
   -h, --help
           Print help
 
