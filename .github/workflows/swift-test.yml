@@ -10,7 +10,7 @@ on:
 jobs:
   run-tests:
     name: Run tests
-    runs-on: macos-15
+    runs-on: macos-26
     steps:
       - name: Checkout code
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # 6.0.2
