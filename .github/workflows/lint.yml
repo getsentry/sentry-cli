@@ -25,13 +25,13 @@ jobs:
             os: ubuntu-24.04
             display-os: Linux
           - target: x86_64-pc-windows-msvc
-            os: windows-2022
+            os: windows-2025
             display-os: Windows
           - target: aarch64-apple-darwin
-            os: macos-14
+            os: macos-26
             display-os: macOS – aarch64
           - target: x86_64-apple-darwin
-            os: macos-14
+            os: macos-26
             display-os: macOS – x86_64
 
     name: ${{ matrix.display-os }}
@@ -77,9 +77,9 @@ jobs:
       - name: Download x86_64 OpenSSL
         if: matrix.target == 'x86_64-apple-darwin' && steps.cache-openssl-x86.outputs.cache-hit != 'true'
         run: |
-          brew fetch --bottle-tag=sonoma openssl@3
+          arch -x86_64 brew fetch --bottle-tag=tahoe openssl@3
           mkdir -p $X86_64_APPLE_DARWIN_OPENSSL_DIR
-          tar xzf $(brew --cache --bottle-tag=sonoma openssl@3) -C $X86_64_APPLE_DARWIN_OPENSSL_DIR --strip-components=2
+          tar xzf $(arch -x86_64 brew --cache --bottle-tag=tahoe openssl@3) -C $X86_64_APPLE_DARWIN_OPENSSL_DIR --strip-components=2
 
       - name: Cache Dependencies
         uses: swatinem/rust-cache@779680da715d629ac1d338a641029a2f4372abb5 # 2.8.2
