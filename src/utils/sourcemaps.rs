@@ -109,6 +109,20 @@ fn guess_sourcemap_reference(
     let map_ext = "map";
     let (path, basename, ext) = split_url(min_url);
 
+    if let Some(ext) = ext.as_ref() {
+        // foo.min.js -> foo.min.js.map
+        // Per the source map spec, a reference is formed by appending `.map` to
+        // the file name, so prefer this over replacing the extension (gh-2802).
+        let new_ext = format!("{ext}.{map_ext}");
+        let url_with_path = unsplit_url(path, basename, Some(&new_ext));
+        if sourcemaps.contains(&url_with_path) {
+            return Ok(
+                SourceMapReference::from_url(unsplit_url(None, basename, Some(&new_ext)))
+                    .with_original_url(url_with_path),
+            );
+        }
+    }
+
     // foo.min.js -> foo.map
     let url_with_path = unsplit_url(path, basename, Some("map"));
     if sourcemaps.contains(&url_with_path) {
@@ -119,16 +133,6 @@ fn guess_sourcemap_reference(
     }
 
     if let Some(ext) = ext.as_ref() {
-        // foo.min.js -> foo.min.js.map
-        let new_ext = format!("{ext}.{map_ext}");
-        let url_with_path = unsplit_url(path, basename, Some(&new_ext));
-        if sourcemaps.contains(&url_with_path) {
-            return Ok(
-                SourceMapReference::from_url(unsplit_url(None, basename, Some(&new_ext)))
-                    .with_original_url(url_with_path),
-            );
-        }
-
         // foo.min.js -> foo.js.map
         if let Some(rest) = ext.strip_prefix("min.") {
             let new_ext = format!("{rest}.{map_ext}");
@@ -1286,6 +1290,37 @@ mod tests {
         assert_eq!(&unsplit_url(None, "foo", Some("js")), "foo.js");
         assert_eq!(&unsplit_url(None, "foo", None), "foo");
         assert_eq!(&unsplit_url(Some(""), "foo", None), "/foo");
+    }
+
+    #[test]
+    fn test_guess_sourcemap_reference() {
+        fn set(urls: &[&str]) -> HashSet<String> {
+            urls.iter().map(|s| (*s).to_owned()).collect()
+        }
+
+        // With both candidates present, the appended `foo.min.js.map` wins over
+        // the replaced `foo.map` (gh-2802, per the source map spec).
+        assert_eq!(
+            guess_sourcemap_reference(&set(&["foo.map", "foo.min.js.map"]), "foo.min.js")
+                .unwrap()
+                .url,
+            "foo.min.js.map"
+        );
+
+        // Each form still resolves when it is the only candidate present.
+        for (candidate, expected) in [
+            ("foo.map", "foo.map"),
+            ("foo.min.js.map", "foo.min.js.map"),
+            ("foo.js.map", "foo.js.map"),
+            ("foo.min.map", "foo.min.map"),
+        ] {
+            assert_eq!(
+                guess_sourcemap_reference(&set(&[candidate]), "foo.min.js")
+                    .unwrap()
+                    .url,
+                expected
+            );
+        }
     }
 
     #[test]
