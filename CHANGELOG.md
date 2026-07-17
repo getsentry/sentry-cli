@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- (sourcemaps) Prevent Debug ID collisions between distinct JS files that share identical sourcemaps by hashing both the JS and sourcemap bytes when injecting Debug IDs ([#3356](https://github.com/getsentry/sentry-cli/pull/3356))
+
 ## 3.6.0
 
 ### Features
