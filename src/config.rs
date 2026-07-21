@@ -150,7 +150,7 @@ impl Config {
         };
         let token_url = token_data
             .as_ref()
-            .map(|data| data.url.as_str())
+            .map(|data| data.base_url())
             .unwrap_or_default();
         let base_url = if token_url.is_empty() {
             auth_and_url.url.unwrap_or_else(|| DEFAULT_URL.to_owned())
@@ -282,7 +282,7 @@ impl Config {
             Some(Auth::Token(ref val)) => {
                 self.cached_token_data = val.payload().cloned();
 
-                if let Some(token_url) = self.cached_token_data.as_ref().map(|td| td.url.as_str()) {
+                if let Some(token_url) = self.cached_token_data.as_ref().map(|td| td.base_url()) {
                     self.cached_base_url = token_url.to_owned();
                 }
 
@@ -719,7 +719,9 @@ impl AuthAndUrl {
 
 /// Returns whether a token is self-contained because it has a nonempty embedded URL.
 fn token_has_embedded_url(token: &AuthToken) -> bool {
-    token.payload().is_some_and(|data| !data.url.is_empty())
+    token
+        .payload()
+        .is_some_and(|data| !data.base_url().is_empty())
 }
 
 /// Determines which inherited value must be removed before applying another source.

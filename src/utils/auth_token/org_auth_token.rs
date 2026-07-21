@@ -19,6 +19,19 @@ pub struct AuthTokenPayload {
     // URL may be missing from some old auth tokens, see getsentry/sentry#57123
     #[serde(deserialize_with = "url_deserializer")]
     pub url: String,
+
+    #[serde(default, deserialize_with = "url_deserializer")]
+    pub region_url: String,
+}
+
+impl AuthTokenPayload {
+    pub fn base_url(&self) -> &str {
+        if self.region_url.is_empty() {
+            &self.url
+        } else {
+            &self.region_url
+        }
+    }
 }
 
 /// Deserializes a URL from a string, returning an empty string if the URL is missing or null.

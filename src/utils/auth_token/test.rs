@@ -21,6 +21,8 @@ fn test_valid_org_auth_token() {
     let payload = token.payload().unwrap();
     assert_eq!(payload.org, "sentry");
     assert_eq!(payload.url, "http://localhost:8000");
+    assert_eq!(payload.region_url, "http://localhost:8000");
+    assert_eq!(payload.base_url(), "http://localhost:8000");
 
     assert_eq!(good_token, token.raw().expose_secret().clone());
 
@@ -43,6 +45,8 @@ fn test_valid_org_auth_token_missing_url() {
     let payload = token.payload().unwrap();
     assert_eq!(payload.org, "sentry");
     assert!(payload.url.is_empty());
+    assert_eq!(payload.region_url, "http://localhost:8000");
+    assert_eq!(payload.base_url(), "http://localhost:8000");
 
     assert_eq!(good_token, token.raw().expose_secret().clone());
 
