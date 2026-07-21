@@ -10,7 +10,7 @@ use std::process;
 use std::{env, iter};
 
 use crate::api::Api;
-use crate::config::{Auth, Config};
+use crate::config::Config;
 use crate::constants::{ARCH, PLATFORM, VERSION};
 use crate::utils::auth_token::{redact_token_from_string, AuthToken};
 use crate::utils::logging::set_quiet_mode;
@@ -139,14 +139,6 @@ fn preexecute_hooks() -> Result<bool> {
 }
 
 fn configure_args(config: &mut Config, matches: &ArgMatches) {
-    if let Some(auth_token) = matches.get_one::<AuthToken>("auth_token") {
-        config.set_auth(Auth::Token(auth_token.to_owned()));
-    }
-
-    if let Some(url) = matches.get_one::<String>("url") {
-        config.set_base_url(url);
-    }
-
     if let Some(headers) = matches.get_many::<String>("headers") {
         let headers = headers.map(|h| h.to_owned()).collect();
         config.set_headers(headers);
@@ -263,7 +255,10 @@ pub fn execute() -> Result<()> {
     if let Some(&log_level) = log_level {
         set_max_level(log_level);
     }
-    let mut config = Config::from_cli_config()?;
+    let mut config = Config::from_cli_config(
+        matches.get_one::<String>("url").map(String::as_str),
+        matches.get_one::<AuthToken>("auth_token"),
+    )?;
     configure_args(&mut config, &matches);
     set_quiet_mode(matches.get_flag("quiet"));
 

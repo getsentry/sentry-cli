@@ -43,6 +43,7 @@ export class SentryCli {
    *
    * @param configFile Path to Sentry CLI config properties, as described in https://docs.sentry.io/learn/cli/configuration/#properties-files.
    * By default, the config file is looked for upwards from the current path and defaults from ~/.sentryclirc are always loaded.
+   * A URL and a non-embedded auth token must be configured in the same file or through runtime options and environment variables.
    * This value will update `SENTRY_PROPERTIES` env variable.
    * @param options More options to pass to the CLI
    */

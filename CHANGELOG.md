@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Do not combine a URL and non-embedded auth token from different configuration files. When configuration sources provide only one of these values, an existing value from another source may be ignored with a warning. Configure the URL and token in the same file or through CLI arguments and environment variables, which are treated as one runtime source. This change does not alter parent-config discovery or how other configuration keys are selected.
+
 ## 3.6.1
 
 ### Fixes

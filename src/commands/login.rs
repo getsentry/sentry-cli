@@ -103,7 +103,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config_to_update = if matches.get_flag("global") {
         Config::global()?
     } else {
-        Config::from_cli_config()?
+        Config::from_cli_config(None, None)?
     };
 
     if should_warn_about_overwrite(config_to_update.get_auth(), &token) {
