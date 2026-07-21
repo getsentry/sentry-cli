@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- (auth) Use an org auth token's embedded `region_url` as the API base URL so uploads from orgs with non-default (e.g. EU) data residency reach the correct region instead of failing with `Invalid org token`. Previously only the token's `url` (always the primary US URL) was honored, and `SENTRY_URL`/`--url` overrides were ignored
+
 ## 3.6.2
 
 ### Fixes
