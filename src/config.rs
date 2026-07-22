@@ -61,7 +61,76 @@ pub struct Config {
 impl Config {
     /// Loads config files and applies URL and token values from the environment and CLI.
     pub fn from_cli_config(cli_url: Option<&str>, cli_token: Option<&AuthToken>) -> Result<Config> {
-        load_cli_config(cli_url, cli_token)
+        let (global_filename, mut rv) = load_global_config_file()?;
+        let mut warning = None;
+
+        let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
+            let file_desc = format!(
+                "{CONFIG_RC_FILE_NAME} file from project path ({})",
+                project_config_path.display()
+            );
+            let mut f = fs::File::open(&project_config_path)
+                .context(failed_local_config_load_message(&file_desc))?;
+            let ini = Ini::read_from(&mut f).context(format!("Failed to parse {file_desc}"))?;
+            warning = merge_config_source(&mut rv, &ini);
+            (project_config_path, rv)
+        } else {
+            (global_filename, rv)
+        };
+
+        if let Ok(prop_path) = env::var("SENTRY_PROPERTIES") {
+            match fs::File::open(&prop_path) {
+                Ok(f) => {
+                    let props = match java_properties::read(f) {
+                        Ok(props) => props,
+                        Err(err) => {
+                            bail!("Could not load java style properties file: {err}");
+                        }
+                    };
+                    info!(
+                        "Loaded file referenced by SENTRY_PROPERTIES ({})",
+                        &prop_path
+                    );
+                    let mut properties_ini = Ini::new();
+                    for (key, value) in props {
+                        let mut iter = key.rsplitn(2, '.');
+                        if let Some(key) = iter.next() {
+                            let section = iter.next();
+                            properties_ini.set_to(section, key.to_owned(), value);
+                        } else {
+                            debug!("Incorrect properties file key: {key}");
+                        }
+                    }
+                    warning = merge_config_source(&mut rv, &properties_ini).or(warning);
+                }
+                Err(err) => {
+                    if err.kind() != io::ErrorKind::NotFound {
+                        return Err(Error::from(err).context(format!(
+                            "Failed to load file referenced by SENTRY_PROPERTIES ({})",
+                            &prop_path
+                        )));
+                    } else {
+                        warn!(
+                            "Failed to find file referenced by SENTRY_PROPERTIES ({})",
+                            &prop_path
+                        );
+                    }
+                }
+            }
+        }
+
+        let mut auth_and_url = AuthAndUrl::from_ini(&rv);
+        let runtime_warning = auth_and_url.merge_runtime(
+            env::var("SENTRY_URL").ok(),
+            env::var("SENTRY_AUTH_TOKEN").ok().map(AuthToken::from),
+            cli_url,
+            cli_token,
+        );
+        if let Some(warning) = runtime_warning.or(warning) {
+            warn!("{warning}");
+        }
+
+        Ok(Config::from_file_and_auth(path, rv, auth_and_url))
     }
 
     /// Creates a config without applying runtime URL or auth token overrides.
@@ -774,81 +843,6 @@ fn failed_local_config_load_message(file_desc: &str) -> String {
         return msg + (" Hint: Please ensure that ${SRCROOT}/.sentryclirc is added to the Input Files of this Xcode Build Phases script.");
     }
     msg
-}
-
-/// Loads file sources in precedence order and applies runtime URL/token values to the resulting
-/// config caches. Runtime values are not added to the file-backed INI.
-fn load_cli_config(cli_url: Option<&str>, cli_token: Option<&AuthToken>) -> Result<Config> {
-    let (global_filename, mut rv) = load_global_config_file()?;
-    let mut warning = None;
-
-    let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
-        let file_desc = format!(
-            "{CONFIG_RC_FILE_NAME} file from project path ({})",
-            project_config_path.display()
-        );
-        let mut f = fs::File::open(&project_config_path)
-            .context(failed_local_config_load_message(&file_desc))?;
-        let ini = Ini::read_from(&mut f).context(format!("Failed to parse {file_desc}"))?;
-        warning = merge_config_source(&mut rv, &ini).or(warning);
-        (project_config_path, rv)
-    } else {
-        (global_filename, rv)
-    };
-
-    if let Ok(prop_path) = env::var("SENTRY_PROPERTIES") {
-        match fs::File::open(&prop_path) {
-            Ok(f) => {
-                let props = match java_properties::read(f) {
-                    Ok(props) => props,
-                    Err(err) => {
-                        bail!("Could not load java style properties file: {err}");
-                    }
-                };
-                info!(
-                    "Loaded file referenced by SENTRY_PROPERTIES ({})",
-                    &prop_path
-                );
-                let mut properties_ini = Ini::new();
-                for (key, value) in props {
-                    let mut iter = key.rsplitn(2, '.');
-                    if let Some(key) = iter.next() {
-                        let section = iter.next();
-                        properties_ini.set_to(section, key.to_owned(), value);
-                    } else {
-                        debug!("Incorrect properties file key: {key}");
-                    }
-                }
-                warning = merge_config_source(&mut rv, &properties_ini).or(warning);
-            }
-            Err(err) => {
-                if err.kind() != io::ErrorKind::NotFound {
-                    return Err(Error::from(err).context(format!(
-                        "Failed to load file referenced by SENTRY_PROPERTIES ({})",
-                        &prop_path
-                    )));
-                } else {
-                    warn!(
-                        "Failed to find file referenced by SENTRY_PROPERTIES ({})",
-                        &prop_path
-                    );
-                }
-            }
-        }
-    }
-
-    let mut auth_and_url = AuthAndUrl::from_ini(&rv);
-    let runtime_warning = auth_and_url.merge_runtime(
-        env::var("SENTRY_URL").ok(),
-        env::var("SENTRY_AUTH_TOKEN").ok().map(AuthToken::from),
-        cli_url,
-        cli_token,
-    );
-    if let Some(warning) = runtime_warning.or(warning) {
-        warn!("{warning}");
-    }
-
-    Ok(Config::from_file_and_auth(path, rv, auth_and_url))
 }
 
 impl Clone for Config {
