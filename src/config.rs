@@ -689,8 +689,8 @@ fn warn_about_conflicting_urls(token_url: &str, manually_configured_url: Option<
         if manually_configured_url != token_url {
             warn!(
                 "Using {token_url} (embedded in token) rather than manually-configured URL \
-                {manually_configured_url}. To use {manually_configured_url}, please provide an \
-                auth token for this URL."
+                {manually_configured_url}. To use {manually_configured_url}, please provide an  \
+                auth token for {manually_configured_url}."
             );
         }
     }
