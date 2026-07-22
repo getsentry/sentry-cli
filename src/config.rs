@@ -615,8 +615,8 @@ impl AuthAndUrl {
 
     /// Applies a higher-priority URL/token source using the shared source-separation rule.
     fn merge(&mut self, overlay: AuthAndUrl) -> Option<DiscardedAuthUrlValue> {
-        let warning = reconcile_auth_url(self, &overlay);
-        match warning {
+        let should_discard = reconcile_auth_url(self, &overlay);
+        match should_discard {
             Some(DiscardedAuthUrlValue::AuthToken) => self.token = None,
             Some(DiscardedAuthUrlValue::Url) => self.url = None,
             None => {}
@@ -629,7 +629,7 @@ impl AuthAndUrl {
             self.token = Some(token);
         }
 
-        warning
+        should_discard
     }
 }
 
@@ -664,8 +664,9 @@ fn reconcile_auth_url(base: &AuthAndUrl, overlay: &AuthAndUrl) -> Option<Discard
 /// URL/token reconciliation uses the same typed rule as runtime merging. All other values
 /// retain the existing key-by-key INI merge behavior.
 fn merge_config_source(base: &mut Ini, overlay: &Ini) -> Option<DiscardedAuthUrlValue> {
-    let warning = reconcile_auth_url(&AuthAndUrl::from_ini(base), &AuthAndUrl::from_ini(overlay));
-    match warning {
+    let should_discard =
+        reconcile_auth_url(&AuthAndUrl::from_ini(base), &AuthAndUrl::from_ini(overlay));
+    match should_discard {
         Some(DiscardedAuthUrlValue::AuthToken) => {
             base.delete_from(Some("auth"), "token");
         }
@@ -681,7 +682,7 @@ fn merge_config_source(base: &mut Ini, overlay: &Ini) -> Option<DiscardedAuthUrl
         }
     }
 
-    warning
+    should_discard
 }
 
 fn warn_about_conflicting_urls(token_url: &str, manually_configured_url: Option<&str>) {
@@ -689,7 +690,7 @@ fn warn_about_conflicting_urls(token_url: &str, manually_configured_url: Option<
         if manually_configured_url != token_url {
             warn!(
                 "Using {token_url} (embedded in token) rather than manually-configured URL \
-                {manually_configured_url}. To use {manually_configured_url}, please provide an  \
+                {manually_configured_url}. To use {manually_configured_url}, please provide an \
                 auth token for {manually_configured_url}."
             );
         }
