@@ -7,6 +7,28 @@ use crate::integration::{MockEndpointBuilder, TestManager};
 
 const USER_TOKEN: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
 
+fn clear_sentry_environment(command: &mut Command) {
+    for variable in [
+        "SENTRY_ALLOW_FAILURE",
+        "SENTRY_AUTH_TOKEN",
+        "SENTRY_DISABLE_UPDATE_CHECK",
+        "SENTRY_DSN",
+        "SENTRY_ENVIRONMENT",
+        "SENTRY_HTTP_MAX_RETRIES",
+        "SENTRY_INTEGRATION_TEST",
+        "SENTRY_LOG_LEVEL",
+        "SENTRY_ORG",
+        "SENTRY_PIPELINE",
+        "SENTRY_PROJECT",
+        "SENTRY_PROPERTIES",
+        "SENTRY_RELEASE",
+        "SENTRY_URL",
+        "SENTRY_VCS_REMOTE",
+    ] {
+        command.env_remove(variable);
+    }
+}
+
 #[test]
 fn project_url_does_not_use_global_token() {
     let manager = TestManager::new();
@@ -36,8 +58,8 @@ fn project_url_does_not_use_global_token() {
     .unwrap();
 
     let mut command = Command::new(cargo_bin!("sentry-cli"));
+    clear_sentry_environment(&mut command);
     let assertion = command
-        .env_clear()
         .env("HOME", &home)
         .env("USERPROFILE", &home)
         .current_dir(&child)
@@ -65,8 +87,8 @@ fn cli_url_and_environment_token_authenticate_as_one_runtime_source() {
     );
 
     let mut command = Command::new(cargo_bin!("sentry-cli"));
+    clear_sentry_environment(&mut command);
     command
-        .env_clear()
         .env("SENTRY_INTEGRATION_TEST", "1")
         .env("SENTRY_AUTH_TOKEN", USER_TOKEN)
         .env("SENTRY_ORG", "wat-org")
