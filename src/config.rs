@@ -1,6 +1,7 @@
 //! This module implements config access.
 use std::env;
 use std::env::VarError;
+use std::fmt;
 use std::fs;
 use std::fs::OpenOptions;
 use std::io::{self, Write as _};
@@ -61,44 +62,129 @@ pub struct Config {
 }
 
 impl Config {
-    /// Loads the CLI config from the default location and returns it.
-    pub fn from_cli_config() -> Result<Config> {
-        let (filename, ini) = load_cli_config()?;
-        Ok(Config::from_file(filename, ini))
-    }
+    /// Loads config files and applies URL and authentication values from the environment and CLI.
+    pub fn from_cli_config(
+        cli_url: Option<&str>,
+        cli_token: Option<&AuthToken>,
+        cli_api_key: Option<&str>,
+    ) -> Result<Config> {
+        let (global_filename, mut rv) = load_global_config_file()?;
+        let mut warning = None;
 
-    /// Creates Config based on provided config file.
-    pub fn from_file(filename: PathBuf, ini: Ini) -> Self {
-        let auth = get_default_auth(&ini);
-        let token_embedded_data = match auth {
-            Some(Auth::Token(ref token)) => token.payload().cloned(),
-            _ => None, // get_default_auth never returns Auth::Token variant
+        let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
+            let file_desc = format!(
+                "{CONFIG_RC_FILE_NAME} file from project path ({})",
+                project_config_path.display()
+            );
+            let mut f = fs::File::open(&project_config_path)
+                .context(failed_local_config_load_message(&file_desc))?;
+            let ini = Ini::read_from(&mut f).context(format!("Failed to parse {file_desc}"))?;
+            warning = merge_config_source(&mut rv, &ini);
+            (project_config_path, rv)
+        } else {
+            (global_filename, rv)
         };
 
-        let manually_configured_url = configured_url(&ini);
-        let token_url = token_embedded_data
-            .as_ref()
-            .map(|td| td.url.as_str())
-            .unwrap_or_default();
+        if let Ok(prop_path) = env::var("SENTRY_PROPERTIES") {
+            match fs::File::open(&prop_path) {
+                Ok(f) => {
+                    let props = match java_properties::read(f) {
+                        Ok(props) => props,
+                        Err(err) => {
+                            bail!("Could not load java style properties file: {err}");
+                        }
+                    };
+                    info!(
+                        "Loaded file referenced by SENTRY_PROPERTIES ({})",
+                        &prop_path
+                    );
+                    let mut properties_ini = Ini::new();
+                    for (key, value) in props {
+                        let mut iter = key.rsplitn(2, '.');
+                        if let Some(key) = iter.next() {
+                            let section = iter.next();
+                            properties_ini.set_to(section, key.to_owned(), value);
+                        } else {
+                            debug!("Incorrect properties file key: {key}");
+                        }
+                    }
+                    warning = merge_config_source(&mut rv, &properties_ini).or(warning);
+                }
+                Err(err) => {
+                    if err.kind() != io::ErrorKind::NotFound {
+                        return Err(Error::from(err).context(format!(
+                            "Failed to load file referenced by SENTRY_PROPERTIES ({})",
+                            &prop_path
+                        )));
+                    } else {
+                        warn!(
+                            "Failed to find file referenced by SENTRY_PROPERTIES ({})",
+                            &prop_path
+                        );
+                    }
+                }
+            }
+        }
 
-        let url = if token_url.is_empty() {
-            manually_configured_url.unwrap_or_else(|| DEFAULT_URL.to_owned())
+        let mut auth_and_url = AuthAndUrl::from_ini(&rv);
+        let runtime_warning = auth_and_url.merge_runtime(
+            env::var("SENTRY_URL").ok(),
+            env::var("SENTRY_AUTH_TOKEN").ok().map(AuthToken::from),
+            env::var("SENTRY_API_KEY").ok(),
+            cli_url,
+            cli_token,
+            cli_api_key,
+        );
+        if let Some(warning) = runtime_warning.or(warning) {
+            warn!("{warning}");
+        }
+
+        Ok(Config::from_file_and_auth(path, rv, auth_and_url))
+    }
+
+    /// Creates a config without applying runtime URL or auth token overrides.
+    ///
+    /// Other environment-backed settings retain their existing behavior.
+    pub fn from_file(filename: PathBuf, ini: Ini) -> Self {
+        let auth_and_url = AuthAndUrl::from_ini(&ini);
+        Self::from_file_and_auth(filename, ini, auth_and_url)
+    }
+
+    /// Constructs a config that persists `ini` while using the separately selected auth and URL.
+    fn from_file_and_auth(filename: PathBuf, ini: Ini, auth_and_url: AuthAndUrl) -> Self {
+        let auth = auth_and_url.auth;
+        let token_data = match auth {
+            Some(Auth::Token(ref token)) => token.payload().cloned(),
+            _ => None,
+        };
+        #[expect(deprecated, reason = "API key is deprecated.")]
+        if matches!(auth, Some(Auth::Key(_))) {
+            warn!(
+                "[DEPRECTATION NOTICE] API key authentication is deprecated. Please generate and set an auth token using `SENTRY_AUTH_TOKEN` instead."
+            );
+        }
+        let token_url = token_data
+            .as_ref()
+            .map(|data| data.url.as_str())
+            .unwrap_or_default();
+        let base_url = if token_url.is_empty() {
+            auth_and_url.url.unwrap_or_else(|| DEFAULT_URL.to_owned())
         } else {
-            warn_about_conflicting_urls(token_url, manually_configured_url.as_deref());
-            token_url.into()
+            warn_about_conflicting_urls(token_url, auth_and_url.url.as_deref());
+            token_url.to_owned()
         };
 
         Config {
             filename,
             process_bound: false,
             cached_auth: auth,
-            cached_base_url: url,
+            cached_base_url: base_url,
             cached_headers: get_default_headers(&ini),
             cached_log_level: get_default_log_level(&ini),
             cached_vcs_remote: get_default_vcs_remote(&ini),
             max_retries: get_max_retries(&ini),
             ini,
-            cached_token_data: token_embedded_data,
+            cached_token_data: token_data,
         }
     }
 
@@ -190,9 +276,21 @@ impl Config {
         .map_err(Into::into)
     }
 
-    /// Returns the auth info
+    /// Returns the auth info selected for the current process.
     pub fn get_auth(&self) -> Option<&Auth> {
         self.cached_auth.as_ref()
+    }
+
+    /// Returns the auth info that would be persisted when this config is saved.
+    pub fn get_persisted_auth(&self) -> Option<Auth> {
+        if let Some(token) = self.ini.get_from(Some("auth"), "token") {
+            Some(Auth::Token(token.into()))
+        } else {
+            #[expect(deprecated, reason = "API key is deprecated.")]
+            self.ini
+                .get_from(Some("auth"), "api_key")
+                .map(|key| Auth::Key(key.to_owned()))
+        }
     }
 
     /// Updates the auth info
@@ -223,6 +321,14 @@ impl Config {
         }
     }
 
+    /// Updates the auth token and URL as a pair.
+    pub fn set_auth_and_url(&mut self, auth: Auth, url: &str) {
+        self.set_auth(auth);
+        url.clone_into(&mut self.cached_base_url);
+        self.ini
+            .set_to(Some("defaults"), "url".into(), url.to_owned());
+    }
+
     /// Returns the base url (without trailing slashes)
     pub fn get_base_url(&self) -> Result<&str> {
         let base = self.cached_base_url.trim_end_matches('/');
@@ -233,26 +339,6 @@ impl Config {
             bail!("bad sentry url: not on URL root ({base})");
         }
         Ok(base)
-    }
-
-    /// Sets the URL
-    pub fn set_base_url(&mut self, url: &str) {
-        let token_url = self
-            .cached_token_data
-            .as_ref()
-            .map(|td| td.url.as_str())
-            .unwrap_or_default();
-
-        if !token_url.is_empty() && url != token_url {
-            log::warn!(
-                "Using {token_url} (embedded in token) rather than manually-configured URL {url}. \
-                To use {url}, please provide an auth token for this URL."
-            );
-        } else {
-            url.clone_into(&mut self.cached_base_url);
-            self.ini
-                .set_to(Some("defaults"), "url".into(), self.cached_base_url.clone());
-        }
     }
 
     /// Sets headers that should be attached to all requests
@@ -600,12 +686,175 @@ fn max_retries_from_ini(ini: &Ini) -> Result<Option<u32>, ParseIntError> {
         .transpose()
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum DiscardedAuthUrlValue {
+    Auth,
+    Url,
+}
+
+impl fmt::Display for DiscardedAuthUrlValue {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            DiscardedAuthUrlValue::Auth => write!(
+                f,
+                "Ignoring an authentication credential because the selected URL comes from a different \
+                 configuration source. Configure the URL and authentication credential together in the same file \
+                 or through CLI arguments and environment variables."
+            ),
+            DiscardedAuthUrlValue::Url => write!(
+                f,
+                "Ignoring a configured URL because the selected authentication credential comes from a different \
+                 configuration source. Configure the URL and authentication credential together in the same file \
+                 or through CLI arguments and environment variables."
+            ),
+        }
+    }
+}
+
+/// URL and authentication selected after all file sources have been reconciled.
+///
+/// Runtime values are applied to this state without modifying the file-backed INI.
+struct AuthAndUrl {
+    url: Option<String>,
+    auth: Option<Auth>,
+}
+
+impl AuthAndUrl {
+    fn from_ini(ini: &Ini) -> Self {
+        Self {
+            url: url_from_ini(ini),
+            auth: ini
+                .get_from(Some("auth"), "token")
+                .map(|token| Auth::Token(token.into()))
+                .or_else(|| {
+                    #[expect(deprecated, reason = "API key is deprecated.")]
+                    ini.get_from(Some("auth"), "api_key")
+                        .map(|key| Auth::Key(key.to_owned()))
+                }),
+        }
+    }
+
+    /// Applies CLI-over-environment runtime values as one source without storing runtime values in the file-backed INI.
+    fn merge_runtime(
+        &mut self,
+        environment_url: Option<String>,
+        environment_token: Option<AuthToken>,
+        environment_api_key: Option<String>,
+        cli_url: Option<&str>,
+        cli_token: Option<&AuthToken>,
+        cli_api_key: Option<&str>,
+    ) -> Option<DiscardedAuthUrlValue> {
+        let auth = cli_token
+            .cloned()
+            .map(Auth::Token)
+            .or_else(|| {
+                cli_api_key.map(|key| {
+                    #[expect(deprecated, reason = "API key is deprecated.")]
+                    Auth::Key(key.to_owned())
+                })
+            })
+            .or_else(|| environment_token.map(Auth::Token))
+            .or_else(|| {
+                environment_api_key.map(|key| {
+                    #[expect(deprecated, reason = "API key is deprecated.")]
+                    Auth::Key(key)
+                })
+            });
+        self.merge(AuthAndUrl {
+            url: cli_url.map(str::to_owned).or(environment_url),
+            auth,
+        })
+    }
+
+    /// Applies a higher-priority URL/authentication source using the shared source-separation rule.
+    fn merge(&mut self, overlay: AuthAndUrl) -> Option<DiscardedAuthUrlValue> {
+        let should_discard = reconcile_auth_url(self, &overlay);
+        match should_discard {
+            Some(DiscardedAuthUrlValue::Auth) => self.auth = None,
+            Some(DiscardedAuthUrlValue::Url) => self.url = None,
+            None => {}
+        }
+
+        if let Some(url) = overlay.url {
+            self.url = Some(url);
+        }
+        if let Some(auth) = overlay.auth {
+            self.auth = Some(auth);
+        }
+
+        should_discard
+    }
+}
+
+/// Returns whether authentication is self-contained because it has a nonempty embedded URL.
+fn auth_has_embedded_url(auth: &Auth) -> bool {
+    match auth {
+        Auth::Token(token) => token.payload().is_some_and(|data| !data.url.is_empty()),
+        #[expect(deprecated, reason = "API key is deprecated.")]
+        Auth::Key(_) => false,
+    }
+}
+
+/// Determines which inherited value must be removed before applying another source.
+///
+/// Tokens with embedded URLs are exempt because the manual URL cannot redirect them; final config
+/// construction always selects the URL embedded in the token.
+fn reconcile_auth_url(base: &AuthAndUrl, overlay: &AuthAndUrl) -> Option<DiscardedAuthUrlValue> {
+    match (&overlay.url, &overlay.auth) {
+        (Some(_), None)
+            if base
+                .auth
+                .as_ref()
+                .is_some_and(|auth| !auth_has_embedded_url(auth)) =>
+        {
+            Some(DiscardedAuthUrlValue::Auth)
+        }
+        (None, Some(auth)) if !auth_has_embedded_url(auth) && base.url.is_some() => {
+            Some(DiscardedAuthUrlValue::Url)
+        }
+        _ => None,
+    }
+}
+
+/// Merges a higher-priority file source while keeping URL and authentication selection source-consistent.
+///
+/// URL/authentication reconciliation uses the same typed rule as runtime merging. All other values
+/// retain the existing key-by-key INI merge behavior.
+fn merge_config_source(base: &mut Ini, overlay: &Ini) -> Option<DiscardedAuthUrlValue> {
+    let should_discard =
+        reconcile_auth_url(&AuthAndUrl::from_ini(base), &AuthAndUrl::from_ini(overlay));
+    match should_discard {
+        Some(DiscardedAuthUrlValue::Auth) => {
+            base.delete_from(Some("auth"), "token");
+            base.delete_from(Some("auth"), "api_key");
+        }
+        Some(DiscardedAuthUrlValue::Url) => {
+            base.delete_from(Some("defaults"), "url");
+        }
+        None => {}
+    }
+
+    if overlay.get_from(Some("auth"), "token").is_some() {
+        base.delete_from(Some("auth"), "api_key");
+    } else if overlay.get_from(Some("auth"), "api_key").is_some() {
+        base.delete_from(Some("auth"), "token");
+    }
+
+    for (section, props) in overlay.iter() {
+        for (key, value) in props.iter() {
+            base.set_to(section, key.to_owned(), value.to_owned());
+        }
+    }
+
+    should_discard
+}
+
 fn warn_about_conflicting_urls(token_url: &str, manually_configured_url: Option<&str>) {
     if let Some(manually_configured_url) = manually_configured_url {
         if manually_configured_url != token_url {
             warn!(
                 "Using {token_url} (embedded in token) rather than manually-configured URL \
-                {manually_configured_url}. To use {manually_configured_url}, please provide an  \
+                {manually_configured_url}. To use {manually_configured_url}, please provide an \
                 auth token for {manually_configured_url}."
             );
         }
@@ -676,69 +925,6 @@ fn failed_local_config_load_message(file_desc: &str) -> String {
     msg
 }
 
-fn load_cli_config() -> Result<(PathBuf, Ini)> {
-    let (global_filename, mut rv) = load_global_config_file()?;
-
-    let (path, mut rv) = if let Some(project_config_path) = find_project_config_file() {
-        let file_desc = format!(
-            "{CONFIG_RC_FILE_NAME} file from project path ({})",
-            project_config_path.display()
-        );
-        let mut f = fs::File::open(&project_config_path)
-            .context(failed_local_config_load_message(&file_desc))?;
-        let ini = Ini::read_from(&mut f).context(format!("Failed to parse {file_desc}"))?;
-        for (section, props) in ini.iter() {
-            for (key, value) in props.iter() {
-                rv.set_to(section, key.to_owned(), value.to_owned());
-            }
-        }
-        (project_config_path, rv)
-    } else {
-        (global_filename, rv)
-    };
-
-    if let Ok(prop_path) = env::var("SENTRY_PROPERTIES") {
-        match fs::File::open(&prop_path) {
-            Ok(f) => {
-                let props = match java_properties::read(f) {
-                    Ok(props) => props,
-                    Err(err) => {
-                        bail!("Could not load java style properties file: {err}");
-                    }
-                };
-                info!(
-                    "Loaded file referenced by SENTRY_PROPERTIES ({})",
-                    &prop_path
-                );
-                for (key, value) in props {
-                    let mut iter = key.rsplitn(2, '.');
-                    if let Some(key) = iter.next() {
-                        let section = iter.next();
-                        rv.set_to(section, key.to_owned(), value);
-                    } else {
-                        debug!("Incorrect properties file key: {key}");
-                    }
-                }
-            }
-            Err(err) => {
-                if err.kind() != io::ErrorKind::NotFound {
-                    return Err(Error::from(err).context(format!(
-                        "Failed to load file referenced by SENTRY_PROPERTIES ({})",
-                        &prop_path
-                    )));
-                } else {
-                    warn!(
-                        "Failed to find file referenced by SENTRY_PROPERTIES ({})",
-                        &prop_path
-                    );
-                }
-            }
-        }
-    }
-
-    Ok((path, rv))
-}
-
 impl Clone for Config {
     fn clone(&self) -> Config {
         Config {
@@ -756,39 +942,9 @@ impl Clone for Config {
     }
 }
 
-fn get_default_auth(ini: &Ini) -> Option<Auth> {
-    if let Ok(val) = env::var("SENTRY_AUTH_TOKEN") {
-        Some(Auth::Token(val.into()))
-    } else if let Ok(val) = env::var("SENTRY_API_KEY") {
-        log::warn!(
-            "[DEPRECTATION NOTICE] API key authentication and the `SENTRY_API_KEY` environment \
-            variable are deprecated. \
-            Please generate and set an auth token using `SENTRY_AUTH_TOKEN` instead."
-        );
-        #[expect(deprecated, reason = "API key is deprecated.")]
-        Some(Auth::Key(val))
-    } else if let Some(val) = ini.get_from(Some("auth"), "token") {
-        Some(Auth::Token(val.into()))
-    } else if let Some(val) = ini.get_from(Some("auth"), "api_key") {
-        log::warn!(
-            "[DEPRECTATION NOTICE] API key authentication and the `api_key` field in the \
-            Sentry CLI config file are deprecated. \
-            Please generate and set an auth token instead."
-        );
-        #[expect(deprecated, reason = "API key is deprecated.")]
-        Some(Auth::Key(val.to_owned()))
-    } else {
-        None
-    }
-}
-
-/// Returns the URL configured in the SENTRY_URL environment variable or provided ini (in that
-/// order of precedence), or returns None if neither is set.
-fn configured_url(ini: &Ini) -> Option<String> {
-    env::var("SENTRY_URL").ok().or_else(|| {
-        ini.get_from(Some("defaults"), "url")
-            .map(|url| url.to_owned())
-    })
+fn url_from_ini(ini: &Ini) -> Option<String> {
+    ini.get_from(Some("defaults"), "url")
+        .map(|url| url.to_owned())
 }
 
 fn get_default_headers(ini: &Ini) -> Option<Vec<String>> {
@@ -835,6 +991,154 @@ mod tests {
     use log::LevelFilter;
 
     use super::*;
+
+    const USER_TOKEN: &str = "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef";
+    const EMBEDDED_URL_TOKEN: &str = "sntrys_\
+        eyJpYXQiOjE3MDQyMDU4MDIuMTk5NzQzLCJ1cmwiOiJodHRwOi8vbG9jYWxob3N0OjgwMDAiLCJyZ\
+        Wdpb25fdXJsIjoiaHR0cDovL2xvY2FsaG9zdDo4MDAwIiwib3JnIjoic2VudHJ5In0=_\
+        lQ5ETt61cHhvJa35fxvxARsDXeVrd0pu4/smF4sRieA";
+
+    fn ini(url: Option<&str>, token: Option<&str>) -> Ini {
+        let mut ini = Ini::new();
+        if let Some(url) = url {
+            ini.set_to(Some("defaults"), "url".into(), url.to_owned());
+        }
+        if let Some(token) = token {
+            ini.set_to(Some("auth"), "token".into(), token.to_owned());
+        }
+        ini
+    }
+
+    #[test]
+    fn reconcile_keeps_url_and_token_from_same_source() {
+        let base = AuthAndUrl::from_ini(&ini(Some("https://global.invalid"), Some(USER_TOKEN)));
+        let overlay =
+            AuthAndUrl::from_ini(&ini(Some("https://project.invalid"), Some("project-token")));
+
+        assert_eq!(reconcile_auth_url(&base, &overlay), None);
+    }
+
+    #[test]
+    fn reconcile_url_discards_inherited_token() {
+        let base = AuthAndUrl::from_ini(&ini(Some("https://global.invalid"), Some(USER_TOKEN)));
+        let overlay = AuthAndUrl::from_ini(&ini(Some("https://project.invalid"), None));
+
+        assert_eq!(
+            reconcile_auth_url(&base, &overlay),
+            Some(DiscardedAuthUrlValue::Auth)
+        );
+    }
+
+    #[test]
+    fn reconcile_token_discards_inherited_url() {
+        let base = AuthAndUrl::from_ini(&ini(Some("https://global.invalid"), None));
+        let overlay = AuthAndUrl::from_ini(&ini(None, Some(USER_TOKEN)));
+
+        assert_eq!(
+            reconcile_auth_url(&base, &overlay),
+            Some(DiscardedAuthUrlValue::Url)
+        );
+    }
+
+    #[test]
+    fn reconcile_api_key_discards_inherited_url_and_url_discards_inherited_key() {
+        let mut base = Ini::new();
+        base.set_to(
+            Some("defaults"),
+            "url".into(),
+            "https://global.invalid".into(),
+        );
+        base.set_to(Some("auth"), "api_key".into(), "global-key".into());
+
+        let mut url_overlay = Ini::new();
+        url_overlay.set_to(
+            Some("defaults"),
+            "url".into(),
+            "https://project.invalid".into(),
+        );
+        assert_eq!(
+            merge_config_source(&mut base, &url_overlay),
+            Some(DiscardedAuthUrlValue::Auth)
+        );
+        assert!(base.get_from(Some("auth"), "api_key").is_none());
+
+        let mut key_overlay = Ini::new();
+        key_overlay.set_to(Some("auth"), "api_key".into(), "project-key".into());
+        assert_eq!(
+            merge_config_source(&mut base, &key_overlay),
+            Some(DiscardedAuthUrlValue::Url)
+        );
+        assert!(base.get_from(Some("defaults"), "url").is_none());
+    }
+
+    #[test]
+    fn reconcile_url_keeps_inherited_embedded_url_token() {
+        let base = AuthAndUrl::from_ini(&ini(None, Some(EMBEDDED_URL_TOKEN)));
+        let overlay = AuthAndUrl::from_ini(&ini(Some("https://project.invalid"), None));
+
+        assert_eq!(reconcile_auth_url(&base, &overlay), None);
+    }
+
+    #[test]
+    fn merge_config_source_without_url_or_token_keeps_inherited_pair() {
+        let mut base = ini(Some("https://global.invalid"), Some(USER_TOKEN));
+        let mut overlay = Ini::new();
+        overlay.set_to(Some("http"), "verify_ssl".into(), "false".into());
+
+        assert_eq!(merge_config_source(&mut base, &overlay), None);
+        assert_eq!(
+            base.get_from(Some("defaults"), "url"),
+            Some("https://global.invalid")
+        );
+        assert_eq!(base.get_from(Some("auth"), "token"), Some(USER_TOKEN));
+        assert_eq!(base.get_from(Some("http"), "verify_ssl"), Some("false"));
+    }
+
+    #[test]
+    fn cli_and_environment_form_one_runtime_source() {
+        let cli_token = AuthToken::from("cli-token");
+        let mut auth_and_url = AuthAndUrl {
+            url: Some("https://file.invalid".to_owned()),
+            auth: None,
+        };
+
+        assert_eq!(
+            auth_and_url.merge_runtime(
+                Some("https://environment.invalid".to_owned()),
+                Some(AuthToken::from(USER_TOKEN)),
+                None,
+                Some("https://cli.invalid"),
+                Some(&cli_token),
+                None,
+            ),
+            None
+        );
+        assert_eq!(auth_and_url.url.as_deref(), Some("https://cli.invalid"));
+        assert_eq!(
+            auth_and_url.auth.as_ref().and_then(|auth| match auth {
+                Auth::Token(token) => Some(token.raw().expose_secret().as_str()),
+                #[expect(deprecated, reason = "API key is deprecated.")]
+                Auth::Key(_) => None,
+            }),
+            Some("cli-token")
+        );
+    }
+
+    #[test]
+    fn persisted_auth_is_available_when_runtime_url_discards_it() {
+        let ini = ini(Some("https://file.invalid"), Some(USER_TOKEN));
+        let config = Config::from_file_and_auth(
+            PathBuf::from(".sentryclirc"),
+            ini,
+            AuthAndUrl {
+                url: Some("https://environment.invalid".to_owned()),
+                auth: None,
+            },
+        );
+
+        assert!(config.get_auth().is_none());
+        assert!(config.get_persisted_auth().is_some());
+    }
 
     #[cfg(not(windows))]
     #[test]
