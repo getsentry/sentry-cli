@@ -220,6 +220,14 @@ impl Config {
         }
     }
 
+    /// Updates the auth token and URL as a pair.
+    pub fn set_auth_and_url(&mut self, auth: Auth, url: &str) {
+        self.set_auth(auth);
+        url.clone_into(&mut self.cached_base_url);
+        self.ini
+            .set_to(Some("defaults"), "url".into(), url.to_owned());
+    }
+
     /// Returns the base url (without trailing slashes)
     pub fn get_base_url(&self) -> Result<&str> {
         let base = self.cached_base_url.trim_end_matches('/');

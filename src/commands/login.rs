@@ -19,9 +19,9 @@ pub fn make_command(command: Command) -> Command {
     )
 }
 
-fn update_config(config: &Config, token: AuthToken) -> Result<()> {
+fn update_config(config: &Config, token: AuthToken, url: &str) -> Result<()> {
     let mut new_cfg = config.clone();
-    new_cfg.set_auth(Auth::Token(token));
+    new_cfg.set_auth_and_url(Auth::Token(token), url);
     new_cfg.save()?;
     Ok(())
 }
@@ -61,7 +61,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     let mut token;
-    loop {
+    let validated_url = loop {
         token = if let Some(token) = predefined_token {
             token.to_owned()
         } else {
@@ -72,6 +72,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             cfg.set_auth(Auth::Token(token.clone()));
             Ok(())
         })?;
+        let tested_url = test_cfg.get_base_url()?.to_owned();
 
         match Api::with_config(test_cfg).authenticated()?.get_auth_info() {
             Ok(info) => {
@@ -85,7 +86,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                         println!("Valid org token");
                     }
                 }
-                break;
+                break tested_url;
             }
             Err(err) => {
                 // Convert to anyhow error to take advantage of anyhow's Debug impl
@@ -98,7 +99,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
                 }
             }
         }
-    }
+    };
 
     let config_to_update = if matches.get_flag("global") {
         Config::global()?
@@ -126,7 +127,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         }
     }
 
-    update_config(&config_to_update, token)?;
+    update_config(&config_to_update, token, &validated_url)?;
     println!();
     println!(
         "Stored token in {}",
