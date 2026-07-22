@@ -192,9 +192,16 @@ impl Config {
         .map_err(Into::into)
     }
 
-    /// Returns the auth info
+    /// Returns the auth info selected for the current process.
     pub fn get_auth(&self) -> Option<&Auth> {
         self.cached_auth.as_ref()
+    }
+
+    /// Returns the auth info that would be persisted when this config is saved.
+    pub fn get_persisted_auth(&self) -> Option<Auth> {
+        self.ini
+            .get_from(Some("auth"), "token")
+            .map(|token| Auth::Token(token.into()))
     }
 
     /// Updates the auth info
@@ -1007,6 +1014,22 @@ mod tests {
                 .map(|token| token.raw().expose_secret().as_str()),
             Some("cli-token")
         );
+    }
+
+    #[test]
+    fn persisted_auth_is_available_when_runtime_url_discards_it() {
+        let ini = ini(Some("https://file.invalid"), Some(USER_TOKEN));
+        let config = Config::from_file_and_auth(
+            PathBuf::from(".sentryclirc"),
+            ini,
+            AuthAndUrl {
+                url: Some("https://environment.invalid".to_owned()),
+                token: None,
+            },
+        );
+
+        assert!(config.get_auth().is_none());
+        assert!(config.get_persisted_auth().is_some());
     }
 
     #[cfg(not(windows))]

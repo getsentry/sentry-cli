@@ -107,12 +107,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         Config::from_cli_config(None, None)?
     };
 
-    if should_warn_about_overwrite(config_to_update.get_auth(), &token) {
+    let persisted_auth = config_to_update.get_persisted_auth();
+    if should_warn_about_overwrite(persisted_auth.as_ref(), &token) {
         println!();
         println!("Warning: You are about to overwrite an existing token!");
 
         // Show organization information
-        if let Some(existing_auth) = config_to_update.get_auth() {
+        if let Some(existing_auth) = persisted_auth.as_ref() {
             let existing_org = get_org_from_auth(existing_auth);
             let new_org = get_org_from_token(&token);
 
