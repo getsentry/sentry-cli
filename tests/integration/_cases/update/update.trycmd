@@ -1,7 +1,6 @@
 ```
 $ sentry-cli update
 ? success
-Latest release is [..]
 Running in integration tests mode. Skipping execution.
 
 ```
