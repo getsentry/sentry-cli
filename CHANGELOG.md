@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- (logs) Correct the severity query example ([#3387](https://github.com/getsentry/sentry-cli/pull/3387))
+
 ## 3.6.2
 
 ### Fixes
