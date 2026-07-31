@@ -32,7 +32,7 @@ Options:
           Set the log output verbosity. [possible values: trace, debug, info, warn, error]
 
       --query <QUERY>
-          Query to filter logs. Example: "level:error". If omitted, no filtering is applied. See
+          Query to filter logs. Example: "severity:error". If omitted, no filtering is applied. See
           https://docs.sentry.io/concepts/search/ for syntax.
 
       --live
