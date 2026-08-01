@@ -11,7 +11,8 @@ use crate::constants::MAX_COMMIT_SHA_LENGTH;
 use crate::utils::args::ArgExt as _;
 use crate::utils::formatting::Table;
 use crate::utils::vcs::{
-    find_heads, generate_patch_set, get_commits_from_git, get_repo_from_remote, CommitSpec,
+    find_heads, generate_patch_set, get_commits_from_git, get_repo_from_remote,
+    git_repo_remote_url, CommitSpec,
 };
 
 pub fn make_command(command: Command) -> Command {
@@ -80,6 +81,11 @@ fn strip_sha(sha: &str) -> &str {
     } else {
         sha
     }
+}
+
+fn get_repo_from_configured_remote(repo: &git2::Repository, remote: &str) -> String {
+    let remote_url = git_repo_remote_url(repo, remote).unwrap_or_else(|_| remote.to_owned());
+    get_repo_from_remote(&remote_url)
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
@@ -199,9 +205,10 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         // Find and connect to local git.
         let repo = git2::Repository::open_from_env()?;
 
-        // Parse the git url.
+        // Resolve the configured remote name before parsing its URL. The configured value can
+        // also be a URL itself, in which case keep the existing fallback behavior.
         let remote = config.get_cached_vcs_remote();
-        let parsed = get_repo_from_remote(&remote);
+        let parsed = get_repo_from_configured_remote(&repo, &remote);
         let ignore_missing = matches.get_flag("ignore-missing");
         // Fetch all the commits upto the `prev_commit` or return the default (20).
         // Will return a tuple of Vec<GitCommits> and the `prev_commit` if it exists in the git tree.
@@ -229,4 +236,33 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::get_repo_from_configured_remote;
+
+    #[test]
+    fn get_repo_from_configured_remote_resolves_a_remote_name() {
+        let directory = tempfile::tempdir().unwrap();
+        let repo = git2::Repository::init(directory.path()).unwrap();
+        repo.remote("origin", "https://github.com/getsentry/sentry-cli.git")
+            .unwrap();
+
+        assert_eq!(
+            get_repo_from_configured_remote(&repo, "origin"),
+            "getsentry/sentry-cli"
+        );
+    }
+
+    #[test]
+    fn get_repo_from_configured_remote_accepts_a_url() {
+        let directory = tempfile::tempdir().unwrap();
+        let repo = git2::Repository::init(directory.path()).unwrap();
+
+        assert_eq!(
+            get_repo_from_configured_remote(&repo, "https://github.com/getsentry/sentry-cli.git"),
+            "getsentry/sentry-cli"
+        );
+    }
 }
