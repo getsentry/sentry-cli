@@ -1,4 +1,4 @@
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, bail, Context as _, Result};
 use log::debug;
 use regex::Regex;
 use std::{
@@ -71,7 +71,12 @@ fn find_car_files(root: &Path) -> Vec<PathBuf> {
 /// │           └── ... (other app resources)
 /// └── ... (other archive metadata)
 /// ```
-pub fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8], temp_dir: &TempDir) -> Result<PathBuf> {
+pub fn ipa_to_xcarchive(
+    ipa_path: &Path,
+    ipa_bytes: &[u8],
+    temp_dir: &TempDir,
+    dsym_paths: &[&Path],
+) -> Result<PathBuf> {
     debug!(
         "Converting IPA to XCArchive structure: {}",
         ipa_path.display()
@@ -134,11 +139,101 @@ pub fn ipa_to_xcarchive(ipa_path: &Path, ipa_bytes: &[u8], temp_dir: &TempDir) -
 
     std::fs::write(&info_plist_path, info_plist_content)?;
 
+    copy_dsyms(dsym_paths, &xcarchive_dir)?;
+
     debug!(
         "Created XCArchive Info.plist at: {}",
         info_plist_path.display()
     );
     Ok(xcarchive_dir)
+}
+
+fn copy_dsyms(dsym_paths: &[&Path], xcarchive_dir: &Path) -> Result<()> {
+    if dsym_paths.is_empty() {
+        return Ok(());
+    }
+
+    let dsyms_dir = xcarchive_dir.join("dSYMs");
+    std::fs::create_dir(&dsyms_dir)?;
+
+    for dsym_input in dsym_paths {
+        for dsym_path in resolve_dsym_bundles(dsym_input)? {
+            let bundle_name = dsym_path
+                .file_name()
+                .ok_or_else(|| anyhow!("dSYM path has no bundle name: {}", dsym_path.display()))?;
+            let destination = dsyms_dir.join(bundle_name);
+            if destination.exists() {
+                bail!(
+                    "Cannot include multiple dSYM bundles named {}",
+                    bundle_name.to_string_lossy()
+                );
+            }
+
+            for entry in WalkDir::new(&dsym_path) {
+                let entry = entry.with_context(|| {
+                    format!("Failed to read dSYM bundle {}", dsym_path.display())
+                })?;
+                let relative_path = entry.path().strip_prefix(&dsym_path)?;
+                let target_path = destination.join(relative_path);
+
+                if entry.file_type().is_dir() {
+                    std::fs::create_dir_all(&target_path)?;
+                } else if entry.file_type().is_file() {
+                    std::fs::copy(entry.path(), &target_path).with_context(|| {
+                        format!(
+                            "Failed to copy dSYM file {} to {}",
+                            entry.path().display(),
+                            target_path.display()
+                        )
+                    })?;
+                } else if entry.file_type().is_symlink() {
+                    let link_target = std::fs::read_link(entry.path())?;
+                    std::os::unix::fs::symlink(link_target, &target_path)?;
+                }
+            }
+        }
+    }
+
+    Ok(())
+}
+
+fn resolve_dsym_bundles(path: &Path) -> Result<Vec<PathBuf>> {
+    if is_dsym_bundle(path) {
+        return Ok(vec![path.to_owned()]);
+    }
+
+    if !path.is_dir() {
+        bail!(
+            "dSYM path must be a .dSYM bundle or a directory containing .dSYM bundles: {}",
+            path.display()
+        );
+    }
+
+    let mut bundles = Vec::new();
+    for entry in std::fs::read_dir(path)
+        .with_context(|| format!("Failed to read dSYM directory {}", path.display()))?
+    {
+        let entry =
+            entry.with_context(|| format!("Failed to read dSYM directory {}", path.display()))?;
+        let entry_path = entry.path();
+        if is_dsym_bundle(&entry_path) {
+            bundles.push(entry_path);
+        }
+    }
+
+    if bundles.is_empty() {
+        bail!("No .dSYM bundles found in directory: {}", path.display());
+    }
+
+    Ok(bundles)
+}
+
+fn is_dsym_bundle(path: &Path) -> bool {
+    path.is_dir()
+        && path
+            .extension()
+            .and_then(|extension| extension.to_str())
+            .is_some_and(|extension| extension.eq_ignore_ascii_case("dsym"))
 }
 
 static PATTERN: LazyLock<Regex> =

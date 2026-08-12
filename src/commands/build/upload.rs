@@ -35,7 +35,7 @@ pub fn make_command(command: Command) -> Command {
     #[cfg(not(all(target_os = "macos", target_arch = "aarch64")))]
     const HELP_TEXT: &str =
         "The path to the build to upload. Supported files include Apk, and Aab.";
-    command
+    let command = command
         .about("Upload builds to a project.")
         .long_about("Upload builds to a project.\n\nThis feature only works with Sentry SaaS.")
         .org_arg()
@@ -47,7 +47,18 @@ pub fn make_command(command: Command) -> Command {
                 .num_args(1..)
                 .action(ArgAction::Append)
                 .required(true),
-        )
+        );
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    let command = command.arg(
+        Arg::new("dsym")
+            .long("dsym")
+            .value_name("PATH")
+            .help(
+                "Path to a dSYM bundle or a directory containing dSYM bundles to include with an IPA upload. Can be specified multiple times.",
+            )
+            .action(ArgAction::Append),
+    );
+    command
         .git_metadata_args()
         .arg(
             Arg::new("build_configuration")
@@ -104,6 +115,15 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         .get_many::<String>("paths")
         .expect("paths argument is required");
 
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    let dsym_paths = matches
+        .get_many::<String>("dsym")
+        .map(|paths| paths.map(Path::new).collect::<Vec<_>>())
+        .unwrap_or_default();
+
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    validate_dsym_upload_count(path_strings.len(), &dsym_paths)?;
+
     // Collect git metadata if running in CI, unless explicitly enabled or disabled.
     let should_collect_git_metadata =
         matches.get_flag("force_git_metadata") || (!matches.get_flag("no_git_metadata") && is_ci());
@@ -143,6 +163,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             return Err(anyhow!("Path does not exist: {}", path.display()));
         }
 
+        #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+        // An IPA is a ZIP file, so a directory cannot be the IPA paired with these dSYMs.
+        // The file's contents are validated as an IPA in `handle_file` below.
+        if !path.is_file() && !dsym_paths.is_empty() {
+            bail!("--dsym can only be used with an IPA upload");
+        }
+
         // On non-Apple Silicon, reject xcarchive/IPA early before trying to
         // open the path as a file (xcarchive is a directory, so ByteView::open
         // would fail with a confusing I/O error).
@@ -167,6 +194,8 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             handle_file(
                 path,
                 &byteview,
+                #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+                &dsym_paths,
                 plugin_name.as_deref(),
                 plugin_version.as_deref(),
             )?
@@ -260,15 +289,24 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 fn handle_file(
     path: &Path,
     byteview: &ByteView,
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))] dsym_paths: &[&Path],
     plugin_name: Option<&str>,
     plugin_version: Option<&str>,
 ) -> Result<TempFile> {
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    let is_ipa = is_zip_file(byteview) && is_ipa_file(byteview)?;
+
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    if !is_ipa && !dsym_paths.is_empty() {
+        bail!("--dsym can only be used with an IPA upload");
+    }
+
     // Handle IPA files by converting them to XCArchive
     #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
-    if is_zip_file(byteview) && is_ipa_file(byteview)? {
+    if is_ipa {
         debug!("Converting IPA file to XCArchive structure");
         let archive_temp_dir = TempDir::create()?;
-        return ipa_to_xcarchive(path, byteview, &archive_temp_dir)
+        return ipa_to_xcarchive(path, byteview, &archive_temp_dir, dsym_paths)
             .and_then(|path| handle_directory(&path, plugin_name, plugin_version))
             .with_context(|| format!("Failed to process IPA file {}", path.display()));
     }
@@ -279,6 +317,14 @@ fn handle_file(
             path.display()
         )
     })
+}
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+fn validate_dsym_upload_count(upload_count: usize, dsym_paths: &[&Path]) -> Result<()> {
+    if upload_count > 1 && !dsym_paths.is_empty() {
+        bail!("--dsym can only be used when uploading exactly one IPA file");
+    }
+    Ok(())
 }
 
 fn validate_is_supported_build(path: &Path, bytes: &[u8]) -> Result<()> {
@@ -549,7 +595,7 @@ mod tests {
         let byteview = ByteView::open(ipa_path)?;
 
         // Process the IPA file - this should work even without asset catalogs
-        let result = handle_file(ipa_path, &byteview, None, None)?;
+        let result = handle_file(ipa_path, &byteview, &[], None, None)?;
 
         let zip_file = fs::File::open(result.path())?;
         let mut archive = ZipArchive::new(zip_file)?;
@@ -570,6 +616,152 @@ mod tests {
             has_parsed_assets,
             "XCArchive upload should include parsed asset catalogs"
         );
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    fn test_ipa_upload_includes_repeated_dsyms() -> Result<()> {
+        let temp_dir = crate::utils::fs::TempDir::create()?;
+        let first_dsym = temp_dir.path().join("DemoApp.app.dSYM");
+        let second_dsym = temp_dir.path().join("DemoFramework.framework.dSYM");
+        let first_dwarf = first_dsym.join("Contents/Resources/DWARF");
+        let second_dwarf = second_dsym.join("Contents/Resources/DWARF");
+        fs::create_dir_all(&first_dwarf)?;
+        fs::create_dir_all(&second_dwarf)?;
+        fs::write(first_dwarf.join("DemoApp"), "app debug symbols")?;
+        fs::write(
+            second_dwarf.join("DemoFramework"),
+            "framework debug symbols",
+        )?;
+
+        let ipa_path = Path::new("tests/integration/_fixtures/build/ipa.ipa");
+        let byteview = ByteView::open(ipa_path)?;
+        let result = handle_file(
+            ipa_path,
+            &byteview,
+            &[first_dsym.as_path(), second_dsym.as_path()],
+            None,
+            None,
+        )?;
+
+        let zip_file = fs::File::open(result.path())?;
+        let mut archive = ZipArchive::new(zip_file)?;
+        assert!(archive
+            .by_name("archive.xcarchive/dSYMs/DemoApp.app.dSYM/Contents/Resources/DWARF/DemoApp")
+            .is_ok());
+        assert!(archive
+            .by_name("archive.xcarchive/dSYMs/DemoFramework.framework.dSYM/Contents/Resources/DWARF/DemoFramework")
+            .is_ok());
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    fn test_ipa_upload_includes_dsyms_from_directory() -> Result<()> {
+        let temp_dir = crate::utils::fs::TempDir::create()?;
+        let dsyms_dir = temp_dir.path().join("dSYMs");
+        let app_dwarf = dsyms_dir.join("DemoApp.app.dSYM/Contents/Resources/DWARF");
+        let framework_dwarf =
+            dsyms_dir.join("DemoFramework.framework.dSYM/Contents/Resources/DWARF");
+        fs::create_dir_all(&app_dwarf)?;
+        fs::create_dir_all(&framework_dwarf)?;
+        fs::write(app_dwarf.join("DemoApp"), "app debug symbols")?;
+        fs::write(
+            framework_dwarf.join("DemoFramework"),
+            "framework debug symbols",
+        )?;
+        fs::write(dsyms_dir.join("README.txt"), "ignored")?;
+
+        let ipa_path = Path::new("tests/integration/_fixtures/build/ipa.ipa");
+        let byteview = ByteView::open(ipa_path)?;
+        let result = handle_file(ipa_path, &byteview, &[dsyms_dir.as_path()], None, None)?;
+
+        let zip_file = fs::File::open(result.path())?;
+        let mut archive = ZipArchive::new(zip_file)?;
+        assert!(archive
+            .by_name("archive.xcarchive/dSYMs/DemoApp.app.dSYM/Contents/Resources/DWARF/DemoApp")
+            .is_ok());
+        assert!(archive
+            .by_name("archive.xcarchive/dSYMs/DemoFramework.framework.dSYM/Contents/Resources/DWARF/DemoFramework")
+            .is_ok());
+        assert!(archive
+            .by_name("archive.xcarchive/dSYMs/README.txt")
+            .is_err());
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    fn test_dsym_arg_is_repeatable() {
+        let matches = make_command(Command::new("test"))
+            .try_get_matches_from([
+                "test",
+                "--org",
+                "test-org",
+                "--project",
+                "test-project",
+                "--dsym",
+                "DemoApp.app.dSYM",
+                "--dsym",
+                "DemoFramework.framework.dSYM",
+                "DemoApp.ipa",
+            ])
+            .unwrap();
+
+        let dsym_paths = matches
+            .get_many::<String>("dsym")
+            .unwrap()
+            .collect::<Vec<_>>();
+        assert_eq!(
+            dsym_paths,
+            ["DemoApp.app.dSYM", "DemoFramework.framework.dSYM"]
+        );
+    }
+
+    #[test]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    fn test_dsym_rejects_multiple_uploads() {
+        let error = validate_dsym_upload_count(2, &[Path::new("DemoApp.app.dSYM")])
+            .unwrap_err()
+            .to_string();
+        assert_eq!(
+            error,
+            "--dsym can only be used when uploading exactly one IPA file"
+        );
+    }
+
+    #[test]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    fn test_dsym_rejects_non_ipa_upload() -> Result<()> {
+        let apk_path = Path::new("tests/integration/_fixtures/build/apk.apk");
+        let byteview = ByteView::open(apk_path)?;
+        let error = handle_file(
+            apk_path,
+            &byteview,
+            &[Path::new("DemoApp.app.dSYM")],
+            None,
+            None,
+        )
+        .unwrap_err()
+        .to_string();
+        assert_eq!(error, "--dsym can only be used with an IPA upload");
+        Ok(())
+    }
+
+    #[test]
+    #[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+    fn test_ipa_upload_rejects_directory_without_dsyms() -> Result<()> {
+        let temp_dir = crate::utils::fs::TempDir::create()?;
+        let symbols_dir = temp_dir.path().join("Symbols");
+        fs::create_dir(&symbols_dir)?;
+
+        let ipa_path = Path::new("tests/integration/_fixtures/build/ipa.ipa");
+        let byteview = ByteView::open(ipa_path)?;
+        let error =
+            handle_file(ipa_path, &byteview, &[symbols_dir.as_path()], None, None).unwrap_err();
+        let error = format!("{error:#}");
+        assert!(error.contains("No .dSYM bundles found in directory"));
         Ok(())
     }
 
