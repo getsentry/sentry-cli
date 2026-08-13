@@ -1,3 +1,5 @@
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+use std::io::Read as _;
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use crate::integration::test_utils::chunk_upload;
@@ -64,6 +66,21 @@ fn command_build_upload_invalid_xcarchive() {
             "build",
             "upload",
             "tests/integration/_fixtures/build/invalid_xcarchive",
+        ])
+        .with_default_token()
+        .run_and_assert(AssertCommand::Failure);
+}
+
+#[test]
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+fn command_build_upload_rejects_dsyms_with_xcarchive() {
+    TestManager::new()
+        .assert_cmd([
+            "build",
+            "upload",
+            "tests/integration/_fixtures/build/archive.xcarchive",
+            "--dsym",
+            "tests/integration/_fixtures/build/dSYMs",
         ])
         .with_default_token()
         .run_and_assert(AssertCommand::Failure);
@@ -266,6 +283,81 @@ fn command_build_upload_ipa_chunked() {
         // for the uploaded files.
         .env("SENTRY_CLI_INTEGRATION_TEST_VERSION_OVERRIDE", "0.0.0-test")
         .with_default_token();
+}
+
+#[test]
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+fn command_build_upload_ipa_with_dsym() {
+    ipa_with_dsym_test_manager()
+        .register_trycmd_test("build/build-upload-ipa-with-dsym.trycmd")
+        .env("SENTRY_CLI_INTEGRATION_TEST_VERSION_OVERRIDE", "0.0.0-test")
+        .with_default_token();
+}
+
+#[cfg(all(target_os = "macos", target_arch = "aarch64"))]
+fn ipa_with_dsym_test_manager() -> TestManager {
+    let is_first_assemble_call = AtomicBool::new(true);
+
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new("GET", "/api/0/organizations/wat-org/chunk-upload/")
+                .with_response_file("build/get-chunk-upload.json"),
+        )
+        .mock_endpoint(
+            MockEndpointBuilder::new("POST", "/api/0/organizations/wat-org/chunk-upload/")
+                .with_response_fn(move |request| {
+                    let boundary = chunk_upload::boundary_from_request(request)
+                        .expect("content-type header should be a valid multipart/form-data header");
+                    let body = request.body().expect("body should be readable");
+                    let decompressed = chunk_upload::decompress_chunks(body, boundary)
+                        .expect("chunks should be valid gzip data");
+
+                    assert_eq!(decompressed.len(), 1, "expected exactly one chunk");
+
+                    let chunk = decompressed.first().unwrap();
+                    let mut archive = zip::ZipArchive::new(std::io::Cursor::new(chunk))
+                        .expect("chunk should be a valid zip");
+                    let mut dsym = archive
+                        .by_name(
+                            "archive.xcarchive/dSYMs/DemoApp.app.dSYM/Contents/Resources/DWARF/DemoApp",
+                        )
+                        .expect("uploaded archive should contain the dSYM");
+                    let mut contents = String::new();
+                    dsym.read_to_string(&mut contents)
+                        .expect("dSYM contents should be readable");
+                    assert_eq!(contents, "integration test debug symbols\n");
+
+                    vec![]
+                }),
+        )
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/files/preprodartifacts/assemble/",
+            )
+            .with_header_matcher("content-type", "application/json")
+            .with_response_fn(move |request| {
+                if is_first_assemble_call.swap(false, Ordering::Relaxed) {
+                    let body = request.body().expect("body should be readable");
+                    let request: serde_json::Value =
+                        serde_json::from_slice(body).expect("body should be valid JSON");
+                    serde_json::json!({
+                        "state": "created",
+                        "missingChunks": request["chunks"]
+                    })
+                    .to_string()
+                } else {
+                    serde_json::json!({
+                        "state": "ok",
+                        "missingChunks": [],
+                        "artifactUrl": "http://sentry.io/wat-org/preprod/wat-project/some-text-id"
+                    })
+                    .to_string()
+                }
+                .into()
+            })
+            .expect(2),
+        )
 }
 
 #[test]

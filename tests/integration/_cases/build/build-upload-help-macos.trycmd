@@ -86,6 +86,10 @@ Options:
           The install group(s) for this build. Can be specified multiple times. Builds with at least
           one matching install group will be shown updates for each other.
 
+      --dsym <PATH>
+          Path to a dSYM bundle, a directory containing dSYM bundles, or a ZIP of either to include
+          with an IPA upload. Can be specified multiple times.
+
   -h, --help
           Print help (see a summary with '-h')
 

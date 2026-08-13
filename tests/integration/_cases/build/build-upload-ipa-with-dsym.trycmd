@@ -1,0 +1,7 @@
+```
+$ sentry-cli build upload tests/integration/_fixtures/build/ipa.ipa --dsym tests/integration/_fixtures/build/dSYMs --head-sha deadbeef12345678deadbeef12345678deadbeef
+? success
+Successfully uploaded 1 file to Sentry
+  - tests/integration/_fixtures/build/ipa.ipa (http://sentry.io/wat-org/preprod/wat-project/some-text-id)
+
+```

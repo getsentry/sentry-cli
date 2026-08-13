@@ -40,6 +40,7 @@ fn find_car_files(root: &Path) -> Vec<PathBuf> {
 }
 
 /// Converts an IPA file to an XCArchive directory structure. The provided IPA must be a valid IPA file.
+/// Any provided dSYM inputs are included in the generated XCArchive.
 ///
 /// # Format Overview
 ///
@@ -74,8 +75,8 @@ fn find_car_files(root: &Path) -> Vec<PathBuf> {
 pub fn ipa_to_xcarchive(
     ipa_path: &Path,
     ipa_bytes: &[u8],
-    temp_dir: &TempDir,
     dsym_paths: &[&Path],
+    temp_dir: &TempDir,
 ) -> Result<PathBuf> {
     debug!(
         "Converting IPA to XCArchive structure: {}",
@@ -157,83 +158,177 @@ fn copy_dsyms(dsym_paths: &[&Path], xcarchive_dir: &Path) -> Result<()> {
     std::fs::create_dir(&dsyms_dir)?;
 
     for dsym_input in dsym_paths {
-        for dsym_path in resolve_dsym_bundles(dsym_input)? {
-            let bundle_name = dsym_path
-                .file_name()
-                .ok_or_else(|| anyhow!("dSYM path has no bundle name: {}", dsym_path.display()))?;
-            let destination = dsyms_dir.join(bundle_name);
-            if destination.exists() {
-                bail!(
-                    "Cannot include multiple dSYM bundles named {}",
-                    bundle_name.to_string_lossy()
-                );
-            }
+        copy_dsym_input(dsym_input, &dsyms_dir)?;
+    }
 
-            for entry in WalkDir::new(&dsym_path) {
-                let entry = entry.with_context(|| {
-                    format!("Failed to read dSYM bundle {}", dsym_path.display())
-                })?;
-                let relative_path = entry.path().strip_prefix(&dsym_path)?;
-                let target_path = destination.join(relative_path);
+    Ok(())
+}
 
-                if entry.file_type().is_dir() {
-                    std::fs::create_dir_all(&target_path)?;
-                } else if entry.file_type().is_file() {
-                    std::fs::copy(entry.path(), &target_path).with_context(|| {
-                        format!(
-                            "Failed to copy dSYM file {} to {}",
-                            entry.path().display(),
-                            target_path.display()
-                        )
-                    })?;
-                } else if entry.file_type().is_symlink() {
-                    let link_target = std::fs::read_link(entry.path())?;
-                    std::os::unix::fs::symlink(link_target, &target_path)?;
-                }
-            }
+fn copy_dsym_input(dsym_input: &Path, dsyms_dir: &Path) -> Result<()> {
+    let metadata = match dsym_input.symlink_metadata() {
+        Ok(metadata) => metadata,
+        Err(error) if error.kind() == std::io::ErrorKind::NotFound => {
+            bail!("dSYM path does not exist: {}", dsym_input.display());
+        }
+        Err(error) => {
+            return Err(error)
+                .with_context(|| format!("Failed to access dSYM path {}", dsym_input.display()));
+        }
+    };
+
+    if metadata.file_type().is_symlink() {
+        bail!("dSYM paths cannot be symlinks: {}", dsym_input.display());
+    }
+
+    let extracted = if metadata.is_file() {
+        Some(extract_dsym_zip(dsym_input)?)
+    } else if metadata.is_dir() {
+        None
+    } else {
+        bail!(
+            "dSYM path must be a .dSYM bundle, a directory containing dSYM bundles, or a ZIP archive: {}",
+            dsym_input.display()
+        );
+    };
+
+    let root = extracted
+        .as_ref()
+        .map_or(dsym_input, |temp_dir| temp_dir.path());
+    let bundles = discover_dsym_bundles(root, extracted.is_some())?;
+    if bundles.is_empty() {
+        let input_kind = if extracted.is_some() {
+            "ZIP archive"
+        } else {
+            "directory"
+        };
+        bail!(
+            "No .dSYM bundles found in {input_kind}: {}",
+            dsym_input.display()
+        );
+    }
+
+    for dsym_path in bundles {
+        copy_dsym_bundle(&dsym_path, dsyms_dir)?;
+    }
+
+    Ok(())
+}
+
+fn copy_dsym_bundle(dsym_path: &Path, dsyms_dir: &Path) -> Result<()> {
+    let bundle_name = dsym_path
+        .file_name()
+        .ok_or_else(|| anyhow!("dSYM path has no bundle name: {}", dsym_path.display()))?;
+    let destination = dsyms_dir.join(bundle_name);
+    if destination.exists() {
+        bail!(
+            "Cannot include multiple dSYM bundles named {}",
+            bundle_name.to_string_lossy()
+        );
+    }
+
+    debug!(
+        "Including dSYM bundle in IPA upload: {}",
+        dsym_path.display()
+    );
+
+    for entry in WalkDir::new(dsym_path) {
+        let entry =
+            entry.with_context(|| format!("Failed to read dSYM bundle {}", dsym_path.display()))?;
+        let relative_path = entry.path().strip_prefix(dsym_path)?;
+        let target_path = destination.join(relative_path);
+
+        if entry.file_type().is_dir() {
+            std::fs::create_dir_all(&target_path)?;
+        } else if entry.file_type().is_file() {
+            std::fs::copy(entry.path(), &target_path).with_context(|| {
+                format!(
+                    "Failed to copy dSYM file {} to {}",
+                    entry.path().display(),
+                    target_path.display()
+                )
+            })?;
+        } else if entry.file_type().is_symlink() {
+            bail!(
+                "Symlinks are not supported in dSYM bundles: {}",
+                entry.path().display()
+            );
         }
     }
 
     Ok(())
 }
 
-fn resolve_dsym_bundles(path: &Path) -> Result<Vec<PathBuf>> {
-    if is_dsym_bundle(path) {
+fn extract_dsym_zip(path: &Path) -> Result<TempDir> {
+    let file = std::fs::File::open(path)
+        .with_context(|| format!("Failed to open dSYM ZIP {}", path.display()))?;
+    let mut archive = ZipArchive::new(file)
+        .with_context(|| format!("dSYM input is not a valid ZIP archive: {}", path.display()))?;
+    let temp_dir = TempDir::create()?;
+    for index in 0..archive.len() {
+        let mut entry = archive.by_index(index)?;
+        let entry_path = entry
+            .enclosed_name()
+            .ok_or_else(|| anyhow!("dSYM ZIP contains an unsafe path: {}", entry.name()))?;
+
+        if entry.is_symlink() {
+            bail!(
+                "Symlinks are not supported in dSYM ZIP archives: {}",
+                entry.name()
+            );
+        }
+
+        let target_path = temp_dir.path().join(entry_path);
+        if entry.is_dir() {
+            std::fs::create_dir_all(&target_path)?;
+        } else {
+            if let Some(parent) = target_path.parent() {
+                std::fs::create_dir_all(parent)?;
+            }
+            let mut target_file = std::fs::File::create(&target_path)?;
+            std::io::copy(&mut entry, &mut target_file)?;
+        }
+    }
+
+    Ok(temp_dir)
+}
+
+fn discover_dsym_bundles(path: &Path, allow_wrapper: bool) -> Result<Vec<PathBuf>> {
+    if has_dsym_extension(path) {
         return Ok(vec![path.to_owned()]);
     }
 
-    if !path.is_dir() {
-        bail!(
-            "dSYM path must be a .dSYM bundle or a directory containing .dSYM bundles: {}",
-            path.display()
-        );
-    }
-
     let mut bundles = Vec::new();
+    let mut directories = Vec::new();
     for entry in std::fs::read_dir(path)
         .with_context(|| format!("Failed to read dSYM directory {}", path.display()))?
     {
         let entry =
             entry.with_context(|| format!("Failed to read dSYM directory {}", path.display()))?;
         let entry_path = entry.path();
-        if is_dsym_bundle(&entry_path) {
-            bundles.push(entry_path);
+        let file_type = entry.file_type()?;
+        if file_type.is_symlink() && has_dsym_extension(&entry_path) {
+            bail!("dSYM paths cannot be symlinks: {}", entry_path.display());
+        }
+        if file_type.is_dir() {
+            if has_dsym_extension(&entry_path) {
+                bundles.push(entry_path);
+            } else {
+                directories.push(entry_path);
+            }
         }
     }
 
-    if bundles.is_empty() {
-        bail!("No .dSYM bundles found in directory: {}", path.display());
+    if bundles.is_empty() && allow_wrapper && directories.len() == 1 {
+        return discover_dsym_bundles(&directories[0], false);
     }
 
     Ok(bundles)
 }
 
-fn is_dsym_bundle(path: &Path) -> bool {
-    path.is_dir()
-        && path
-            .extension()
-            .and_then(|extension| extension.to_str())
-            .is_some_and(|extension| extension.eq_ignore_ascii_case("dsym"))
+fn has_dsym_extension(path: &Path) -> bool {
+    path.extension()
+        .and_then(|extension| extension.to_str())
+        .is_some_and(|extension| extension.eq_ignore_ascii_case("dsym"))
 }
 
 static PATTERN: LazyLock<Regex> =
@@ -251,5 +346,197 @@ fn extract_app_name_from_ipa<'a>(archive: &'a ZipArchive<Cursor<&[u8]>>) -> Resu
         Ok(app_name)
     } else {
         Err(anyhow!("IPA did not contain exactly one .app."))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::io::Write as _;
+    use std::os::unix::fs::symlink;
+    use zip::write::SimpleFileOptions;
+    use zip::ZipWriter;
+
+    fn create_dsym(root: &Path, name: &str, contents: &str) -> Result<PathBuf> {
+        let bundle = root.join(name);
+        std::fs::create_dir_all(&bundle)?;
+        std::fs::write(bundle.join("symbols"), contents)?;
+        Ok(bundle)
+    }
+
+    fn create_dsym_zip(path: &Path, wrapper: Option<&str>, bundles: &[(&str, &str)]) -> Result<()> {
+        let mut archive = ZipWriter::new(std::fs::File::create(path)?);
+        for (name, contents) in bundles {
+            let entry = match wrapper {
+                Some(wrapper) => format!("{wrapper}/{name}/symbols"),
+                None => format!("{name}/symbols"),
+            };
+            archive.start_file(entry, SimpleFileOptions::default())?;
+            archive.write_all(contents.as_bytes())?;
+        }
+        archive.finish()?;
+        Ok(())
+    }
+
+    fn create_output_dir(root: &Path, name: &str) -> Result<PathBuf> {
+        let output = root.join(name);
+        std::fs::create_dir(&output)?;
+        Ok(output)
+    }
+
+    #[test]
+    fn copy_dsyms_accepts_bundle_and_directory_inputs() -> Result<()> {
+        let temp_dir = TempDir::create()?;
+        let direct = create_dsym(temp_dir.path(), "DemoApp.app.dSYM", "app symbols")?;
+        let symbols_dir = temp_dir.path().join("Symbols");
+        create_dsym(
+            &symbols_dir,
+            "DemoFramework.framework.dSYM",
+            "framework symbols",
+        )?;
+        std::fs::write(symbols_dir.join("README.txt"), "ignored")?;
+        let xcarchive = create_output_dir(temp_dir.path(), "archive.xcarchive")?;
+
+        copy_dsyms(&[direct.as_path(), symbols_dir.as_path()], &xcarchive)?;
+
+        let output = xcarchive.join("dSYMs");
+        assert_eq!(
+            std::fs::read_to_string(output.join("DemoApp.app.dSYM/symbols"))?,
+            "app symbols"
+        );
+        assert_eq!(
+            std::fs::read_to_string(output.join("DemoFramework.framework.dSYM/symbols"))?,
+            "framework symbols"
+        );
+        assert!(!output.join("README.txt").exists());
+        Ok(())
+    }
+
+    #[test]
+    fn copy_dsyms_accepts_supported_zip_layouts() -> Result<()> {
+        let temp_dir = TempDir::create()?;
+        let bundle_zip = temp_dir.path().join("bundle.zip");
+        create_dsym_zip(&bundle_zip, None, &[("DemoApp.app.dSYM", "app symbols")])?;
+        let directory_zip = temp_dir.path().join("directory.zip");
+        create_dsym_zip(
+            &directory_zip,
+            Some("dSYMs"),
+            &[("DemoFramework.framework.dSYM", "framework symbols")],
+        )?;
+        let xcarchive = create_output_dir(temp_dir.path(), "archive.xcarchive")?;
+
+        copy_dsyms(&[bundle_zip.as_path(), directory_zip.as_path()], &xcarchive)?;
+
+        let output = xcarchive.join("dSYMs");
+        assert_eq!(
+            std::fs::read_to_string(output.join("DemoApp.app.dSYM/symbols"))?,
+            "app symbols"
+        );
+        assert_eq!(
+            std::fs::read_to_string(output.join("DemoFramework.framework.dSYM/symbols"))?,
+            "framework symbols"
+        );
+        Ok(())
+    }
+
+    #[test]
+    fn copy_dsym_input_rejects_missing_input() -> Result<()> {
+        let temp_dir = TempDir::create()?;
+        let output = create_output_dir(temp_dir.path(), "output")?;
+        let error = copy_dsym_input(&temp_dir.path().join("missing.dSYM"), &output).unwrap_err();
+        assert!(format!("{error:#}").contains("dSYM path does not exist"));
+        Ok(())
+    }
+
+    #[test]
+    fn copy_dsym_input_rejects_inputs_without_dsyms() -> Result<()> {
+        let temp_dir = TempDir::create()?;
+        let empty_directory = create_output_dir(temp_dir.path(), "empty")?;
+        let output = create_output_dir(temp_dir.path(), "directory-output")?;
+        let error = copy_dsym_input(&empty_directory, &output).unwrap_err();
+        assert!(format!("{error:#}").contains("No .dSYM bundles found in directory"));
+
+        let empty_zip = temp_dir.path().join("empty.zip");
+        ZipWriter::new(std::fs::File::create(&empty_zip)?).finish()?;
+        let output = create_output_dir(temp_dir.path(), "zip-output")?;
+        let error = copy_dsym_input(&empty_zip, &output).unwrap_err();
+        assert!(format!("{error:#}").contains("No .dSYM bundles found in ZIP archive"));
+        Ok(())
+    }
+
+    #[test]
+    fn copy_dsym_input_rejects_invalid_zip() -> Result<()> {
+        let temp_dir = TempDir::create()?;
+        let zip = temp_dir.path().join("invalid.zip");
+        std::fs::write(&zip, "not a ZIP")?;
+        let output = create_output_dir(temp_dir.path(), "output")?;
+        let error = copy_dsym_input(&zip, &output).unwrap_err();
+        assert!(format!("{error:#}").contains("dSYM input is not a valid ZIP archive"));
+        Ok(())
+    }
+
+    #[test]
+    fn copy_dsym_input_rejects_unsafe_zip_entries() -> Result<()> {
+        let temp_dir = TempDir::create()?;
+        let traversal_zip = temp_dir.path().join("traversal.zip");
+        let mut archive = ZipWriter::new(std::fs::File::create(&traversal_zip)?);
+        archive.start_file("../DemoApp.app.dSYM/symbols", SimpleFileOptions::default())?;
+        archive.write_all(b"symbols")?;
+        archive.finish()?;
+        let output = create_output_dir(temp_dir.path(), "traversal-output")?;
+        let error = copy_dsym_input(&traversal_zip, &output).unwrap_err();
+        assert!(format!("{error:#}").contains("dSYM ZIP contains an unsafe path"));
+
+        let symlink_zip = temp_dir.path().join("symlink.zip");
+        let mut archive = ZipWriter::new(std::fs::File::create(&symlink_zip)?);
+        archive.add_symlink(
+            "DemoApp.app.dSYM/symbols",
+            "../symbols",
+            SimpleFileOptions::default(),
+        )?;
+        archive.finish()?;
+        let output = create_output_dir(temp_dir.path(), "symlink-output")?;
+        let error = copy_dsym_input(&symlink_zip, &output).unwrap_err();
+        assert!(format!("{error:#}").contains("Symlinks are not supported in dSYM ZIP archives"));
+        Ok(())
+    }
+
+    #[test]
+    fn copy_dsym_input_rejects_symlink() -> Result<()> {
+        let temp_dir = TempDir::create()?;
+        let bundle = create_dsym(temp_dir.path(), "DemoApp.app.dSYM", "symbols")?;
+        let link = temp_dir.path().join("DemoAppAlias.app.dSYM");
+        symlink(bundle, &link)?;
+        let output = create_output_dir(temp_dir.path(), "output")?;
+        let error = copy_dsym_input(&link, &output).unwrap_err();
+        assert!(format!("{error:#}").contains("dSYM paths cannot be symlinks"));
+        Ok(())
+    }
+
+    #[test]
+    fn copy_dsym_bundle_rejects_internal_symlink() -> Result<()> {
+        let temp_dir = TempDir::create()?;
+        let bundle = create_dsym(temp_dir.path(), "DemoApp.app.dSYM", "symbols")?;
+        symlink("symbols", bundle.join("symbols-link"))?;
+        let output = create_output_dir(temp_dir.path(), "output")?;
+        let error = copy_dsym_bundle(&bundle, &output).unwrap_err();
+        assert!(format!("{error:#}").contains("Symlinks are not supported in dSYM bundles"));
+        Ok(())
+    }
+
+    #[test]
+    fn copy_dsyms_rejects_duplicate_bundle_names() -> Result<()> {
+        let temp_dir = TempDir::create()?;
+        let first = create_dsym(&temp_dir.path().join("first"), "DemoApp.app.dSYM", "first")?;
+        let second = create_dsym(
+            &temp_dir.path().join("second"),
+            "DemoApp.app.dSYM",
+            "second",
+        )?;
+        let xcarchive = create_output_dir(temp_dir.path(), "archive.xcarchive")?;
+        let error = copy_dsyms(&[first.as_path(), second.as_path()], &xcarchive).unwrap_err();
+        assert!(format!("{error:#}")
+            .contains("Cannot include multiple dSYM bundles named DemoApp.app.dSYM"));
+        Ok(())
     }
 }
