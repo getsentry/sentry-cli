@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Features
+
+- (build) Add dSYM support to IPA uploads ([#3393](https://github.com/getsentry/sentry-cli/pull/3393))
+
 ### Fixes
 
 - (logs) Correct the severity query example ([#3387](https://github.com/getsentry/sentry-cli/pull/3387))
