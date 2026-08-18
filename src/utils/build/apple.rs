@@ -277,6 +277,11 @@ fn extract_dsym_zip(path: &Path) -> Result<TempDir> {
             );
         }
 
+        // Ignore common archive metadata so it does not affect dSYM layout discovery.
+        if !zip::read::root_dir_common_filter(&entry_path) {
+            continue;
+        }
+
         let target_path = temp_dir.path().join(entry_path);
         if entry.is_dir() {
             std::fs::create_dir_all(&target_path)?;
@@ -436,6 +441,32 @@ mod tests {
             std::fs::read_to_string(output.join("DemoFramework.framework.dSYM/symbols"))?,
             "framework symbols"
         );
+        Ok(())
+    }
+
+    #[test]
+    fn copy_dsyms_ignores_macos_metadata_in_zip() -> Result<()> {
+        let temp_dir = TempDir::create()?;
+        let zip = temp_dir.path().join("symbols.zip");
+        let mut archive = ZipWriter::new(std::fs::File::create(&zip)?);
+        archive.start_file(
+            "dSYMs/DemoApp.app.dSYM/symbols",
+            SimpleFileOptions::default(),
+        )?;
+        archive.write_all(b"symbols")?;
+        archive.start_file(
+            "__MACOSX/dSYMs/DemoApp.app.dSYM/._symbols",
+            SimpleFileOptions::default(),
+        )?;
+        archive.write_all(b"metadata")?;
+        archive.finish()?;
+        let xcarchive = create_output_dir(temp_dir.path(), "archive.xcarchive")?;
+
+        copy_dsyms(&[zip.as_path()], &xcarchive)?;
+
+        let output = xcarchive.join("dSYMs/DemoApp.app.dSYM");
+        assert_eq!(std::fs::read_to_string(output.join("symbols"))?, "symbols");
+        assert!(!output.join("._symbols").exists());
         Ok(())
     }
 
