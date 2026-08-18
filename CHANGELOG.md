@@ -4,6 +4,7 @@
 
 ### Fixes
 
+- (snapshots) Create snapshot builds for selective uploads with no affected images when a complete filename manifest is provided ([#3395](https://github.com/getsentry/sentry-cli/pull/3395))
 - (logs) Correct the severity query example ([#3387](https://github.com/getsentry/sentry-cli/pull/3387))
 
 ## 3.6.2

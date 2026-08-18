@@ -1,0 +1,5 @@
+```
+$ sentry-cli snapshots upload tests/integration/_fixtures/empty_snapshots --app-id test-app --selective --no-git-metadata
+! No image files found; no snapshot was created. Pass --all-image-file-names or --all-image-file-names-file to record an empty selective build.
+
+```
