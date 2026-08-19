@@ -27,6 +27,9 @@ targets:
     id: '@sentry/cli-linux-i686'
     includeNames: /^sentry-cli-linux-i686-\d.*\.tgz$/
   - name: npm
+    id: '@sentry/cli-linux-riscv64'
+    includeNames: /^sentry-cli-linux-riscv64-\d.*\.tgz$/
+  - name: npm
     id: '@sentry/cli-linux-x64'
     includeNames: /^sentry-cli-linux-x64-\d.*\.tgz$/
   - name: npm
@@ -64,7 +67,7 @@ targets:
               url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-armv7"
               sha256 "{{checksums.sentry-cli-Linux-armv7}}"
             end
-          elseif Hardware::CPU.intel?
+          elsif Hardware::CPU.intel?
             if Hardware::CPU.is_64_bit?
               url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-x86_64"
               sha256 "{{checksums.sentry-cli-Linux-x86_64}}"
@@ -72,6 +75,9 @@ targets:
               url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-i686"
               sha256 "{{checksums.sentry-cli-Linux-i686}}"
             end
+          elsif RUBY_PLATFORM.include?("riscv64")
+            url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Linux-riscv64"
+            sha256 "{{checksums.sentry-cli-Linux-riscv64}}"
           else
             raise "Unsupported architecture"
           end
@@ -115,6 +121,7 @@ requireNames:
   - /^sentry-cli-Linux-x86_64$/
   - /^sentry-cli-Linux-armv7$/
   - /^sentry-cli-Linux-aarch64$/
+  - /^sentry-cli-Linux-riscv64$/
   - /^sentry-cli-Windows-i686.exe$/
   - /^sentry-cli-Windows-x86_64.exe$/
   - /^sentry-cli-Windows-aarch64.exe$/

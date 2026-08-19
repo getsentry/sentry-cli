@@ -31,6 +31,9 @@ jobs:
           - arch: aarch64
             target: aarch64-unknown-linux-musl
             container: aarch64-musl
+          - arch: riscv64
+            target: riscv64gc-unknown-linux-musl
+            container: riscv64gc-musl
 
     name: Linux ${{ matrix.arch }}
     runs-on: ubuntu-24.04
@@ -368,6 +371,7 @@ jobs:
           mv binary-artifacts/sentry-cli-Linux-armv7 npm-binary-distributions/linux-arm/bin/sentry-cli
           mv binary-artifacts/sentry-cli-Linux-aarch64 npm-binary-distributions/linux-arm64/bin/sentry-cli
           mv binary-artifacts/sentry-cli-Linux-i686 npm-binary-distributions/linux-i686/bin/sentry-cli
+          mv binary-artifacts/sentry-cli-Linux-riscv64 npm-binary-distributions/linux-riscv64/bin/sentry-cli
           mv binary-artifacts/sentry-cli-Linux-x86_64 npm-binary-distributions/linux-x64/bin/sentry-cli
           mv binary-artifacts/sentry-cli-Windows-i686.exe npm-binary-distributions/win32-i686/bin/sentry-cli.exe
           mv binary-artifacts/sentry-cli-Windows-x86_64.exe npm-binary-distributions/win32-x64/bin/sentry-cli.exe

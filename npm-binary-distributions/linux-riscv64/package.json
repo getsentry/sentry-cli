@@ -1,0 +1,21 @@
+{
+  "name": "@sentry/cli-linux-riscv64",
+  "version": "3.6.2",
+  "description": "The linux riscv64 distribution of the Sentry CLI binary.",
+  "repository": "https://github.com/getsentry/sentry-cli",
+  "license": "FSL-1.1-MIT",
+  "publishConfig": {
+    "access": "public"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "linux",
+    "freebsd",
+    "android"
+  ],
+  "cpu": [
+    "riscv64"
+  ]
+}

@@ -12,6 +12,7 @@ const BINARY_DISTRIBUTIONS = [
   { packageName: '@sentry/cli-linux-i686', subpath: 'bin/sentry-cli' },
   { packageName: '@sentry/cli-linux-arm64', subpath: 'bin/sentry-cli' },
   { packageName: '@sentry/cli-linux-arm', subpath: 'bin/sentry-cli' },
+  { packageName: '@sentry/cli-linux-riscv64', subpath: 'bin/sentry-cli' },
   { packageName: '@sentry/cli-win32-x64', subpath: 'bin/sentry-cli.exe' },
   { packageName: '@sentry/cli-win32-i686', subpath: 'bin/sentry-cli.exe' },
   { packageName: '@sentry/cli-win32-arm64', subpath: 'bin/sentry-cli.exe' },
@@ -55,6 +56,9 @@ function getDistributionForThisPlatform() {
         break;
       case 'arm':
         packageName = '@sentry/cli-linux-arm';
+        break;
+      case 'riscv64':
+        packageName = '@sentry/cli-linux-riscv64';
         break;
     }
   } else if (platform === 'win32') {
@@ -102,7 +106,7 @@ function throwUnsupportedPlatformError(): void {
 
 Sentry CLI supports:
 - Darwin (macOS)
-- Linux and FreeBSD on x64, x86, ia32, arm64, and arm architectures
+- Linux and FreeBSD on x64, x86, ia32, arm64, arm, and riscv64 architectures
 - Windows x64, x86, and ia32 architectures`
   );
 }

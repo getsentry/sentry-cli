@@ -9,7 +9,7 @@ This is **sentry-cli**, a command-line utility for working with Sentry. It's pri
 - **Primary language**: Rust (core functionality)
 - **Secondary language**: JavaScript/TypeScript (npm wrapper, installation scripts)
 - **Build system**: Cargo for Rust, npm/yarn for JavaScript
-- **Cross-platform**: Supports multiple architectures (darwin, linux, windows, ARM variants)
+- **Cross-platform**: Supports multiple architectures (darwin, linux, windows, ARM and RISC-V variants)
 - **Binary distributions**: Located in `npm-binary-distributions/` for different platforms
 
 ## Project Structure

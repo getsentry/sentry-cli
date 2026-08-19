@@ -36,6 +36,7 @@
     "@sentry/cli-linux-arm": "3.6.2",
     "@sentry/cli-linux-arm64": "3.6.2",
     "@sentry/cli-linux-i686": "3.6.2",
+    "@sentry/cli-linux-riscv64": "3.6.2",
     "@sentry/cli-linux-x64": "3.6.2",
     "@sentry/cli-win32-i686": "3.6.2",
     "@sentry/cli-win32-x64": "3.6.2",

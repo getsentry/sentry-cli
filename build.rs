@@ -21,6 +21,10 @@ fn main() -> Result<(), Box<dyn Error>> {
         arch = "arm64"; // enforce Darwin naming conventions
     }
 
+    if arch == "riscv64gc" {
+        arch = "riscv64"; // match uname -m / Node os.arch()
+    }
+
     writeln!(f, "/// The platform identifier")?;
     writeln!(f, "pub const PLATFORM: &str = \"{platform}\";")?;
     writeln!(f, "/// The CPU architecture identifier")?;
