@@ -147,10 +147,22 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     debug!("Organization: {org}");
     debug!("Project: {project}");
 
+    let all_image_file_names = parse_all_image_file_names(matches)?;
+    let selective = matches.get_flag("selective") || all_image_file_names.is_some();
+
     // Collect image files and read their dimensions
     let images = collect_images(dir_path);
-    if images.is_empty() {
-        println!("{} No image files found", style("!").yellow());
+    // A complete image name list makes an empty upload a valid selective run:
+    // the server can reconstruct unaffected base images as skipped.
+    if images.is_empty() && all_image_file_names.is_none() {
+        let message = if selective {
+            "No image files found; no snapshot was created. Pass \
+             --all-image-file-names or --all-image-file-names-file to record an empty \
+             selective build."
+        } else {
+            "No image files found"
+        };
+        println!("{} {message}", style("!").yellow());
         return Ok(());
     }
 
@@ -162,10 +174,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     );
 
     validate_image_sizes(&images)?;
-
-    let all_image_file_names = parse_all_image_file_names(matches)?;
-
-    let selective = matches.get_flag("selective") || all_image_file_names.is_some();
 
     if let Some(ref all_names) = all_image_file_names {
         let all_names_set: HashSet<&str> = all_names.iter().map(|s| s.as_str()).collect();
@@ -190,7 +198,11 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         if images.len() == 1 { "file" } else { "files" }
     );
 
-    let manifest_entries = upload_images(images, &org, &project)?;
+    let manifest_entries = if images.is_empty() {
+        HashMap::new()
+    } else {
+        upload_images(images, &org, &project)?
+    };
 
     // Build manifest from discovered images
     let diff_threshold = matches.get_one::<f64>("diff_threshold").copied();
