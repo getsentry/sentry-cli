@@ -47,8 +47,7 @@ pub fn make_command(command: Command) -> Command {
                 .num_args(1..)
                 .action(ArgAction::Append)
                 .required(true),
-        );
-    let command = command
+        )
         .git_metadata_args()
         .arg(
             Arg::new("build_configuration")
