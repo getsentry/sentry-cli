@@ -28,6 +28,13 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     // Aborts with an error if this installation is not updatable.
     assert_updatable()?;
 
+    // It's not currently possible to easily mock I/O with `trycmd`,
+    // but verifying that `execute` is not panicking, is good enough for now.
+    if env::var("SENTRY_INTEGRATION_TEST").is_ok() {
+        println!("Running in integration tests mode. Skipping execution.");
+        return Ok(());
+    }
+
     let exe = env::current_exe()?;
     let update = get_latest_sentrycli_release()
         .with_context(|| "Error getting latest Sentry CLI version.")?;
@@ -36,13 +43,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
     }
 
     println!("Latest release is {}", update.latest_version());
-
-    // It's not currently possible to easily mock I/O with `trycmd`,
-    // but verifying that `execute` is not panicking, is good enough for now.
-    if env::var("SENTRY_INTEGRATION_TEST").is_ok() {
-        println!("Running in integration tests mode. Skipping execution.");
-        return Ok(());
-    }
 
     if update.is_latest_version() {
         if matches.get_flag("force") {
