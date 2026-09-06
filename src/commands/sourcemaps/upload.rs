@@ -149,8 +149,10 @@ pub fn make_command(command: Command) -> Command {
                 .long("strip-common-prefix")
                 .action(ArgAction::SetTrue)
                 .help(
-                    "Similar to --strip-prefix but strips the most common \
-                    prefix on all sources references.",
+                    "Strips the common prefix from source references in each sourcemap. \
+                    When uploading multiple sourcemaps, the prefix is computed independently \
+                    for each one. To strip the same explicit prefix from every sourcemap, use \
+                    --strip-prefix.",
                 )
                 .conflicts_with("no_rewrite"),
         )

@@ -65,7 +65,9 @@ Options:
           This will not modify the uploaded sources paths. To do that, point the upload or
           upload-sourcemaps command to a more precise directory instead.
       --strip-common-prefix
-          Similar to --strip-prefix but strips the most common prefix on all sources references.
+          Strips the common prefix from source references in each sourcemap. When uploading multiple
+          sourcemaps, the prefix is computed independently for each one. To strip the same explicit
+          prefix from every sourcemap, use --strip-prefix.
   -i, --ignore <IGNORE>
           Ignores all files and folders matching the given glob
   -I, --ignore-file <IGNORE_FILE>
