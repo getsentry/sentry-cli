@@ -80,6 +80,16 @@ pub fn make_command(command: Command) -> Command {
                 ),
         )
         .arg(
+            Arg::new("strip_names")
+                .long("strip-names")
+                .action(ArgAction::SetTrue)
+                .help(
+                    "Also strip the name section from the deployable .wasm. \
+                     The companion keeps it, so symbolication is unaffected. \
+                     Only applies to modules that are split.",
+                ),
+        )
+        .arg(
             Arg::new("no_upload")
                 .long("no-upload")
                 .action(ArgAction::SetTrue)
@@ -148,8 +158,7 @@ pub fn make_command(command: Command) -> Command {
 }
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
-
-    // Read CLI arguments 
+    // Read CLI arguments
     #[expect(clippy::unwrap_used, reason = "required clap argument")]
     let paths: Vec<PathBuf> = matches
         .get_many::<String>("paths")
@@ -205,6 +214,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         dry_run,
         out_dir,
         build_id,
+        strip_names: matches.get_flag("strip_names"),
     };
 
     let mut results = Vec::new();
@@ -237,20 +247,14 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
         return Err(QuietExit(1).into());
     }
 
-    // Upload companions or stop 
+    // Upload companions or stop
     if no_upload {
         return Ok(());
     }
 
     let companions: Vec<PathBuf> = results
         .iter()
-        .filter(|result| {
-            matches!(
-                result.action,
-                PrepareAction::Split | PrepareAction::AlreadyPrepared
-            )
-        })
-        .filter_map(|result| result.companion.clone())
+        .filter_map(|result| result.upload_path().map(Path::to_path_buf))
         .collect();
 
     if companions.is_empty() {

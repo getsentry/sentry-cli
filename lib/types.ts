@@ -262,6 +262,11 @@ export type SentryCliDebugFilesPrepareOptions = {
    */
   outDir?: string;
   /**
+   * Also strip the name section from the deployable `.wasm`. The companion
+   * keeps it, so symbolication is unaffected.
+   */
+  stripNames?: boolean;
+  /**
    * Upload companions after splitting. Defaults to `true`. Set to `false` for
    * `--no-upload` (split only).
    */

@@ -1,10 +1,11 @@
 ```
-$ sentry-cli debug-files prepare . --no-upload --require-dwarf
+$ sentry-cli debug-files prepare . --no-upload --require-dwarf --build-id 00000000-0000-4000-8000-000000000000
 ? failed
 > Searching .
 > Found 1 wasm file
 > Skipping ./unity.wasm
     Debug quality: symtab
+    Build ID: 00000000000040008000000000000000
     Warning: no line-level symbolication (name/symtab only)
 Error: some .wasm files lack DWARF (--require-dwarf)
 

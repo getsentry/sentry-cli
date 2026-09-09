@@ -52,6 +52,10 @@ Options:
           
           [aliases: --silent]
 
+      --strip-names
+          Also strip the name section from the deployable .wasm. The companion keeps it, so
+          symbolication is unaffected. Only applies to modules that are split.
+
       --no-upload
           Split only; do not upload companions.
 

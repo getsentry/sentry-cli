@@ -1,10 +1,11 @@
 ```
-$ sentry-cli debug-files prepare . --no-upload
+$ sentry-cli debug-files prepare . --no-upload --build-id 00000000-0000-4000-8000-000000000000
 ? success
 > Searching .
 > Found 1 wasm file
 > Skipping ./app.wasm
     Debug quality: none
+    Build ID: 00000000000040008000000000000000
     Warning: no debug information; rebuild with DWARF (Emscripten -g, wasm-pack dwarf-debug-info)
 
 ```

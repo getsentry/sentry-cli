@@ -16,6 +16,10 @@ export const PREPARE_OPTIONS = {
     param: '--out-dir',
     type: 'string',
   },
+  stripNames: {
+    param: '--strip-names',
+    type: 'boolean',
+  },
   upload: {
     invertedParam: '--no-upload',
     type: 'boolean',

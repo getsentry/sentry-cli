@@ -5,6 +5,7 @@ $ sentry-cli debug-files prepare . --no-upload
 > Found 1 wasm file
 > Skipping ./app.wasm
     Debug quality: none
+    Build ID: 07070707070707070707070707070707
     Warning: already stripped (build_id present, no debug sections); splitting would produce a useless companion
 
 ```

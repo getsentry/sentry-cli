@@ -93,6 +93,24 @@ impl PrepareResult {
             warning: Some(warning.into()),
         }
     }
+
+    fn with_build_id(mut self, build_id: Option<&[u8]>) -> Self {
+        self.build_id = build_id.map(format_build_id);
+        self
+    }
+
+    /// Companion to upload to Sentry for this result, if it produced one.
+    ///
+    /// Only split modules yield a debug file. A name/symtab-only module is not
+    /// worth uploading: its `name` section stays in the deployable module, and
+    /// runtimes resolve function names from it directly, so a DIF built from it
+    /// would carry nothing the stack trace does not already have.
+    pub fn upload_path(&self) -> Option<&Path> {
+        match self.action {
+            PrepareAction::Split | PrepareAction::AlreadyPrepared => self.companion.as_deref(),
+            _ => None,
+        }
+    }
 }
 
 /// Options for [`prepare_wasm_file`].
@@ -101,6 +119,7 @@ pub struct PrepareOptions<'a> {
     pub dry_run: bool,
     pub out_dir: Option<&'a Path>,
     pub build_id: Option<Uuid>,
+    pub strip_names: bool,
 }
 
 pub fn is_wasm_path(path: &Path) -> bool {
@@ -242,11 +261,16 @@ fn read_build_id(path: &Path) -> Result<Option<Vec<u8>>> {
 /// Injects `build_id` if missing, writes the full module (Code + DWARF) to
 /// `companion`, strips `.debug_*` from the deployable copy, and adds
 /// `external_debug_info` pointing at the companion filename.
+///
+/// `strip_names` additionally drops the name section from the deployable copy.
+/// Safe only here: the companion is written first and keeps every section, so
+/// the names survive for symbolication.
 pub fn split_wasm(
     input: &Path,
     companion: &Path,
     stripped_out: &Path,
     build_id: Option<Uuid>,
+    strip_names: bool,
 ) -> Result<Vec<u8>> {
     let mut module = decode_module(input)?;
     let inspection = inspect_module(&module);
@@ -267,7 +291,7 @@ pub fn split_wasm(
 
     module
         .sections
-        .retain(|section| !is_strippable_section(section, false));
+        .retain(|section| !is_strippable_section(section, strip_names));
 
     let debug_file_name = companion
         .file_name()
@@ -328,6 +352,38 @@ fn verify_split(
     Ok(())
 }
 
+/// Give a module that will not be split a `build_id`, writing it back in place.
+///
+/// `wasm-split` stamps every module it processes, regardless of debug quality.
+/// Sentry matches a module in a stack trace to its debug file by `build_id`, so
+/// a module without one can never be symbolicated, even from a debug file
+/// uploaded later. Returns the effective id, or `None` when a dry run leaves an
+/// unstamped module untouched.
+fn ensure_build_id(
+    path: &Path,
+    module: &mut Module,
+    existing: Option<Vec<u8>>,
+    options: PrepareOptions<'_>,
+) -> Result<Option<Vec<u8>>> {
+    if existing.is_some() {
+        return Ok(existing);
+    }
+    if options.dry_run {
+        return Ok(None);
+    }
+
+    let new_id = options
+        .build_id
+        .unwrap_or_else(Uuid::new_v4)
+        .as_bytes()
+        .to_vec();
+    module
+        .sections
+        .push(CustomSection::BuildId(new_id.clone()).into());
+    encode_module(module, path)?;
+    Ok(Some(new_id))
+}
+
 /// Classify and optionally split one `.wasm` file.
 ///
 /// Higher-level wrapper around [`split_wasm`] for the `debug-files prepare`
@@ -343,7 +399,7 @@ pub fn prepare_wasm_file(path: &Path, options: PrepareOptions<'_>) -> Result<Pre
         ));
     }
 
-    let module = match decode_module(path) {
+    let mut module = match decode_module(path) {
         Ok(module) => module,
         Err(err) => {
             return Ok(PrepareResult::skipped(
@@ -356,10 +412,10 @@ pub fn prepare_wasm_file(path: &Path, options: PrepareOptions<'_>) -> Result<Pre
 
     let inspection = inspect_module(&module);
     let expected_companion = companion_path(path, options.out_dir);
-    let stripped_out = match options.out_dir {
-        Some(dir) => dir.join(path.file_name().unwrap_or(path.as_os_str())),
-        None => path.to_path_buf(),
-    };
+    // `out_dir` redirects the companion only. The deployable module is always
+    // stripped in place, so the path the caller deploys is the one that ends up
+    // stamped and stripped.
+    let stripped_out = path.to_path_buf();
 
     // Already split: stripped module + companion with the same build_id.
     if inspection.quality != DebugQuality::Dwarf {
@@ -399,40 +455,35 @@ pub fn prepare_wasm_file(path: &Path, options: PrepareOptions<'_>) -> Result<Pre
         }
     }
 
-    match inspection.quality {
-        DebugQuality::Dwarf => {}
+    let skip_warning = match inspection.quality {
+        DebugQuality::Dwarf => None,
         DebugQuality::ExternalDebugInfo => {
-            return Ok(PrepareResult::skipped(
-                path.to_path_buf(),
-                inspection.quality,
-                "has external_debug_info but no local companion with matching build_id".to_owned(),
-            ));
+            Some("has external_debug_info but no local companion with matching build_id")
         }
-        DebugQuality::Symtab => {
-            return Ok(PrepareResult::skipped(
-                path.to_path_buf(),
-                inspection.quality,
-                "no line-level symbolication (name/symtab only)".to_owned(),
-            ));
-        }
+        DebugQuality::Symtab => Some("no line-level symbolication (name/symtab only)"),
         DebugQuality::None => {
             // A build_id without debug sections means someone already stripped
             // this module, so re-splitting would overwrite a good companion
             // with an empty one. Without a build_id it was simply built
             // without debug info.
-            let warning = if inspection.build_id.is_some() {
+            Some(if inspection.build_id.is_some() {
                 "already stripped (build_id present, no debug sections); \
                  splitting would produce a useless companion"
             } else {
                 "no debug information; rebuild with DWARF \
                  (Emscripten -g, wasm-pack dwarf-debug-info)"
-            };
-            return Ok(PrepareResult::skipped(
-                path.to_path_buf(),
-                inspection.quality,
-                warning.to_owned(),
-            ));
+            })
         }
+    };
+
+    if let Some(warning) = skip_warning {
+        let build_id = ensure_build_id(path, &mut module, inspection.build_id.clone(), options)?;
+        return Ok(PrepareResult::skipped(
+            path.to_path_buf(),
+            inspection.quality,
+            warning.to_owned(),
+        )
+        .with_build_id(build_id.as_deref()));
     }
 
     if options.dry_run {
@@ -447,7 +498,13 @@ pub fn prepare_wasm_file(path: &Path, options: PrepareOptions<'_>) -> Result<Pre
         });
     }
 
-    let build_id = split_wasm(path, &expected_companion, &stripped_out, options.build_id)?;
+    let build_id = split_wasm(
+        path,
+        &expected_companion,
+        &stripped_out,
+        options.build_id,
+        options.strip_names,
+    )?;
 
     Ok(PrepareResult {
         path: path.to_path_buf(),
@@ -478,6 +535,21 @@ mod tests {
     fn name_only_module() -> Module {
         Module {
             sections: vec![CustomSection::Name(Default::default()).into()],
+        }
+    }
+
+    /// Module carrying both DWARF and a name section, i.e. what `--strip-names`
+    /// is meant to trim.
+    fn dwarf_and_names_module() -> Module {
+        Module {
+            sections: vec![
+                CustomSection::Other(RawCustomSection {
+                    name: ".debug_info".into(),
+                    data: vec![0, 1, 2, 3].into(),
+                })
+                .into(),
+                CustomSection::Name(Default::default()).into(),
+            ],
         }
     }
 
@@ -537,7 +609,7 @@ mod tests {
         let dir = tempfile::tempdir().unwrap();
         let input = write_module(dir.path(), "app.wasm", &dwarf_module());
         let companion = dir.path().join("app.debug.wasm");
-        let build_id = split_wasm(&input, &companion, &input, None).unwrap();
+        let build_id = split_wasm(&input, &companion, &input, None, false).unwrap();
 
         let stripped = inspect_module(&decode_module(&input).unwrap());
         let debug = inspect_module(&decode_module(&companion).unwrap());
@@ -553,14 +625,123 @@ mod tests {
     }
 
     #[test]
+    fn out_dir_redirects_companion_but_strips_in_place() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = write_module(dir.path(), "app.wasm", &dwarf_module());
+        let out_dir = dir.path().join("symbols");
+
+        let result = prepare_wasm_file(
+            &input,
+            PrepareOptions {
+                out_dir: Some(&out_dir),
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        assert_eq!(result.action, PrepareAction::Split);
+        assert_eq!(
+            result.companion.as_deref(),
+            Some(out_dir.join("app.debug.wasm").as_path())
+        );
+        assert!(out_dir.join("app.debug.wasm").is_file());
+
+        // The deployed path, not a copy in `out_dir`, is what gets stripped.
+        assert_eq!(result.stripped.as_deref(), Some(input.as_path()));
+        assert!(!out_dir.join("app.wasm").exists());
+
+        let deployed = inspect_module(&decode_module(&input).unwrap());
+        assert!(deployed.build_id.is_some());
+        assert_ne!(deployed.quality, DebugQuality::Dwarf);
+    }
+
+    fn has_name_section(path: &Path) -> bool {
+        decode_module(path)
+            .unwrap()
+            .sections
+            .iter()
+            .filter_map(as_custom_section)
+            .any(|section| matches!(section, CustomSection::Name(_)))
+    }
+
+    #[test]
+    fn strip_names_trims_the_deployable_only() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = write_module(dir.path(), "app.wasm", &dwarf_and_names_module());
+
+        prepare_wasm_file(
+            &input,
+            PrepareOptions {
+                strip_names: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        let companion = companion_path(&input, None);
+        assert_eq!(
+            inspect_module(&decode_module(&companion).unwrap()).quality,
+            DebugQuality::Dwarf
+        );
+        assert!(has_name_section(&companion));
+        assert!(!has_name_section(&input));
+    }
+
+    #[test]
+    fn names_are_kept_by_default() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = write_module(dir.path(), "app.wasm", &dwarf_and_names_module());
+
+        prepare_wasm_file(&input, PrepareOptions::default()).unwrap();
+
+        assert!(has_name_section(&input));
+    }
+
+    #[test]
     fn prepare_skips_symtab_only() {
         let dir = tempfile::tempdir().unwrap();
         let input = write_module(dir.path(), "unity.wasm", &name_only_module());
         let result = prepare_wasm_file(&input, PrepareOptions::default()).unwrap();
         assert_eq!(result.action, PrepareAction::Skipped);
         assert_eq!(result.quality, DebugQuality::Symtab);
-        assert!(result.warning.unwrap().contains("no line-level"));
+        assert!(result.warning.as_deref().unwrap().contains("no line-level"));
         assert!(!companion_path(&input, None).exists());
+        // Stamped so a DWARF build of the same module can be matched later, but
+        // nothing to upload: the name section stays in the deployable module.
+        assert!(result.build_id.is_some());
+        assert!(result.upload_path().is_none());
+        assert!(read_build_id(&input).unwrap().is_some());
+    }
+
+    #[test]
+    fn stamping_a_skipped_module_is_stable_across_runs() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = write_module(dir.path(), "unity.wasm", &name_only_module());
+
+        let first = prepare_wasm_file(&input, PrepareOptions::default()).unwrap();
+        let second = prepare_wasm_file(&input, PrepareOptions::default()).unwrap();
+
+        assert!(first.build_id.is_some());
+        assert_eq!(first.build_id, second.build_id);
+    }
+
+    #[test]
+    fn dry_run_does_not_stamp_a_skipped_module() {
+        let dir = tempfile::tempdir().unwrap();
+        let input = write_module(dir.path(), "unity.wasm", &name_only_module());
+
+        let result = prepare_wasm_file(
+            &input,
+            PrepareOptions {
+                dry_run: true,
+                ..Default::default()
+            },
+        )
+        .unwrap();
+
+        assert_eq!(result.action, PrepareAction::Skipped);
+        assert!(result.build_id.is_none());
+        assert!(read_build_id(&input).unwrap().is_none());
     }
 
     #[test]
