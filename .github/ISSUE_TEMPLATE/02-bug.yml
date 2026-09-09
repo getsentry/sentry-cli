@@ -1,7 +1,31 @@
 name: 🐞 Bug Report
-description: Report a bug in Sentry CLI
+description: Report a bug that prevents migration to the new Sentry CLI
 labels: ["CLI", "Bug"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        > [!IMPORTANT]
+        > This legacy CLI is no longer under active development. Please try the [new Sentry CLI](https://cli.sentry.dev/) and report bugs in the [new CLI repository](https://github.com/getsentry/cli/issues/new) instead.
+
+        Only open a bug here if migrating to the new CLI is impossible or infeasible for a concrete reason. Bug reports that do not explain a migration blocker will be closed.
+
+  - type: textarea
+    id: migration-blocker
+    attributes:
+      label: Migration blocker
+      description: Why is migrating to the new Sentry CLI impossible or infeasible? Describe the concrete technical or operational blocker. A preference to keep using this legacy CLI is not sufficient.
+      placeholder: Include the new CLI command or workflow you tried, what prevents it from replacing your current sentry-cli workflow, and any constraints that rule out a workaround.
+    validations:
+      required: true
+  - type: checkboxes
+    id: migration-confirmation
+    attributes:
+      label: Migration blocker confirmation
+      options:
+        - label: I tried the new Sentry CLI and have described a concrete reason why migrating to it is impossible or infeasible.
+          required: true
+
   - type: markdown
     attributes:
       value: |
