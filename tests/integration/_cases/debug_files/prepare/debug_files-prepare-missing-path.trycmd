@@ -1,0 +1,9 @@
+```
+$ sentry-cli debug-files prepare does-not-exist --no-upload
+? failed
+error: Given path does not exist: does-not-exist
+
+Add --log-level=[info|debug] or export SENTRY_LOG_LEVEL=[info|debug] to see more output.
+Please attach the full debug log to all bug reports.
+
+```

@@ -1,6 +1,7 @@
 use crate::integration::TestManager;
 
 mod bundle_jvm;
+mod prepare;
 mod upload;
 
 #[test]

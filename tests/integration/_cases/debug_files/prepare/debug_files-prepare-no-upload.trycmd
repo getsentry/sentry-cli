@@ -1,0 +1,11 @@
+```
+$ sentry-cli debug-files prepare . --no-upload --build-id 00000000-0000-4000-8000-000000000000
+? success
+> Searching .
+> Found 1 wasm file
+> Split ./app.wasm
+    Debug quality: dwarf
+    Build ID: 00000000000040008000000000000000
+    Companion: ./app.debug.wasm
+
+```

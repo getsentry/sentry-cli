@@ -1,0 +1,17 @@
+```
+$ sentry-cli debug-files prepare . --dry-run --json
+? success
+{
+  "files": [
+    {
+      "path": "./app.wasm",
+      "action": "would_split",
+      "quality": "dwarf",
+      "build_id": null,
+      "stripped": "./app.wasm",
+      "companion": "./app.debug.wasm"
+    }
+  ]
+}
+
+```

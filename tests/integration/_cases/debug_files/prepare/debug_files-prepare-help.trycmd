@@ -1,0 +1,86 @@
+```
+$ sentry-cli debug-files prepare --help
+? success
+Prepare WebAssembly debug files for Sentry.
+
+Scans PATH for .wasm modules, classifies debug quality, and for modules with DWARF runs the same
+split as wasm-split: inject a build_id if missing, write a *.debug.wasm companion that keeps the
+Code section, and strip DWARF from the deployable .wasm.
+
+Companions are uploaded with debug-files upload --type wasm unless --no-upload or --dry-run is set.
+
+Compiler-agnostic: operates on module sections only. Build with DWARF (Emscripten -g, wasm-pack
+dwarf-debug-info) and optionally --build-id at link. Name/symtab-only modules are skipped with a
+warning (no line-level symbolication).
+
+Usage: sentry-cli[EXE] debug-files prepare [OPTIONS] <PATH>...
+
+Arguments:
+  <PATH>...
+          A .wasm file or a directory to search recursively.
+
+Options:
+  -o, --org <ORG>
+          The organization ID or slug.
+
+      --header <KEY:VALUE>
+          Custom headers that should be attached to all requests
+          in key:value format.
+
+  -p, --project <PROJECT>
+          The project ID or slug.
+
+      --auth-token <AUTH_TOKEN>
+          Use the given Sentry auth token.
+
+  -i, --ignore <IGNORE>
+          Ignores all files and folders matching the given glob.
+
+  -I, --ignore-file <IGNORE_FILE>
+          Ignore all files and folders specified in the given ignore file, e.g. .gitignore.
+
+      --log-level <LOG_LEVEL>
+          Set the log output verbosity. [possible values: trace, debug, info, warn, error]
+
+      --out-dir <DIR>
+          Write *.debug.wasm companions into this directory. The stripped .wasm is still written
+          next to the input (in-place) so the original path stays the deploy artifact.
+
+      --quiet
+          Do not print any output while preserving correct exit code. This flag is currently
+          implemented only for selected subcommands.
+          
+          [aliases: --silent]
+
+      --no-upload
+          Split only; do not upload companions.
+
+      --dry-run
+          Inspect and classify modules without writing or uploading.
+
+      --require-dwarf
+          Exit with an error if any scanned .wasm lacks DWARF (or a matching companion).
+
+      --include-sources
+          Include sources from the local file system and upload them as source bundles.
+
+      --wait
+          Wait for the server to fully process uploaded files. Errors can only be displayed if
+          --wait or --wait-for is specified, but this will significantly slow down the upload
+          process.
+
+      --wait-for <SECS>
+          Wait for the server to fully process uploaded files, but at most for the given number of
+          seconds. Errors can only be displayed if --wait or --wait-for is specified, but this will
+          significantly slow down the upload process.
+
+      --json
+          Format outputs as JSON.
+
+      --build-id <UUID>
+          Explicit build_id to inject when a module has none. Defaults to a random UUID.
+
+  -h, --help
+          Print help (see a summary with '-h')
+
+```

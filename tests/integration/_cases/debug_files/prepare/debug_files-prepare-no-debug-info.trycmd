@@ -1,0 +1,10 @@
+```
+$ sentry-cli debug-files prepare . --no-upload
+? success
+> Searching .
+> Found 1 wasm file
+> Skipping ./app.wasm
+    Debug quality: none
+    Warning: no debug information; rebuild with DWARF (Emscripten -g, wasm-pack dwarf-debug-info)
+
+```

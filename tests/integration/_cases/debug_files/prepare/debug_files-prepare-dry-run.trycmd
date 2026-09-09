@@ -1,0 +1,10 @@
+```
+$ sentry-cli debug-files prepare . --dry-run
+? success
+> Searching .
+> Found 1 wasm file
+> Would split ./app.wasm
+    Debug quality: dwarf
+    Companion: ./app.debug.wasm
+
+```

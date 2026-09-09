@@ -1,0 +1,10 @@
+```
+$ sentry-cli debug-files prepare . --no-upload
+? success
+> Searching .
+> Found 1 wasm file
+> Skipping ./unity.wasm
+    Debug quality: symtab
+    Warning: no line-level symbolication (name/symtab only)
+
+```

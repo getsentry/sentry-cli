@@ -8,6 +8,7 @@ Usage: sentry-cli[EXE] debug-files [OPTIONS] <COMMAND>
 Commands:
   bundle-sources  Create a source bundle for a given debug information file
   check           Check the debug info file at a given path.
+  prepare         Prepare WebAssembly files for Sentry: split DWARF, then upload companions.
   find            Locate debug information files for given debug identifiers.
   print-sources   Print source files linked by the given debug info file.
   upload          Upload debugging information files.
