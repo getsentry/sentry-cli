@@ -2,6 +2,7 @@
 
 import * as pkgInfo from '../package.json';
 import * as helper from './helper';
+import { DebugFiles } from './debugFiles';
 import { Releases } from './releases';
 import { SourceMaps } from './sourceMaps';
 import type { SentryCliOptions } from './types';
@@ -13,6 +14,7 @@ export type {
   SentryCliNewDeployOptions,
   SentryCliCommitsOptions,
   SentryCliInjectOptions,
+  SentryCliDebugFilesPrepareOptions,
 } from './types';
 
 /**
@@ -33,6 +35,7 @@ export type {
 export class SentryCli {
   public releases: Releases;
   public sourceMaps: SourceMaps;
+  public debugFiles: DebugFiles;
 
   /**
    * Creates a new `SentryCli` instance.
@@ -54,6 +57,7 @@ export class SentryCli {
     this.options = options || { silent: false };
     this.releases = new Releases(this.options, configFile);
     this.sourceMaps = new SourceMaps(this.options, configFile);
+    this.debugFiles = new DebugFiles(this.options, configFile);
   }
 
   /**

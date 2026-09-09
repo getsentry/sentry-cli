@@ -234,3 +234,56 @@ export type SentryCliInjectOptions = {
    */
   dryRun?: boolean;
 }
+
+/**
+ * Options for preparing WebAssembly debug files (`debug-files prepare`).
+ */
+export type SentryCliDebugFilesPrepareOptions = {
+  /**
+   * A `.wasm` file or directory to scan. Can be a single path or an array.
+   */
+  path?: string | string[];
+  /**
+   * Additional paths to scan. Merged with `path` when both are set.
+   */
+  paths?: string[];
+  /**
+   * One or more globs to ignore during the scan.
+   * Defaults to `['node_modules']` if neither ignore nor ignoreFile is specified.
+   */
+  ignore?: string[];
+  /**
+   * Path to a file containing list of files/directories to ignore.
+   */
+  ignoreFile?: string;
+  /**
+   * Directory to write `*.debug.wasm` companions into. The stripped `.wasm`
+   * is still written next to the input.
+   */
+  outDir?: string;
+  /**
+   * Upload companions after splitting. Defaults to `true`. Set to `false` for
+   * `--no-upload` (split only).
+   */
+  upload?: boolean;
+  /**
+   * Inspect and classify modules without writing or uploading.
+   */
+  dryRun?: boolean;
+  /**
+   * Fail if any scanned `.wasm` lacks DWARF (or a matching companion).
+   */
+  requireDwarf?: boolean;
+  /**
+   * Include sources from the local file system and upload them as source bundles.
+   */
+  includeSources?: boolean;
+  /**
+   * Wait for the server to fully process uploaded files.
+   */
+  wait?: boolean;
+  /**
+   * Wait at most this many seconds for processing.
+   */
+  waitFor?: number;
+}
