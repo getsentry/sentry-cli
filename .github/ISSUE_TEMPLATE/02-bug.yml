@@ -5,26 +5,32 @@ body:
   - type: markdown
     attributes:
       value: |
-        > [!IMPORTANT]
-        > This legacy CLI is no longer under active development. Please try the [new Sentry CLI](https://cli.sentry.dev/) and report bugs in the [new CLI repository](https://github.com/getsentry/cli/issues/new) instead.
+        Thanks for taking the time to report a bug! Before you continue, please try the [new Sentry CLI](https://cli.sentry.dev/). This legacy `sentry-cli` is no longer under active development.
 
-        This form is for bugs in the legacy `sentry-cli`. We will only consider a bug report here if you also have a concrete reason why using the new CLI is impossible or infeasible. That reason is separate from the legacy CLI bug you are reporting below.
+        If you find a bug in the new CLI, please [report it in the new CLI repository](https://github.com/getsentry/cli/issues/new). We will still consider bugs reported here when a blocker prevents you from adopting the new CLI.
 
+  - type: checkboxes
+    id: tried-new-cli
+    attributes:
+      label: Have you tried the new Sentry CLI?
+      options:
+        - label: I have tried the new Sentry CLI.
+          required: true
+  - type: checkboxes
+    id: adoption-blocker
+    attributes:
+      label: Is something blocking adoption of the new CLI?
+      options:
+        - label: I encountered a blocker that prevents me from adopting the new Sentry CLI.
+          required: true
   - type: textarea
     id: migration-blocker
     attributes:
-      label: Reason you cannot use the new Sentry CLI
-      description: Describe the concrete technical or operational situation that makes the new CLI impossible or infeasible for you. This does not need to be a bug in either CLI, but it must be independent of the legacy CLI bug reported below. A preference to keep using the legacy CLI is not sufficient.
-      placeholder: Describe the new CLI capability, compatibility requirement, environment constraint, or other blocker that prevents migration.
+      label: What is blocking your migration?
+      description: Tell us what makes adopting the new CLI impossible or infeasible for you. This does not have to be a bug in either CLI.
+      placeholder: Describe the missing capability, compatibility requirement, environment constraint, or other blocker.
     validations:
       required: true
-  - type: checkboxes
-    id: migration-confirmation
-    attributes:
-      label: Migration blocker confirmation
-      options:
-        - label: I have described a concrete reason, separate from the bug below, why I cannot use the new Sentry CLI instead.
-          required: true
 
   - type: markdown
     attributes:
