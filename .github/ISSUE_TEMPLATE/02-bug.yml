@@ -1,5 +1,5 @@
 name: 🐞 Bug Report
-description: Report a bug that prevents migration to the new Sentry CLI
+description: Report a bug in the legacy Sentry CLI
 labels: ["CLI", "Bug"]
 body:
   - type: markdown
@@ -8,14 +8,14 @@ body:
         > [!IMPORTANT]
         > This legacy CLI is no longer under active development. Please try the [new Sentry CLI](https://cli.sentry.dev/) and report bugs in the [new CLI repository](https://github.com/getsentry/cli/issues/new) instead.
 
-        Only open a bug here if migrating to the new CLI is impossible or infeasible for a concrete reason. Bug reports that do not explain a migration blocker will be closed.
+        This form is for bugs in the legacy `sentry-cli`. We will only consider a bug report here if you also have a concrete reason why using the new CLI is impossible or infeasible. That reason is separate from the legacy CLI bug you are reporting below.
 
   - type: textarea
     id: migration-blocker
     attributes:
-      label: Migration blocker
-      description: Why is migrating to the new Sentry CLI impossible or infeasible? Describe the concrete technical or operational blocker. A preference to keep using this legacy CLI is not sufficient.
-      placeholder: Include the new CLI command or workflow you tried, what prevents it from replacing your current sentry-cli workflow, and any constraints that rule out a workaround.
+      label: Reason you cannot use the new Sentry CLI
+      description: Describe the concrete technical or operational situation that makes the new CLI impossible or infeasible for you. This does not need to be a bug in either CLI, but it must be independent of the legacy CLI bug reported below. A preference to keep using the legacy CLI is not sufficient.
+      placeholder: Describe the new CLI capability, compatibility requirement, environment constraint, or other blocker that prevents migration.
     validations:
       required: true
   - type: checkboxes
@@ -23,7 +23,7 @@ body:
     attributes:
       label: Migration blocker confirmation
       options:
-        - label: I tried the new Sentry CLI and have described a concrete reason why migrating to it is impossible or infeasible.
+        - label: I have described a concrete reason, separate from the bug below, why I cannot use the new Sentry CLI instead.
           required: true
 
   - type: markdown
