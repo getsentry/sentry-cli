@@ -4,6 +4,7 @@
 
 ### Features
 
+- (debug-files) Add `debug-files prepare` to split WASM DWARF companions and upload them
 - (build) Add dSYM support to IPA uploads ([#3393](https://github.com/getsentry/sentry-cli/pull/3393))
 
 ### Fixes

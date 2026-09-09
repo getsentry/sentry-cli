@@ -29,4 +29,5 @@ pub mod ui;
 pub mod update;
 pub mod value_parsers;
 pub mod vcs;
+pub mod wasm;
 pub mod xcode;
