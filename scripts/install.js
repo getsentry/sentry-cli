@@ -17,6 +17,7 @@ const which = require('which');
 const helper = require('../js/helper');
 const pkgInfo = require('../package.json');
 const { Logger } = require('../js/logger');
+const { promptLogin } = require('./prompt-login');
 
 const logger = new Logger(getLogStream('stderr'));
 
@@ -317,6 +318,7 @@ if (distributionPackageName === undefined) {
 try {
   require.resolve(`${distributionPackageName}/${distributionSubpath}`);
   // If the `resolve` call succeeds it means a binary was installed successfully via optional dependencies so we can skip the manual postinstall download.
+  promptLogin(helper.getPath());
   process.exit(0);
 } catch (e) {
   // Optional dependencies likely didn't get installed - proceed with fallback downloading manually
@@ -329,6 +331,7 @@ This can happen if you use an option to disable optional dependencies during ins
 
   downloadBinary()
     .then(() => checkVersion())
+    .then(() => promptLogin(helper.getPath()))
     .then(() => {
       process.exit(0);
     })

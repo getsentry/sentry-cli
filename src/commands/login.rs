@@ -10,13 +10,21 @@ use crate::utils::auth_token::AuthToken;
 use crate::utils::ui::{prompt, prompt_to_continue};
 
 pub fn make_command(command: Command) -> Command {
-    command.about("Authenticate with the Sentry server.").arg(
-        Arg::new("global")
-            .short('g')
-            .long("global")
-            .action(ArgAction::SetTrue)
-            .help("Store authentication token globally rather than locally."),
-    )
+    command
+        .about("Authenticate with the Sentry server.")
+        .arg(
+            Arg::new("global")
+                .short('g')
+                .long("global")
+                .action(ArgAction::SetTrue)
+                .help("Store authentication token globally rather than locally."),
+        )
+        .arg(
+            Arg::new("if_needed")
+                .long("if-needed")
+                .action(ArgAction::SetTrue)
+                .hide(true),
+        )
 }
 
 fn update_config(config: &Config, token: AuthToken, url: &str) -> Result<()> {
@@ -28,6 +36,11 @@ fn update_config(config: &Config, token: AuthToken, url: &str) -> Result<()> {
 
 pub fn execute(matches: &ArgMatches) -> Result<()> {
     let config = Config::current();
+
+    if matches.get_flag("if_needed") && config.get_auth().is_some() {
+        return Ok(());
+    }
+
     let token_url = format!(
         "{}/orgredirect/organizations/:orgslug/settings/auth-tokens/",
         config.get_base_url()?

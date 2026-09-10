@@ -1,0 +1,4 @@
+```
+$ sentry-cli login --if-needed
+? success
+```
