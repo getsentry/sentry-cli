@@ -1,4 +1,4 @@
 ```
-$ sentry-cli login --if-needed
+$ sentry-cli login --if-needed --auth-token 0000000000000000000000000000000000000000000000000000000000000000
 ? success
 ```
