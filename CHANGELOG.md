@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- Prompt for login after interactive install ([#3406](https://github.com/getsentry/sentry-cli/pull/3406))
+
 ## 3.7.0
 
 ### Features
