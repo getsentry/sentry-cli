@@ -2161,6 +2161,17 @@ mod tests {
     }
 
     #[test]
+    fn objectstore_upload_options_usecase_defaults_to_preprod() {
+        let json = r#"{"url":"https://o.example","scopes":[],"expirationPolicy":"tti:30d"}"#;
+        let options: ObjectstoreUploadOptions = serde_json::from_str(json).unwrap();
+        assert_eq!(options.usecase, "preprod");
+
+        let json = r#"{"url":"https://o.example","usecase":"snapshots","scopes":[],"expirationPolicy":"tti:30d"}"#;
+        let options: ObjectstoreUploadOptions = serde_json::from_str(json).unwrap();
+        assert_eq!(options.usecase, "snapshots");
+    }
+
+    #[test]
     fn convert_rnf_reports_project_rename() {
         let err = project_renamed_response()
             .convert_rnf::<SnapshotsUploadOptions>(ApiErrorKind::ProjectNotFound)
