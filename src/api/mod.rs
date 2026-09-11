@@ -1015,7 +1015,7 @@ impl AuthenticatedApi<'_> {
         project: &str,
     ) -> ApiResult<SnapshotsUploadOptions> {
         let path = format!(
-            "/projects/{}/{}/preprodartifacts/snapshots/upload-options/?usecase=snapshots",
+            "/projects/{}/{}/preprodartifacts/snapshots/upload-options/?usecase=auto",
             PathArg(org),
             PathArg(project)
         );
