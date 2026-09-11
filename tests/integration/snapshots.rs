@@ -118,7 +118,7 @@ fn command_snapshots_upload_renamed_project() {
         .mock_endpoint(
             MockEndpointBuilder::new(
                 "GET",
-                "/api/0/projects/wat-org/wat-project/preprodartifacts/snapshots/upload-options/",
+                "/api/0/projects/wat-org/wat-project/preprodartifacts/snapshots/upload-options/?usecase=snapshots",
             )
             .with_status(302)
             .with_response_body(

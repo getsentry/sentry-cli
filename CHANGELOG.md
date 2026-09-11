@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+### Improvements
+
+- (snapshots) Upload snapshot images under the dedicated `snapshots` objectstore usecase when the server supports it
+
 ### Fixes
 
 - (logs) Correct the severity query example ([#3387](https://github.com/getsentry/sentry-cli/pull/3387))

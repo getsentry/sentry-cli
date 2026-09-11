@@ -1015,7 +1015,7 @@ impl AuthenticatedApi<'_> {
         project: &str,
     ) -> ApiResult<SnapshotsUploadOptions> {
         let path = format!(
-            "/projects/{}/{}/preprodartifacts/snapshots/upload-options/",
+            "/projects/{}/{}/preprodartifacts/snapshots/upload-options/?usecase=snapshots",
             PathArg(org),
             PathArg(project)
         );
@@ -2132,9 +2132,15 @@ pub struct SnapshotsUploadOptions {
 #[serde(rename_all = "camelCase")]
 pub struct ObjectstoreUploadOptions {
     pub url: String,
+    #[serde(default = "legacy_objectstore_usecase")]
+    pub usecase: String,
     pub scopes: Vec<(String, String)>,
     pub auth_token: Option<SecretString>,
     pub expiration_policy: String,
+}
+
+fn legacy_objectstore_usecase() -> String {
+    "preprod".into()
 }
 
 #[cfg(test)]
