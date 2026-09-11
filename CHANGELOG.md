@@ -4,7 +4,7 @@
 
 ### Improvements
 
-- (snapshots) Upload snapshot images under the dedicated `snapshots` objectstore usecase when the server supports it
+- (snapshots) Upload snapshot images under the dedicated `snapshots` objectstore usecase when the server supports it ([#3408](https://github.com/getsentry/sentry-cli/pull/3408))
 
 ### Fixes
 
