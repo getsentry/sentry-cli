@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::Arc;
 
 use serde_json::json;
+use sha2::{Digest as _, Sha256};
 
 use crate::integration::{AssertCommand, MockEndpointBuilder, TestManager};
 
@@ -129,6 +130,89 @@ fn command_snapshots_upload_renamed_project() {
         )
         .register_trycmd_test("snapshots/snapshots-upload-renamed-project.trycmd")
         .with_default_token();
+}
+
+#[rstest::rstest]
+#[case::preprod_snapshots(Some("preprod_snapshots"), "preprod_snapshots")]
+#[case::preprod(Some("preprod"), "preprod")]
+#[case::legacy(None, "preprod")]
+fn command_snapshots_upload_uses_server_usecase(
+    #[case] returned_usecase: Option<&str>,
+    #[case] expected_usecase: &str,
+) {
+    let mut objectstore = mockito::Server::new();
+    let image = std::fs::read("tests/integration/_fixtures/snapshots/snapshot.png").unwrap();
+    let hash = format!("{:x}", Sha256::digest(image));
+    let batch_path = format!("/proxy/v1/objects:batch/{expected_usecase}/org=1;project=2/");
+    let objectstore_mocks: Vec<_> = [("head", 404), ("insert", 200)]
+        .into_iter()
+        .map(|(operation, status)| {
+            objectstore
+                .mock("POST", batch_path.as_str())
+                .match_header("x-os-auth", "Bearer objectstore-token")
+                .match_body(mockito::Matcher::AllOf(vec![
+                    mockito::Matcher::Regex(format!(
+                        "x-sn-batch-operation-kind: {operation}\\r\\n"
+                    )),
+                    mockito::Matcher::Regex(format!(
+                        "x-sn-batch-operation-key: 1%2F2%2F{hash}\\r\\n"
+                    )),
+                ]))
+                .with_header("content-type", "multipart/form-data; boundary=response")
+                .with_body(format!(
+                    "--response\r\n\
+                     Content-Disposition: form-data; name=\"part\"\r\n\
+                     x-sn-batch-operation-index: 0\r\n\
+                     x-sn-batch-operation-status: {status}\r\n\
+                     \r\n\r\n--response--\r\n"
+                ))
+                .expect(1)
+                .create()
+        })
+        .collect();
+    let mut upload_options = json!({
+        "objectstore": {
+            "url": format!("{}/proxy", objectstore.url()),
+            "scopes": [["org", "1"], ["project", "2"]],
+            "authToken": "objectstore-token",
+            "expirationPolicy": "tti:30d"
+        }
+    });
+    if let Some(usecase) = returned_usecase {
+        upload_options["objectstore"]["usecase"] = json!(usecase);
+    }
+
+    TestManager::new()
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "GET",
+                "/api/0/projects/wat-org/wat-project/preprodartifacts/snapshots/upload-options/?usecase=auto",
+            )
+            .expect(1)
+            .with_response_body(upload_options.to_string()),
+        )
+        .mock_endpoint(
+            MockEndpointBuilder::new(
+                "POST",
+                "/api/0/projects/wat-org/wat-project/preprodartifacts/snapshots/",
+            )
+            .expect(1)
+            .with_response_body(r#"{"artifactId":"snapshot-id","imageCount":1,"snapshotUrl":null}"#),
+        )
+        .assert_cmd(vec![
+            "snapshots",
+            "upload",
+            "tests/integration/_fixtures/snapshots",
+            "--app-id",
+            "test-app",
+            "--no-git-metadata",
+        ])
+        .with_default_token()
+        .run_and_assert(AssertCommand::Success);
+
+    for mock in objectstore_mocks {
+        mock.assert();
+    }
 }
 
 #[test]
