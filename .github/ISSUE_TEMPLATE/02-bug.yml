@@ -1,7 +1,27 @@
 name: 🐞 Bug Report
-description: Report a bug in Sentry CLI
+description: Report a bug in the legacy Sentry CLI
 labels: ["CLI", "Bug"]
 body:
+  - type: markdown
+    attributes:
+      value: |
+        > [!IMPORTANT]
+        > This legacy `sentry-cli` is no longer under active development. Before filing an issue here, please try the [new Sentry CLI](https://cli.sentry.dev/). Report problems with the new CLI in the [new CLI repository](https://github.com/getsentry/cli/issues/new).
+
+        We only accept bug reports for the legacy CLI in exceptional cases:
+
+        - A fundamental blocker prevents you from migrating to the new CLI.
+        - A recent legacy CLI release introduced a serious regression.
+
+  - type: textarea
+    id: exceptional-reason
+    attributes:
+      label: Why should this be addressed in the legacy CLI?
+      description: Explain which exceptional case applies and why. If migration is blocked, describe the fundamental blocker. If this is a serious regression, identify the recent legacy CLI release that introduced it.
+      placeholder: Tell us why this problem needs to be fixed in the legacy CLI rather than addressed by migrating to the new CLI.
+    validations:
+      required: true
+
   - type: markdown
     attributes:
       value: |
