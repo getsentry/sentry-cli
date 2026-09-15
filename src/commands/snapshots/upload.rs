@@ -444,7 +444,8 @@ fn upload_images(
     let org_id = find_scope("org").context("Missing org in UploadOptions scope")?;
     let project_id = find_scope("project").context("Missing project in UploadOptions scope")?;
 
-    let mut scope = Usecase::new("preprod").scope();
+    debug!("Using objectstore usecase {}", options.objectstore.usecase);
+    let mut scope = Usecase::new(&options.objectstore.usecase).scope();
     for (key, value) in scopes {
         scope = scope.push(&key, value);
     }

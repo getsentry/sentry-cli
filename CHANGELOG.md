@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Improvements
+
+- (snapshots) Upload snapshot images to the objectstore usecase chosen by the server instead of a hardcoded one ([#3408](https://github.com/getsentry/sentry-cli/pull/3408))
+
 ## 3.7.0
 
 ### Features
