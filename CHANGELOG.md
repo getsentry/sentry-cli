@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Fixes
+
+- Ignore trailing slashes when comparing the configured URL with the auth token's embedded URL, removing a spurious conflict warning ([#3420](https://github.com/getsentry/sentry-cli/pull/3420))
+
 ## 3.8.0
 
 ### Improvements
