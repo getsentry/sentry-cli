@@ -771,7 +771,7 @@ fn merge_config_source(base: &mut Ini, overlay: &Ini) -> Option<DiscardedAuthUrl
 
 fn warn_about_conflicting_urls(token_url: &str, manually_configured_url: Option<&str>) {
     if let Some(manually_configured_url) = manually_configured_url {
-        if manually_configured_url != token_url {
+        if !urls_equivalent(token_url, manually_configured_url) {
             warn!(
                 "Using {token_url} (embedded in token) rather than manually-configured URL \
                 {manually_configured_url}. To use {manually_configured_url}, please provide an \
@@ -779,6 +779,12 @@ fn warn_about_conflicting_urls(token_url: &str, manually_configured_url: Option<
             );
         }
     }
+}
+
+/// Returns whether two URLs refer to the same Sentry instance, ignoring
+/// trailing slashes (`https://sentry.io` and `https://sentry.io/` are equal).
+fn urls_equivalent(a: &str, b: &str) -> bool {
+    a.trim_end_matches('/') == b.trim_end_matches('/')
 }
 
 fn find_global_config_file() -> Result<PathBuf> {
@@ -1084,5 +1090,29 @@ mod tests {
                 .unwrap(),
             "https://us.sentry.io/api/0/organizations/test-org/chunk-upload/"
         );
+    }
+
+    #[test]
+    fn urls_equivalent_ignores_trailing_slashes() {
+        assert!(urls_equivalent("https://sentry.io", "https://sentry.io/"));
+        assert!(urls_equivalent("https://sentry.io/", "https://sentry.io"));
+        assert!(urls_equivalent("https://sentry.io", "https://sentry.io"));
+        assert!(urls_equivalent(
+            "http://localhost:8000",
+            "http://localhost:8000/"
+        ));
+    }
+
+    #[test]
+    fn urls_equivalent_detects_different_urls() {
+        assert!(!urls_equivalent(
+            "https://sentry.io",
+            "https://us.sentry.io"
+        ));
+        assert!(!urls_equivalent(
+            "https://sentry.io",
+            "https://sentry.io.evil.com"
+        ));
+        assert!(!urls_equivalent("https://sentry.io", "http://sentry.io/"));
     }
 }
