@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-We are no longer releasing Sentry CLI for Intel-based (x86_64) Macs. Starting with this release, we only publish macOS binaries for Apple Silicon (arm64), and we no longer publish the universal macOS binary. If you use Sentry CLI on an Intel-based Mac, please build it from source instead. To use a self-built binary with the `@sentry/cli` npm package, set `SENTRYCLI_SKIP_DOWNLOAD=1` when installing the package, and set `SENTRY_BINARY_PATH` to the path of your binary when running it ([#3425](https://github.com/getsentry/sentry-cli/pull/3425)).
+We are no longer releasing Sentry CLI for Intel-based (x86_64) Macs. Starting with this release, we only publish macOS binaries for Apple Silicon (arm64), and we no longer publish the universal macOS binary. Version 3.8.0 is the last release that supports Intel-based Macs. If you use Sentry CLI on an Intel-based Mac, please pin Sentry CLI to version 3.8.0, or build it from source instead. To use a self-built binary with the `@sentry/cli` npm package, set `SENTRYCLI_SKIP_DOWNLOAD=1` when installing the package, and set `SENTRY_BINARY_PATH` to the path of your binary when running it ([#3425](https://github.com/getsentry/sentry-cli/pull/3425)).
 
 ## 3.8.0
 
