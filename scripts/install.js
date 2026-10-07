@@ -74,7 +74,8 @@ function getDownloadUrl(platform, arch) {
   }
   switch (platform) {
     case 'darwin':
-      return `${releasesUrl}-Darwin-universal`;
+      // We only release macOS binaries for Apple Silicon (arm64).
+      return arch === 'arm64' ? `${releasesUrl}-Darwin-arm64` : null;
     case 'win32':
       return `${releasesUrl}-Windows-${archString}.exe`;
     case 'linux':

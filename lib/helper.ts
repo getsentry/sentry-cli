@@ -40,7 +40,10 @@ function getDistributionForThisPlatform() {
 
   let packageName = undefined;
   if (platform === 'darwin') {
-    packageName = '@sentry/cli-darwin';
+    // We only release macOS binaries for Apple Silicon (arm64).
+    if (arch === 'arm64') {
+      packageName = '@sentry/cli-darwin';
+    }
   } else if (platform === 'linux' || platform === 'freebsd' || platform === 'android') {
     switch (arch) {
       case 'x64':
@@ -101,7 +104,7 @@ function throwUnsupportedPlatformError(): void {
     `Unsupported operating system or architecture! Sentry CLI does not work on this architecture.
 
 Sentry CLI supports:
-- Darwin (macOS)
+- Darwin (macOS) on arm64 (Apple Silicon)
 - Linux and FreeBSD on x64, x86, ia32, arm64, and arm architectures
 - Windows x64, x86, and ia32 architectures`
   );
