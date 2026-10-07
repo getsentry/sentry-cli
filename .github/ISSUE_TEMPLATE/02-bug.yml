@@ -6,7 +6,7 @@ body:
     attributes:
       value: |
         > [!IMPORTANT]
-        > This legacy `sentry-cli` is no longer under active development. Before filing an issue here, please try the [new Sentry CLI](https://cli.sentry.dev/). Report problems with the new CLI in the [new CLI repository](https://github.com/getsentry/cli/issues/new).
+        > This legacy `sentry-cli` is no longer under active development. Before filing an issue here, please try the [new Sentry CLI](https://cli.sentry.dev/). Report problems with the new CLI in the [`getsentry/toolkit` monorepo](https://github.com/getsentry/toolkit/issues/new), which is where the new CLI is developed.
 
         We only accept bug reports for the legacy CLI in exceptional cases:
 

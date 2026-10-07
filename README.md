@@ -11,7 +11,7 @@
 > [!IMPORTANT]
 > This repository is no longer under active development, as our [new CLI](https://cli.sentry.dev/) will soon be replacing this one.
 >
-> We are therefore no longer accepting feature requests for this repo. Also, we will generally only fix bugs in this repo when there is a concrete reason preventing adoption of the new CLI. Please raise new issues in the new CLI's repository, instead.
+> We are therefore no longer accepting feature requests for this repo. Also, we will generally only fix bugs in this repo when there is a concrete reason preventing adoption of the new CLI. Please raise new issues in the [`getsentry/toolkit` monorepo](https://github.com/getsentry/toolkit/issues/new), whose [`packages/cli`](https://github.com/getsentry/toolkit/tree/main/packages/cli) directory contains the new CLI.
 
 # Sentry CLI
 
