@@ -53,8 +53,9 @@ targets:
         version "{{version}}"
         license "FSL-1.1-MIT"
         if OS.mac?
-          url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Darwin-universal"
-          sha256 "{{checksums.sentry-cli-Darwin-universal}}"
+          depends_on arch: :arm64
+          url "https://downloads.sentry-cdn.com/sentry-cli/{{version}}/sentry-cli-Darwin-arm64"
+          sha256 "{{checksums.sentry-cli-Darwin-arm64}}"
         elsif OS.linux?
           if Hardware::CPU.arm?
             if Hardware::CPU.is_64_bit?
@@ -108,9 +109,7 @@ targets:
     target: getsentry/sentry-cli
     targetFormat: '{{{target}}}:latest'
 requireNames:
-  - /^sentry-cli-Darwin-x86_64$/
   - /^sentry-cli-Darwin-arm64$/
-  - /^sentry-cli-Darwin-universal$/
   - /^sentry-cli-Linux-i686$/
   - /^sentry-cli-Linux-x86_64$/
   - /^sentry-cli-Linux-armv7$/

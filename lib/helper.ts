@@ -40,7 +40,10 @@ function getDistributionForThisPlatform() {
 
   let packageName = undefined;
   if (platform === 'darwin') {
-    packageName = '@sentry/cli-darwin';
+    // We only release macOS binaries for Apple Silicon (arm64).
+    if (arch === 'arm64') {
+      packageName = '@sentry/cli-darwin';
+    }
   } else if (platform === 'linux' || platform === 'freebsd' || platform === 'android') {
     switch (arch) {
       case 'x64':
@@ -92,16 +95,33 @@ function getDistributionForThisPlatform() {
 }
 
 /**
+ * The last Sentry CLI version that shipped binaries for Intel-based (x86_64) Macs.
+ */
+const LAST_INTEL_MAC_VERSION = '3.8.0';
+
+/**
  * Throws an error with a message stating that Sentry CLI doesn't support the current platform.
  *
  * @returns nothing. It throws.
  */
 function throwUnsupportedPlatformError(): void {
+  if (os.platform() === 'darwin' && os.arch() === 'x64') {
+    throw new Error(
+      `Sentry CLI no longer supports Intel-based (x86_64) Macs.
+
+The last version of Sentry CLI that supports Intel-based Macs is ${LAST_INTEL_MAC_VERSION}. To keep using Sentry CLI on an Intel-based Mac, pin the "@sentry/cli" package to version ${LAST_INTEL_MAC_VERSION}.
+
+Alternatively, build Sentry CLI from source, install this package with SENTRYCLI_SKIP_DOWNLOAD=1, and set SENTRY_BINARY_PATH to the path of your binary.
+
+If you are on an Apple Silicon Mac, you are likely running an x64 build of Node.js under Rosetta. Switch to an arm64 build of Node.js instead.`
+    );
+  }
+
   throw new Error(
     `Unsupported operating system or architecture! Sentry CLI does not work on this architecture.
 
 Sentry CLI supports:
-- Darwin (macOS)
+- Darwin (macOS) on arm64 (Apple Silicon)
 - Linux and FreeBSD on x64, x86, ia32, arm64, and arm architectures
 - Windows x64, x86, and ia32 architectures`
   );

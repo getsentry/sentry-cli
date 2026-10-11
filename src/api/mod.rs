@@ -333,13 +333,7 @@ impl Api {
     pub fn get_latest_sentrycli_release(&self) -> ApiResult<Option<SentryCliRelease>> {
         let resp = self.get(RELEASE_REGISTRY_LATEST_URL)?;
 
-        // Prefer universal binary on macOS
-        let arch = match PLATFORM {
-            "darwin" => "universal",
-            _ => ARCH,
-        };
-
-        let ref_name = format!("sentry-cli-{}-{arch}{EXT}", capitalize_string(PLATFORM));
+        let ref_name = format!("sentry-cli-{}-{ARCH}{EXT}", capitalize_string(PLATFORM));
         info!("Looking for file named: {ref_name}");
 
         if resp.status() == 200 {

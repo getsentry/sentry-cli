@@ -68,8 +68,6 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - arch: x86_64
-            target: x86_64-apple-darwin
           - arch: arm64
             target: aarch64-apple-darwin
 
@@ -83,34 +81,6 @@ jobs:
 
       - name: Add Rustup Target
         run: rustup target add ${{ matrix.target }}
-
-      # On x86_64, this environment variable specifies to the openssl-sys crate
-      # where to find the OpenSSL library.
-      - name: Set OpenSSL env (x86_64)
-        if: matrix.arch == 'x86_64'
-        run: echo "X86_64_APPLE_DARWIN_OPENSSL_DIR=${{ github.workspace }}/openssl-x86_64" >> $GITHUB_ENV
-
-      - name: Get OpenSSL cache month (x86_64)
-        if: matrix.arch == 'x86_64'
-        id: cache-date
-        run: echo "month=$(date +%Y-%m)" >> $GITHUB_OUTPUT
-
-      - name: Cache x86_64 OpenSSL
-        if: matrix.arch == 'x86_64'
-        id: cache-openssl-x86
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # 6.1.0
-        with:
-          path: ${{ env.X86_64_APPLE_DARWIN_OPENSSL_DIR }}
-          key: openssl-x86_64-${{ runner.os }}-${{ steps.cache-date.outputs.month }}
-
-      # To cross-compile for x86_64 from an ARM-based macOS runner, we need to have the
-      # x86_64 OpenSSL libraries installed locally.
-      - name: Download x86_64 OpenSSL
-        if: matrix.arch == 'x86_64' && steps.cache-openssl-x86.outputs.cache-hit != 'true'
-        run: |
-          arch -x86_64 brew fetch --bottle-tag=tahoe openssl@3.5
-          mkdir -p $X86_64_APPLE_DARWIN_OPENSSL_DIR
-          tar xzf $(arch -x86_64 brew --cache --bottle-tag=tahoe openssl@3.5) -C $X86_64_APPLE_DARWIN_OPENSSL_DIR --strip-components=2
 
       - name: Cache Dependencies
         uses: swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # 2.9.1
@@ -127,36 +97,14 @@ jobs:
           path: sentry-cli-Darwin-${{ matrix.arch }}
           if-no-files-found: 'error'
 
-  macos_universal:
-    needs: macos
-    name: macOS universal
-    runs-on: macos-26
-
-    steps:
-      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
-        with:
-          pattern: unsigned-bin-macos-*
-          merge-multiple: true
-
-      - name: Link universal binary
-        run: lipo -create -output sentry-cli-Darwin-universal sentry-cli-Darwin-x86_64 sentry-cli-Darwin-arm64
-
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
-        with:
-          name: unsigned-bin-macos-universal
-          path: sentry-cli-Darwin-universal
-          if-no-files-found: 'error'
-
   sign-macos-binaries:
     strategy:
       fail-fast: false
       matrix:
         include:
-          - arch: universal
-          - arch: x86_64
           - arch: arm64
 
-    needs: [macos, macos_universal]
+    needs: [macos]
     name: Sign & Notarize macOS Binary (${{ matrix.arch }})
     runs-on: ubuntu-24.04
 
@@ -364,7 +312,7 @@ jobs:
           path: binary-artifacts
       - name: Move binaries into distribution packages
         run: |
-          mv binary-artifacts/sentry-cli-Darwin-universal npm-binary-distributions/darwin/bin/sentry-cli
+          mv binary-artifacts/sentry-cli-Darwin-arm64 npm-binary-distributions/darwin/bin/sentry-cli
           mv binary-artifacts/sentry-cli-Linux-armv7 npm-binary-distributions/linux-arm/bin/sentry-cli
           mv binary-artifacts/sentry-cli-Linux-aarch64 npm-binary-distributions/linux-arm64/bin/sentry-cli
           mv binary-artifacts/sentry-cli-Linux-i686 npm-binary-distributions/linux-i686/bin/sentry-cli
