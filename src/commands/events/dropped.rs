@@ -115,7 +115,7 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
 
     for section in &sections {
         println!(
-            "\n{} — {} dropped ({})",
+            "\n{}: {} dropped ({})",
             outcome_label(&section.outcome),
             section.events,
             format_share(section.events, total),
