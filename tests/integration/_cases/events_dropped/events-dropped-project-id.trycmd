@@ -2,14 +2,14 @@
 $ sentry-cli events dropped --org wat-org --project 12345
 ? success
 
-Client Discard — 100 dropped (10.00%)
+Client Discard: 100 dropped (10.00%)
 +-------------+----------+---------+--------+
 | Reason      | Category | Dropped | Share  |
 +-------------+----------+---------+--------+
 | sample_rate | error    | 100     | 10.00% |
 +-------------+----------+---------+--------+
 
-Rate Limited — 17 dropped (1.70%)
+Rate Limited: 17 dropped (1.70%)
 +------------------+----------+---------+-------+
 | Reason           | Category | Dropped | Share |
 +------------------+----------+---------+-------+
@@ -17,7 +17,7 @@ Rate Limited — 17 dropped (1.70%)
 | usage_exceeded   | error    | 2       | 0.20% |
 +------------------+----------+---------+-------+
 
-Inbound Filter — 3 dropped (0.30%)
+Inbound Filter: 3 dropped (0.30%)
 +--------------+----------+---------+-------+
 | Reason       | Category | Dropped | Share |
 +--------------+----------+---------+-------+
