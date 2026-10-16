@@ -1,7 +1,7 @@
 ```
 $ sentry-cli events list --help
 ? success
-List all events in your organization.
+List all stored events in your organization.
 
 Usage: sentry-cli[EXE] events list [OPTIONS]
 

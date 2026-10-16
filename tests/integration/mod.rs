@@ -4,6 +4,7 @@ mod code_mappings;
 mod debug_files;
 mod deploys;
 mod events;
+mod events_dropped;
 mod help;
 mod info;
 mod invalid_env;

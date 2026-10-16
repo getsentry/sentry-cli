@@ -1,0 +1,6 @@
+```
+$ sentry-cli events dropped --org wat-org --project wat-project
+? success
+No dropped events found
+
+```

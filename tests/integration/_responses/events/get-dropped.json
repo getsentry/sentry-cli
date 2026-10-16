@@ -1,0 +1,18 @@
+{
+  "meta": {
+    "dataset": "errors",
+    "start": 0,
+    "end": 0,
+    "interval": 3600000
+  },
+  "droppedEvents": [
+    {"type": "error", "category": "error", "outcome": "rate_limited", "reason": "spike_protection", "start": 0, "end": 3600, "count": 10},
+    {"type": "error", "category": "error", "outcome": "rate_limited", "reason": "spike_protection", "start": 3600, "end": 7200, "count": 5},
+    {"type": "error", "category": "error", "outcome": "rate_limited", "reason": "usage_exceeded", "start": 0, "end": 3600, "count": 2},
+    {"type": "error", "category": "error", "outcome": "filtered", "reason": "web-crawlers", "start": 0, "end": 3600, "count": 3},
+    {"type": "error", "category": "error", "outcome": "client_discard", "reason": "sample_rate", "start": 0, "end": 3600, "count": 100}
+  ],
+  "acceptedEvents": [
+    {"type": "error", "category": "error", "outcome": "accepted", "reason": "accepted", "start": 0, "end": 3600, "count": 880}
+  ]
+}
