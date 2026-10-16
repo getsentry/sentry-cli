@@ -5,6 +5,7 @@
 ### Features
 
 - (events) Add `events dropped` command to summarize dropped events by outcome and reason ([#3431](https://github.com/getsentry/sentry-cli/pull/3431))
+- (events) Add `--json` output to `events dropped` ([#3432](https://github.com/getsentry/sentry-cli/pull/3432))
 
 ## 3.8.0
 
