@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Features
+
+- (events) Add `events dropped` command to summarize dropped events by outcome and reason ([#3431](https://github.com/getsentry/sentry-cli/pull/3431))
+
 ## 3.8.0
 
 ### Improvements
