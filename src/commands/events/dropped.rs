@@ -7,7 +7,7 @@ use crate::api::{outcome_label, Api, DroppedEventsBucket};
 use crate::config::Config;
 use crate::utils::formatting::Table;
 
-const DATASETS: &[&str] = &["errors", "spans", "logs", "trace_metrics"];
+const DATASETS: &[&str] = &["errors", "spans", "logs", "tracemetrics"];
 
 pub fn make_command(command: Command) -> Command {
     command
