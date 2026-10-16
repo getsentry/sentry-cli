@@ -900,6 +900,35 @@ impl AuthenticatedApi<'_> {
         Ok(logs_response.data)
     }
 
+    pub fn fetch_organization_events_dropped(
+        &self,
+        org: &str,
+        project: &str,
+        dataset: &str,
+        stats_period: &str,
+    ) -> ApiResult<DroppedEventsResponse> {
+        let project_param = if project.chars().all(|c| c.is_ascii_digit()) {
+            "project"
+        } else {
+            "projectSlug"
+        };
+        let url = format!(
+            "/organizations/{}/events-dropped/?{project_param}={}&dataset={}&statsPeriod={}",
+            PathArg(org),
+            QueryArg(project),
+            QueryArg(dataset),
+            QueryArg(stats_period),
+        );
+
+        let resp = self.get(&url)?;
+
+        if resp.status() == 404 {
+            return Err(ApiErrorKind::OrganizationNotFound.into());
+        }
+
+        resp.convert()
+    }
+
     /// List all issues associated with an organization and a project
     pub fn list_organization_project_issues(
         &self,

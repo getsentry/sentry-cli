@@ -7,7 +7,7 @@ use crate::utils::formatting::Table;
 
 pub fn make_command(command: Command) -> Command {
     command
-        .about("List all events in your organization.")
+        .about("List all stored events in your organization.")
         .arg(
             Arg::new("show_user")
                 .long("show-user")
