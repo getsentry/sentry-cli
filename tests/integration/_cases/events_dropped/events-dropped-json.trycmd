@@ -1,0 +1,55 @@
+```
+$ sentry-cli events dropped --org wat-org --project wat-project --json
+? success
+[
+  {
+    "outcome": "client_discard",
+    "label": "Client Discard",
+    "events": 100,
+    "share": 0.1,
+    "reasons": [
+      {
+        "reason": "sample_rate",
+        "category": "error",
+        "events": 100,
+        "share": 0.1
+      }
+    ]
+  },
+  {
+    "outcome": "rate_limited",
+    "label": "Rate Limited",
+    "events": 17,
+    "share": 0.017,
+    "reasons": [
+      {
+        "reason": "spike_protection",
+        "category": "error",
+        "events": 15,
+        "share": 0.015
+      },
+      {
+        "reason": "usage_exceeded",
+        "category": "error",
+        "events": 2,
+        "share": 0.002
+      }
+    ]
+  },
+  {
+    "outcome": "filtered",
+    "label": "Inbound Filter",
+    "events": 3,
+    "share": 0.003,
+    "reasons": [
+      {
+        "reason": "web-crawlers",
+        "category": "error",
+        "events": 3,
+        "share": 0.003
+      }
+    ]
+  }
+]
+
+```
