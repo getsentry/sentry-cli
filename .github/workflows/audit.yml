@@ -23,3 +23,25 @@ jobs:
         uses: rustsec/audit-check@69366f33c96575abad1ee0dba8212993eecbe998 # 2.0.0
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
+          # Advisories reviewed and found not to affect sentry-cli.
+          # Re-evaluate if the relevant dependency usage changes.
+          # - RUSTSEC-2025-0119: number_prefix unmaintained (informational),
+          #   pulled in by the intentionally pinned indicatif 0.14.
+          # - RUSTSEC-2026-0253: lru use-after-free; requires `pop()` with a
+          #   key whose drop panics. We only use `LruCache<String, ()>` and
+          #   never call `pop()`.
+          # - RUSTSEC-2026-0285, RUSTSEC-2026-0346, RUSTSEC-2026-0348,
+          #   RUSTSEC-2026-0349: rustls; only an optional dependency of
+          #   reqwest in Cargo.lock, never compiled (we use native-tls).
+          # - RUSTSEC-2026-0367, RUSTSEC-2026-0368, RUSTSEC-2026-0369: zip;
+          #   only affect the `extract()` APIs, which we don't use.
+          ignore: |
+            RUSTSEC-2025-0119,
+            RUSTSEC-2026-0253,
+            RUSTSEC-2026-0285,
+            RUSTSEC-2026-0346,
+            RUSTSEC-2026-0348,
+            RUSTSEC-2026-0349,
+            RUSTSEC-2026-0367,
+            RUSTSEC-2026-0368,
+            RUSTSEC-2026-0369
