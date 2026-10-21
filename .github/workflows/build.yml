@@ -84,34 +84,6 @@ jobs:
       - name: Add Rustup Target
         run: rustup target add ${{ matrix.target }}
 
-      # On x86_64, this environment variable specifies to the openssl-sys crate
-      # where to find the OpenSSL library.
-      - name: Set OpenSSL env (x86_64)
-        if: matrix.arch == 'x86_64'
-        run: echo "X86_64_APPLE_DARWIN_OPENSSL_DIR=${{ github.workspace }}/openssl-x86_64" >> $GITHUB_ENV
-
-      - name: Get OpenSSL cache month (x86_64)
-        if: matrix.arch == 'x86_64'
-        id: cache-date
-        run: echo "month=$(date +%Y-%m)" >> $GITHUB_OUTPUT
-
-      - name: Cache x86_64 OpenSSL
-        if: matrix.arch == 'x86_64'
-        id: cache-openssl-x86
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # 6.1.0
-        with:
-          path: ${{ env.X86_64_APPLE_DARWIN_OPENSSL_DIR }}
-          key: openssl-x86_64-${{ runner.os }}-${{ steps.cache-date.outputs.month }}
-
-      # To cross-compile for x86_64 from an ARM-based macOS runner, we need to have the
-      # x86_64 OpenSSL libraries installed locally.
-      - name: Download x86_64 OpenSSL
-        if: matrix.arch == 'x86_64' && steps.cache-openssl-x86.outputs.cache-hit != 'true'
-        run: |
-          arch -x86_64 brew fetch --bottle-tag=tahoe openssl@3.5
-          mkdir -p $X86_64_APPLE_DARWIN_OPENSSL_DIR
-          tar xzf $(arch -x86_64 brew --cache --bottle-tag=tahoe openssl@3.5) -C $X86_64_APPLE_DARWIN_OPENSSL_DIR --strip-components=2
-
       - name: Cache Dependencies
         uses: swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # 2.9.1
 

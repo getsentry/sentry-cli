@@ -3640,6 +3640,7 @@ dependencies = [
  "objectstore-client",
  "open",
  "openssl-probe 0.1.6",
+ "openssl-sys",
  "parking_lot",
  "percent-encoding",
  "plist",
