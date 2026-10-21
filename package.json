@@ -57,7 +57,7 @@
     "test:vercel-nft": "node scripts/test-vercel-nft.js"
   },
   "volta": {
-    "node": "24.8.0",
+    "node": "24.22.1",
     "npm": "11.6.0"
   },
   "overrides": {
