@@ -142,10 +142,10 @@ curl = { version = "0.4.46", features = ["static-curl", "static-ssl"] }
 
 # On macOS, curl links the system libcurl, but `openssl-sys` still needs OpenSSL
 # headers at build time. We cross-compile for Intel Macs on ARM runners, where no
-# x86_64 OpenSSL is available, so build it from source. The linker drops it from
-# the final binary, which does not use OpenSSL.
+# x86_64 OpenSSL is available, so `static-ssl` builds it from source. Without
+# `static-curl`, libcurl stays dynamic, and the linker drops OpenSSL from the binary.
 [target."cfg(all(target_os = \"macos\", target_arch = \"x86_64\"))".dependencies]
-openssl-sys = { version = "0.9.117", features = ["vendored"] }
+curl = { version = "0.4.46", features = ["static-ssl"] }
 
 # We optimize the release build for size.
 [profile.release]
