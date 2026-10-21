@@ -4,7 +4,7 @@
 
 ### Fixes
 
-- (docker) Require `ca-certificates` 20261020-r0 or newer in the Docker image, which removes distrusted eMudhra/emSign root certificates ([#PLACEHOLDER](https://github.com/getsentry/sentry-cli/pull/PLACEHOLDER))
+- (docker) Require `ca-certificates` 20261020-r0 or newer in the Docker image, which removes distrusted eMudhra/emSign root certificates ([#3447](https://github.com/getsentry/sentry-cli/pull/3447))
 
 ## 3.8.0
 
