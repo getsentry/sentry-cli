@@ -22,7 +22,8 @@ RUN cp target/release/sentry-cli /usr/local/bin/sentry-cli
 
 FROM alpine:3.22.0@sha256:8a1f59ffb675680d47db6337b49d22281a139e9d709335b492be023728e11715
 WORKDIR /work
-RUN apk add --no-cache ca-certificates
+# 20261020-r0 removes distrusted eMudhra/emSign root certificates.
+RUN apk add --no-cache 'ca-certificates>=20261020-r0'
 COPY ./docker-entrypoint.sh /
 COPY --from=sentry-build /usr/local/bin/sentry-cli /bin
 ENTRYPOINT ["/docker-entrypoint.sh"]
