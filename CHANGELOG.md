@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 3.8.2
 
 ### Internal Changes
 
