@@ -54,7 +54,7 @@ jobs:
           sudo apt-get install -y musl-tools
 
       - name: Cache Dependencies
-        uses: swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # 2.9.1
+        uses: swatinem/rust-cache@6323deb102c322ba6fcbdcafc7e3dddab59af2b6 # 2.9.2
 
       - name: Run Rustfmt
         run: cargo fmt --all -- --check
