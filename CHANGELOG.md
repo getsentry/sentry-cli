@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Internal Changes
+
+- (deps) Bump the Volta-pinned Node.js version from 24.8.0 to 24.22.1. This security release distrusts the compromised eMudhra/emSign CA keys ([#3452](https://github.com/getsentry/sentry-cli/pull/3452)).
+
 ## 3.8.1
 
 ### Fixes
