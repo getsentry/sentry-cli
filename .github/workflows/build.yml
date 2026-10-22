@@ -429,7 +429,7 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows, npm-distributions, node, python]
     steps:
-      - uses: actions/upload-artifact/merge@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact/merge@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           # Craft expects release assets to be a single artifact named after the sha.
           name: ${{ github.sha }}
