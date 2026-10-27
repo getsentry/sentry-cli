@@ -244,7 +244,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # 7.0.0
         with:
-          node-version: '20.10.0'
+          node-version: '24.22.1'
 
       - name: Install dependencies
         run: npm ci --ignore-scripts
@@ -328,7 +328,7 @@ jobs:
           ref: ${{ inputs.checkout-ref }}
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # 7.0.0
         with:
-          node-version: '20.10.0'
+          node-version: '24.22.1'
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
         with:
           pattern: artifact-bin-*
