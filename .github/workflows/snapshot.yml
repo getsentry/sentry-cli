@@ -41,7 +41,7 @@ jobs:
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # 7.0.0
         with:
-          node-version: '20.10.0'
+          node-version: '24.22.1'
 
       - name: Bump versions
         run: scripts/bump-version.sh "${{ steps.version.outputs.current }}" "${{ steps.version.outputs.version }}"
