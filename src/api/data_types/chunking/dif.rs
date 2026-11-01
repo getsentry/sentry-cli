@@ -16,6 +16,8 @@ pub struct ChunkedDifRequest<'a> {
     pub debug_id: Option<DebugId>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub code_id: Option<Cow<'a, str>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub shader_group: Option<Cow<'a, str>>,
     pub chunks: &'a [Digest],
     #[serde(skip)]
     hash: Digest,
@@ -31,6 +33,7 @@ impl<'a> ChunkedDifRequest<'a> {
             hash,
             debug_id: None,
             code_id: None,
+            shader_group: None,
         }
     }
 
@@ -45,6 +48,13 @@ impl<'a> ChunkedDifRequest<'a> {
     /// `None` is passed.
     pub fn with_code_id(mut self, code_id: Option<Cow<'a, str>>) -> Self {
         self.code_id = code_id;
+        self
+    }
+
+    /// Set the provided shader_group on the request, or clear it if
+    /// `None` is passed.
+    pub fn with_shader_group(mut self, shader_group: Option<Cow<'a, str>>) -> Self {
+        self.shader_group = shader_group;
         self
     }
 }

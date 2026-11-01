@@ -58,9 +58,11 @@ enum ParsedDif<'a> {
     BcSymbolMap,
     UuidMap,
     Il2Cpp,
-    /// A DXIL shader container with an optional NVIDIA Aftermath shader hash.
+    /// A DXIL shader container with an optional NVIDIA Aftermath shader hash
+    /// and an optional shader group taken from the manifest.
     Dxil {
         code_id: Option<String>,
+        shader_group: Option<String>,
     },
     /// A DXC shader PDB.
     DxilPdb,
@@ -156,16 +158,20 @@ impl<'data> DifMatch<'data> {
     /// Creates a [`DifMatch`] from a DXC shader debug file.
     ///
     /// The `debug_id` is derived from the file stem by the caller. For DXIL
-    /// containers, `code_id` carries the Aftermath shader hash if known.
+    /// containers, `manifest_entry` carries the Aftermath shader hash and the
+    /// shader group if known.
     fn from_shader(
         kind: ShaderDifKind,
         debug_id: DebugId,
         name: String,
         data: ByteView<'static>,
-        code_id: Option<String>,
+        manifest_entry: ShaderManifestEntry,
     ) -> Self {
         let parsed = match kind {
-            ShaderDifKind::Dxil => ParsedDif::Dxil { code_id },
+            ShaderDifKind::Dxil => ParsedDif::Dxil {
+                code_id: manifest_entry.code_id,
+                shader_group: manifest_entry.shader_group,
+            },
             ShaderDifKind::DxilPdb => ParsedDif::DxilPdb,
         };
         let dif = SelfCell::new(data, |_| parsed);
@@ -236,7 +242,16 @@ impl<'data> DifMatch<'data> {
     /// Returns the code ID of this DIF, if it is not derived by the server.
     pub fn code_id(&self) -> Option<&str> {
         match self.dif.get() {
-            ParsedDif::Dxil { code_id } => code_id.as_deref(),
+            ParsedDif::Dxil { code_id, .. } => code_id.as_deref(),
+            _ => None,
+        }
+    }
+
+    /// Returns the shader group of this DIF, if it is a DXIL container with a
+    /// manifest entry that carries one.
+    pub fn shader_group(&self) -> Option<&str> {
+        match self.dif.get() {
+            ParsedDif::Dxil { shader_group, .. } => shader_group.as_deref(),
             _ => None,
         }
     }
@@ -354,6 +369,10 @@ impl Assemblable for DifMatch<'_> {
 
     fn code_id(&self) -> Option<Cow<'_, str>> {
         DifMatch::code_id(self).map(Cow::Borrowed)
+    }
+
+    fn shader_group(&self) -> Option<Cow<'_, str>> {
+        DifMatch::shader_group(self).map(Cow::Borrowed)
     }
 }
 
@@ -773,6 +792,13 @@ impl Display for ShaderDifKind {
     }
 }
 
+/// Manifest metadata resolved for a single `.dxil` file.
+#[derive(Debug, Default)]
+struct ShaderManifestEntry {
+    code_id: Option<String>,
+    shader_group: Option<String>,
+}
+
 /// Per-directory cache of shader manifests found during the search.
 #[derive(Debug, Default)]
 struct ShaderManifestCache {
@@ -781,8 +807,13 @@ struct ShaderManifestCache {
 }
 
 impl ShaderManifestCache {
-    /// Looks up the code ID of a `.dxil` file from the manifest in its directory.
-    fn code_id_for(&mut self, path: &Path) -> Option<String> {
+    /// Looks up the code ID and shader group of a `.dxil` file from the
+    /// manifest in its directory.
+    fn entry_for(&mut self, path: &Path) -> ShaderManifestEntry {
+        self.lookup(path).unwrap_or_default()
+    }
+
+    fn lookup(&mut self, path: &Path) -> Option<ShaderManifestEntry> {
         let dir = path.parent()?.to_path_buf();
         let manifest = self
             .manifests
@@ -791,7 +822,10 @@ impl ShaderManifestCache {
             .as_ref()?;
 
         let file_name = path.file_name()?.to_str()?;
-        manifest.code_id(file_name)
+        Some(ShaderManifestEntry {
+            code_id: manifest.code_id(file_name),
+            shader_group: manifest.shader_group(file_name).map(str::to_owned),
+        })
     }
 
     fn warn_missing_once(&mut self, name: &str) {
@@ -808,8 +842,8 @@ impl ShaderManifestCache {
 /// Collects a DXC shader debug file into a [`DifMatch`].
 ///
 /// The debug ID is derived from the 32-hex file stem. For DXIL containers found
-/// in the file system, the code ID is looked up in the shader manifest next to
-/// the file.
+/// in the file system, the code ID and shader group are looked up in the shader
+/// manifest next to the file.
 fn collect_shader_dif<'a>(
     source: &DifSource<'_>,
     name: String,
@@ -827,18 +861,18 @@ fn collect_shader_dif<'a>(
         return Ok(None);
     };
 
-    let code_id = match (kind, source) {
+    let manifest_entry = match (kind, source) {
         (ShaderDifKind::Dxil, DifSource::FileSystem(path)) => {
-            let code_id = manifests.code_id_for(path);
-            if code_id.is_none() {
+            let entry = manifests.entry_for(path);
+            if entry.code_id.is_none() {
                 manifests.warn_missing_once(&name);
             }
-            code_id
+            entry
         }
-        _ => None,
+        _ => ShaderManifestEntry::default(),
     };
 
-    let dif = DifMatch::from_shader(kind, debug_id, name.clone(), buffer, code_id);
+    let dif = DifMatch::from_shader(kind, debug_id, name.clone(), buffer, manifest_entry);
 
     if let Err(e) = options.validate_dif(&dif) {
         error::handle(&name, &e)?;

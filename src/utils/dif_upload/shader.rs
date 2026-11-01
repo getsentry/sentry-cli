@@ -58,10 +58,17 @@ pub fn debug_id_from_stem(name: &str) -> Option<DebugId> {
     stem.parse().ok()
 }
 
-/// Maps `.dxil` file names to their NVIDIA Aftermath shader hash.
+/// Metadata recorded for a single `.dxil` file in the manifest.
+#[derive(Debug, Clone, PartialEq, Eq)]
+struct ManifestEntry {
+    hash: u64,
+    group: Option<String>,
+}
+
+/// Maps `.dxil` file names to their NVIDIA Aftermath shader hash and group.
 #[derive(Debug, Default)]
 pub struct ShaderManifest {
-    entries: HashMap<String, u64>,
+    entries: HashMap<String, ManifestEntry>,
 }
 
 impl ShaderManifest {
@@ -95,6 +102,7 @@ impl ShaderManifest {
     /// Parses manifest contents.
     ///
     /// Every line holds `<aftermath hash>\t<pdb name>\t<dxil path>[\t<group>]`.
+    /// The optional group is trimmed; an empty group is treated as absent.
     /// Malformed lines are skipped.
     pub fn parse(contents: &str) -> Self {
         let entries = contents
@@ -104,7 +112,12 @@ impl ShaderManifest {
                 let hash = columns.next()?.trim().parse::<u64>().ok()?;
                 let _pdb_name = columns.next()?;
                 let dxil_name = file_name_of(columns.next()?)?;
-                Some((dxil_name.to_owned(), hash))
+                let group = columns
+                    .next()
+                    .map(str::trim)
+                    .filter(|group| !group.is_empty())
+                    .map(str::to_owned);
+                Some((dxil_name.to_owned(), ManifestEntry { hash, group }))
             })
             .collect();
 
@@ -115,7 +128,12 @@ impl ShaderManifest {
     pub fn code_id(&self, dxil_file_name: &str) -> Option<String> {
         self.entries
             .get(dxil_file_name)
-            .map(|hash| format!("{hash:016x}"))
+            .map(|entry| format!("{:016x}", entry.hash))
+    }
+
+    /// Returns the shader group for the given `.dxil` file name, if known.
+    pub fn shader_group(&self, dxil_file_name: &str) -> Option<&str> {
+        self.entries.get(dxil_file_name)?.group.as_deref()
     }
 }
 
@@ -196,5 +214,27 @@ mod tests {
         );
         assert_eq!(manifest.code_id("foo.dxil"), None);
         assert_eq!(manifest.code_id("missing.dxil"), None);
+    }
+
+    #[test]
+    fn test_manifest_shader_group() {
+        let contents = "1\ta.pdb\ta.dxil\n\
+                        2\tb.pdb\tb.dxil\tGlobalShaders\n\
+                        3\tc.pdb\tc.dxil\t  Padded Group \r\n\
+                        4\td.pdb\td.dxil\t   \n\
+                        5\te.pdb\te.dxil\t\n";
+        let manifest = ShaderManifest::parse(contents);
+
+        assert_eq!(manifest.shader_group("a.dxil"), None);
+        assert_eq!(manifest.shader_group("b.dxil"), Some("GlobalShaders"));
+        assert_eq!(manifest.shader_group("c.dxil"), Some("Padded Group"));
+        assert_eq!(manifest.shader_group("d.dxil"), None);
+        assert_eq!(manifest.shader_group("e.dxil"), None);
+        assert_eq!(manifest.shader_group("missing.dxil"), None);
+
+        assert_eq!(
+            manifest.code_id("d.dxil"),
+            Some("0000000000000004".to_owned())
+        );
     }
 }

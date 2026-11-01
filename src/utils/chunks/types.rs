@@ -29,6 +29,12 @@ pub trait Assemblable {
     fn code_id(&self) -> Option<Cow<'_, str>> {
         None
     }
+
+    /// Returns the shader group of the object, if it is a shader debug file
+    /// that belongs to one.
+    fn shader_group(&self) -> Option<Cow<'_, str>> {
+        None
+    }
 }
 
 /// Chunked arbitrary data with computed SHA1 checksums.
@@ -115,6 +121,10 @@ where
     fn code_id(&self) -> Option<Cow<'_, str>> {
         (*self).code_id()
     }
+
+    fn shader_group(&self) -> Option<Cow<'_, str>> {
+        (*self).shader_group()
+    }
 }
 
 impl<T> Assemblable for Chunked<T>
@@ -132,6 +142,10 @@ where
     fn code_id(&self) -> Option<Cow<'_, str>> {
         self.object().code_id()
     }
+
+    fn shader_group(&self) -> Option<Cow<'_, str>> {
+        self.object().shader_group()
+    }
 }
 
 impl<'c, T> From<&'c Chunked<T>> for ChunkedDifRequest<'c>
@@ -142,5 +156,6 @@ where
         Self::new(value.name(), value.chunk_hashes(), value.checksum())
             .with_debug_id(value.debug_id())
             .with_code_id(value.code_id())
+            .with_shader_group(value.shader_group())
     }
 }
