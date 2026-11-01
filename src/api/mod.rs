@@ -36,7 +36,7 @@ use parking_lot::Mutex;
 use regex::{Captures, Regex};
 use secrecy::{ExposeSecret as _, SecretString};
 use serde::de::DeserializeOwned;
-use serde::{Deserialize, Serialize};
+use serde::{Deserialize, Deserializer, Serialize};
 use sha1_smol::Digest;
 use symbolic::common::DebugId;
 use symbolic::debuginfo::ObjectKind;
@@ -1821,11 +1821,27 @@ pub struct SentryCliRelease {
 
 #[derive(Debug, Deserialize, Default)]
 pub struct DebugInfoData {
-    #[serde(default, rename = "type")]
+    #[serde(
+        default,
+        rename = "type",
+        deserialize_with = "deserialize_lenient_object_kind"
+    )]
     pub kind: Option<ObjectKind>,
     #[serde(default)]
     #[expect(dead_code)]
     pub features: Vec<String>,
+}
+
+/// Deserializes an object kind, mapping values unknown to symbolic (such as
+/// server-side shader kinds) to `None` instead of failing.
+fn deserialize_lenient_object_kind<'de, D>(
+    deserializer: D,
+) -> std::result::Result<Option<ObjectKind>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let kind: Option<String> = Option::deserialize(deserializer)?;
+    Ok(kind.and_then(|k| k.parse().ok()))
 }
 
 /// Debug information files as processed and stored on the server.

@@ -4,6 +4,7 @@
 //! `DifUpload` for more information.
 
 mod error;
+mod shader;
 
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
@@ -34,6 +35,7 @@ use zip::result::ZipError;
 use zip::ZipArchive;
 
 use self::error::ValidationError;
+use self::shader::ShaderManifest;
 use crate::api::{Api, ChunkServerOptions};
 use crate::config::Config;
 use crate::constants::{DEFAULT_MAX_DIF_SIZE, DEFAULT_MAX_WAIT};
@@ -56,6 +58,12 @@ enum ParsedDif<'a> {
     BcSymbolMap,
     UuidMap,
     Il2Cpp,
+    /// A DXIL shader container with an optional NVIDIA Aftermath shader hash.
+    Dxil {
+        code_id: Option<String>,
+    },
+    /// A DXC shader PDB.
+    DxilPdb,
 }
 
 impl<'slf, 'data: 'slf> AsSelf<'slf> for ParsedDif<'data> {
@@ -145,6 +153,32 @@ impl<'data> DifMatch<'data> {
         })
     }
 
+    /// Creates a [`DifMatch`] from a DXC shader debug file.
+    ///
+    /// The `debug_id` is derived from the file stem by the caller. For DXIL
+    /// containers, `code_id` carries the Aftermath shader hash if known.
+    fn from_shader(
+        kind: ShaderDifKind,
+        debug_id: DebugId,
+        name: String,
+        data: ByteView<'static>,
+        code_id: Option<String>,
+    ) -> Self {
+        let parsed = match kind {
+            ShaderDifKind::Dxil => ParsedDif::Dxil { code_id },
+            ShaderDifKind::DxilPdb => ParsedDif::DxilPdb,
+        };
+        let dif = SelfCell::new(data, |_| parsed);
+
+        Self {
+            _backing: None,
+            dif,
+            name,
+            debug_id: Some(debug_id),
+            attachments: None,
+        }
+    }
+
     fn from_plist(uuid: DebugId, name: String, data: ByteView<'static>) -> Result<Self> {
         let dif = SelfCell::try_new(data, |buf| {
             UuidMapping::parse_plist(uuid, unsafe { &*buf }).map(|_| ParsedDif::UuidMap)
@@ -183,6 +217,8 @@ impl<'data> DifMatch<'data> {
             ParsedDif::BcSymbolMap => None,
             ParsedDif::UuidMap => None,
             ParsedDif::Il2Cpp => None,
+            ParsedDif::Dxil { .. } => None,
+            ParsedDif::DxilPdb => None,
         }
     }
 
@@ -192,6 +228,16 @@ impl<'data> DifMatch<'data> {
             ParsedDif::BcSymbolMap => DifFormat::BcSymbolMap,
             ParsedDif::UuidMap => DifFormat::PList,
             ParsedDif::Il2Cpp => DifFormat::Il2Cpp,
+            ParsedDif::Dxil { .. } => DifFormat::Dxil,
+            ParsedDif::DxilPdb => DifFormat::DxilPdb,
+        }
+    }
+
+    /// Returns the code ID of this DIF, if it is not derived by the server.
+    pub fn code_id(&self) -> Option<&str> {
+        match self.dif.get() {
+            ParsedDif::Dxil { code_id } => code_id.as_deref(),
+            _ => None,
         }
     }
 
@@ -202,6 +248,8 @@ impl<'data> DifMatch<'data> {
             ParsedDif::BcSymbolMap => self.dif.owner(),
             ParsedDif::UuidMap => self.dif.owner(),
             ParsedDif::Il2Cpp => self.dif.owner(),
+            ParsedDif::Dxil { .. } => self.dif.owner(),
+            ParsedDif::DxilPdb => self.dif.owner(),
         }
     }
 
@@ -272,6 +320,8 @@ impl Display for DifMatch<'_> {
             ParsedDif::BcSymbolMap => String::from("bcsymbolmap"),
             ParsedDif::UuidMap => String::from("uuidmap"),
             ParsedDif::Il2Cpp => String::from("il2cpp"),
+            ParsedDif::Dxil { .. } => String::from("dxil"),
+            ParsedDif::DxilPdb => String::from("dxilpdb"),
         };
 
         write!(
@@ -300,6 +350,10 @@ impl Assemblable for DifMatch<'_> {
 
     fn debug_id(&self) -> Option<DebugId> {
         self.debug_id
+    }
+
+    fn code_id(&self) -> Option<Cow<'_, str>> {
+        DifMatch::code_id(self).map(Cow::Borrowed)
     }
 }
 
@@ -595,6 +649,7 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
     pb.set_style(progress_style);
 
     let mut age_overrides = BTreeMap::new();
+    let mut shader_manifests = ShaderManifestCache::default();
     let mut collected = Vec::new();
     for base_path in &options.paths {
         if base_path == Path::new("") {
@@ -608,7 +663,13 @@ fn search_difs(options: &DifUpload) -> Result<Vec<DifMatch<'static>>> {
             debug!("trying to process {name}");
             pb.set_message(&name);
 
-            if Archive::peek(&buffer) != FileFormat::Unknown {
+            if let Some(kind) = ShaderDifKind::detect(&buffer) {
+                if let Some(dif) =
+                    collect_shader_dif(&source, name, buffer, options, kind, &mut shader_manifests)?
+                {
+                    collected.push(dif);
+                }
+            } else if Archive::peek(&buffer) != FileFormat::Unknown {
                 let mut difs =
                     collect_object_dif(source, name, buffer, options, &mut age_overrides)?;
                 collected.append(difs.as_mut());
@@ -672,6 +733,119 @@ impl Display for AuxDifKind {
             AuxDifKind::UuidMap => write!(f, "UuidMap"),
         }
     }
+}
+
+#[derive(Debug, Clone, Copy, Eq, PartialEq)]
+enum ShaderDifKind {
+    Dxil,
+    DxilPdb,
+}
+
+impl ShaderDifKind {
+    /// Detects DXC shader debug files from their leading bytes.
+    ///
+    /// This must run before [`Archive::peek`], since shader PDBs carry the MSF
+    /// magic but cannot be parsed by symbolic.
+    fn detect(data: &[u8]) -> Option<Self> {
+        if shader::is_dxil(data) {
+            Some(Self::Dxil)
+        } else if shader::is_dxil_pdb(data) {
+            Some(Self::DxilPdb)
+        } else {
+            None
+        }
+    }
+
+    fn format(self) -> DifFormat {
+        match self {
+            Self::Dxil => DifFormat::Dxil,
+            Self::DxilPdb => DifFormat::DxilPdb,
+        }
+    }
+}
+
+impl Display for ShaderDifKind {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            Self::Dxil => write!(f, "DXIL"),
+            Self::DxilPdb => write!(f, "DXIL PDB"),
+        }
+    }
+}
+
+/// Per-directory cache of shader manifests found during the search.
+#[derive(Debug, Default)]
+struct ShaderManifestCache {
+    manifests: BTreeMap<PathBuf, Option<ShaderManifest>>,
+    warned_missing: bool,
+}
+
+impl ShaderManifestCache {
+    /// Looks up the code ID of a `.dxil` file from the manifest in its directory.
+    fn code_id_for(&mut self, path: &Path) -> Option<String> {
+        let dir = path.parent()?.to_path_buf();
+        let manifest = self
+            .manifests
+            .entry(dir)
+            .or_insert_with(|| ShaderManifest::load_for(path))
+            .as_ref()?;
+
+        let file_name = path.file_name()?.to_str()?;
+        manifest.code_id(file_name)
+    }
+
+    fn warn_missing_once(&mut self, name: &str) {
+        if !self.warned_missing {
+            self.warned_missing = true;
+            warn!(
+                "No {} entry for {name}; DXIL files without an entry are uploaded without code ID",
+                shader::MANIFEST_FILE_NAME
+            );
+        }
+    }
+}
+
+/// Collects a DXC shader debug file into a [`DifMatch`].
+///
+/// The debug ID is derived from the 32-hex file stem. For DXIL containers found
+/// in the file system, the code ID is looked up in the shader manifest next to
+/// the file.
+fn collect_shader_dif<'a>(
+    source: &DifSource<'_>,
+    name: String,
+    buffer: ByteView<'static>,
+    options: &DifUpload,
+    kind: ShaderDifKind,
+    manifests: &mut ShaderManifestCache,
+) -> Result<Option<DifMatch<'a>>> {
+    if !options.valid_format(kind.format()) {
+        return Ok(None);
+    }
+
+    let Some(debug_id) = shader::debug_id_from_stem(&name) else {
+        warn!("Skipping {kind} with invalid filename: {name}");
+        return Ok(None);
+    };
+
+    let code_id = match (kind, source) {
+        (ShaderDifKind::Dxil, DifSource::FileSystem(path)) => {
+            let code_id = manifests.code_id_for(path);
+            if code_id.is_none() {
+                manifests.warn_missing_once(&name);
+            }
+            code_id
+        }
+        _ => None,
+    };
+
+    let dif = DifMatch::from_shader(kind, debug_id, name.clone(), buffer, code_id);
+
+    if let Err(e) = options.validate_dif(&dif) {
+        error::handle(&name, &e)?;
+        return Ok(None);
+    }
+
+    Ok(Some(dif))
 }
 
 /// Collects a possible BCSymbolmap or PList into a [`DifMatch`].
@@ -1224,6 +1398,10 @@ pub enum DifFormat {
     PList,
     /// A Unity il2cpp line mapping file.
     Il2Cpp,
+    /// A DXIL shader container produced by DXC.
+    Dxil,
+    /// A DXC shader PDB.
+    DxilPdb,
 }
 
 /// Searches, processes and uploads debug information files (DIFs).

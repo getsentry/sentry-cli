@@ -23,6 +23,12 @@ pub trait Assemblable {
     /// Returns the debug ID of the object.
     /// Types which do not have a debug ID should return `None`.
     fn debug_id(&self) -> Option<DebugId>;
+
+    /// Returns the code ID of the object, if it has one that is not
+    /// derived by the server from the file contents.
+    fn code_id(&self) -> Option<Cow<'_, str>> {
+        None
+    }
 }
 
 /// Chunked arbitrary data with computed SHA1 checksums.
@@ -105,6 +111,10 @@ where
     fn debug_id(&self) -> Option<DebugId> {
         (*self).debug_id()
     }
+
+    fn code_id(&self) -> Option<Cow<'_, str>> {
+        (*self).code_id()
+    }
 }
 
 impl<T> Assemblable for Chunked<T>
@@ -118,6 +128,10 @@ where
     fn debug_id(&self) -> Option<DebugId> {
         self.object().debug_id()
     }
+
+    fn code_id(&self) -> Option<Cow<'_, str>> {
+        self.object().code_id()
+    }
 }
 
 impl<'c, T> From<&'c Chunked<T>> for ChunkedDifRequest<'c>
@@ -127,5 +141,6 @@ where
     fn from(value: &'c Chunked<T>) -> Self {
         Self::new(value.name(), value.chunk_hashes(), value.checksum())
             .with_debug_id(value.debug_id())
+            .with_code_id(value.code_id())
     }
 }

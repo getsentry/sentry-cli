@@ -2,7 +2,7 @@ use std::path::Path;
 use std::str;
 use std::{fmt, iter};
 
-use anyhow::{bail, Context as _, Error, Result};
+use anyhow::{bail, format_err, Context as _, Error, Result};
 use proguard::ProguardMapping;
 use serde::ser::{SerializeStruct as _, Serializer};
 use serde::Serialize;
@@ -22,6 +22,8 @@ pub enum DifType {
     PortablePdb,
     Wasm,
     Jvm,
+    Dxil,
+    DxilPdb,
 }
 
 impl DifType {
@@ -37,6 +39,8 @@ impl DifType {
             DifType::Proguard => "proguard",
             DifType::Wasm => "wasm",
             DifType::Jvm => "jvm",
+            DifType::Dxil => "dxil",
+            DifType::DxilPdb => "dxilpdb",
         }
     }
 
@@ -52,6 +56,8 @@ impl DifType {
             DifType::Proguard,
             DifType::Wasm,
             DifType::Jvm,
+            DifType::Dxil,
+            DifType::DxilPdb,
         ]
     }
 
@@ -67,6 +73,8 @@ impl DifType {
             "proguard",
             "wasm",
             "jvm",
+            "dxil",
+            "dxilpdb",
         ]
     }
 }
@@ -92,6 +100,8 @@ impl str::FromStr for DifType {
             "proguard" => Ok(DifType::Proguard),
             "wasm" => Ok(DifType::Wasm),
             "jvm" => Ok(DifType::Jvm),
+            "dxil" => Ok(DifType::Dxil),
+            "dxilpdb" => Ok(DifType::DxilPdb),
             _ => bail!("Invalid debug info file type"),
         }
     }
@@ -257,6 +267,9 @@ impl DifFile<'static> {
             Some(DifType::Breakpad) => DifFile::open_object(&path, FileFormat::Breakpad),
             Some(DifType::Proguard) => DifFile::open_proguard(&path),
             Some(DifType::Jvm) => DifFile::open_object(&path, FileFormat::SourceBundle),
+            Some(DifType::Dxil | DifType::DxilPdb) => {
+                Err(format_err!("Shader debug files can only be uploaded"))
+            }
             None => DifFile::try_open(&path),
         };
 

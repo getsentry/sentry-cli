@@ -14,6 +14,8 @@ pub struct ChunkedDifRequest<'a> {
     pub name: Cow<'a, str>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub debug_id: Option<DebugId>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub code_id: Option<Cow<'a, str>>,
     pub chunks: &'a [Digest],
     #[serde(skip)]
     hash: Digest,
@@ -28,6 +30,7 @@ impl<'a> ChunkedDifRequest<'a> {
             chunks,
             hash,
             debug_id: None,
+            code_id: None,
         }
     }
 
@@ -35,6 +38,13 @@ impl<'a> ChunkedDifRequest<'a> {
     /// `None` is passed.
     pub fn with_debug_id(mut self, debug_id: Option<DebugId>) -> Self {
         self.debug_id = debug_id;
+        self
+    }
+
+    /// Set the provided code_id on the request, or clear it if
+    /// `None` is passed.
+    pub fn with_code_id(mut self, code_id: Option<Cow<'a, str>>) -> Self {
+        self.code_id = code_id;
         self
     }
 }

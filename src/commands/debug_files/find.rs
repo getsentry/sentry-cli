@@ -150,7 +150,7 @@ fn find_ids(
                 DifType::Breakpad => find_ids_for_breakpad(&dirent, &remaining),
                 DifType::Proguard => find_ids_for_proguard(&dirent, &proguard_uuids),
                 DifType::Jvm => find_ids_for_sourcebundle(&dirent, &remaining),
-                DifType::Wasm => None,
+                DifType::Wasm | DifType::Dxil | DifType::DxilPdb => None,
             })
             .flatten()
             .collect();
