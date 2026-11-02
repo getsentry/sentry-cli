@@ -248,7 +248,6 @@ pub fn execute(matches: &ArgMatches) -> Result<()> {
             "jvm" => upload.filter_format(DifFormat::Object(FileFormat::SourceBundle)),
             "wasm" => upload.filter_format(DifFormat::Object(FileFormat::Wasm)),
             "dxil" => upload.filter_format(DifFormat::Dxil),
-            "dxilpdb" => upload.filter_format(DifFormat::DxilPdb),
             "bcsymbolmap" => {
                 upload.filter_format(DifFormat::BcSymbolMap);
                 upload.filter_format(DifFormat::PList)

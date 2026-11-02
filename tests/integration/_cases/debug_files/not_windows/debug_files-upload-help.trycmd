@@ -16,8 +16,8 @@ Options:
       --auth-token <AUTH_TOKEN>  Use the given Sentry auth token.
   -t, --type <TYPE>              Only consider debug information files of the given type.  By
                                  default, all types are considered. [possible values: bcsymbolmap,
-                                 breakpad, dsym, dxil, dxilpdb, elf, jvm, pdb, pe, portablepdb,
-                                 sourcebundle, wasm]
+                                 breakpad, dsym, dxil, elf, jvm, pdb, pe, portablepdb, sourcebundle,
+                                 wasm]
       --log-level <LOG_LEVEL>    Set the log output verbosity. [possible values: trace, debug, info,
                                  warn, error]
       --no-unwind                Do not scan for stack unwinding information. Specify this flag for

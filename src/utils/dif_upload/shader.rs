@@ -1,4 +1,4 @@
-//! Detection and manifest lookup for DXC shader debug files.
+//! Detection and manifest lookup for DXIL shader containers.
 
 use std::collections::HashMap;
 use std::fs;
@@ -7,24 +7,10 @@ use std::path::Path;
 use log::warn;
 
 const MANIFEST_FILE_NAME: &str = "sentry-shader-manifest.tsv";
-const MSF_MAGIC: &[u8] = b"Microsoft C/C++ MSF 7.00\r\n\x1aDS";
-const ILDN_SCAN_LIMIT: usize = 64 * 1024;
 
 /// Returns `true` if the buffer is a DXIL container.
 pub fn is_dxil(data: &[u8]) -> bool {
     data.starts_with(b"DXBC")
-}
-
-/// Returns `true` if the buffer is a DXC shader PDB.
-///
-/// These carry the MSF magic but no DBI stream, so symbolic cannot parse them.
-/// They are told apart from regular PDBs by the `ILDN` part near the start of
-/// the file.
-pub fn is_dxil_pdb(data: &[u8]) -> bool {
-    data.starts_with(MSF_MAGIC)
-        && data[..data.len().min(ILDN_SCAN_LIMIT)]
-            .windows(4)
-            .any(|window| window == b"ILDN")
 }
 
 /// Manifest metadata of a single `.dxil` file.
@@ -84,23 +70,6 @@ mod tests {
     fn test_is_dxil() {
         assert!(is_dxil(b"DXBC\x01\x02\x03"));
         assert!(!is_dxil(b"\x7fELF"));
-    }
-
-    #[test]
-    fn test_is_dxil_pdb() {
-        let mut data = MSF_MAGIC.to_vec();
-        data.extend_from_slice(&[0; 4096]);
-        assert!(!is_dxil_pdb(&data));
-
-        data.extend_from_slice(b"ILDN");
-        assert!(is_dxil_pdb(&data));
-
-        let mut far = MSF_MAGIC.to_vec();
-        far.resize(ILDN_SCAN_LIMIT, 0);
-        far.extend_from_slice(b"ILDN");
-        assert!(!is_dxil_pdb(&far));
-
-        assert!(!is_dxil_pdb(b"DXBCILDN"));
     }
 
     #[test]

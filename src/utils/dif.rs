@@ -23,7 +23,6 @@ pub enum DifType {
     Wasm,
     Jvm,
     Dxil,
-    DxilPdb,
 }
 
 impl DifType {
@@ -40,7 +39,6 @@ impl DifType {
             DifType::Wasm => "wasm",
             DifType::Jvm => "jvm",
             DifType::Dxil => "dxil",
-            DifType::DxilPdb => "dxilpdb",
         }
     }
 
@@ -57,7 +55,6 @@ impl DifType {
             DifType::Wasm,
             DifType::Jvm,
             DifType::Dxil,
-            DifType::DxilPdb,
         ]
     }
 
@@ -74,7 +71,6 @@ impl DifType {
             "wasm",
             "jvm",
             "dxil",
-            "dxilpdb",
         ]
     }
 }
@@ -101,7 +97,6 @@ impl str::FromStr for DifType {
             "wasm" => Ok(DifType::Wasm),
             "jvm" => Ok(DifType::Jvm),
             "dxil" => Ok(DifType::Dxil),
-            "dxilpdb" => Ok(DifType::DxilPdb),
             _ => bail!("Invalid debug info file type"),
         }
     }
@@ -267,9 +262,7 @@ impl DifFile<'static> {
             Some(DifType::Breakpad) => DifFile::open_object(&path, FileFormat::Breakpad),
             Some(DifType::Proguard) => DifFile::open_proguard(&path),
             Some(DifType::Jvm) => DifFile::open_object(&path, FileFormat::SourceBundle),
-            Some(DifType::Dxil | DifType::DxilPdb) => {
-                Err(format_err!("Shader debug files can only be uploaded"))
-            }
+            Some(DifType::Dxil) => Err(format_err!("Shader debug files can only be uploaded")),
             None => DifFile::try_open(&path),
         };
 

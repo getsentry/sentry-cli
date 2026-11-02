@@ -4,7 +4,7 @@
 
 ### Features
 
-- Add `dxil` and `dxilpdb` debug file types to `debug-files upload` for GPU crash shader symbolication
+- Add `dxil` debug file type to `debug-files upload` for GPU crash shader symbolication
 
 ### Improvements
 
