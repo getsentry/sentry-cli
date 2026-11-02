@@ -29,6 +29,9 @@ use crate::utils::progress::{ProgressBar, ProgressBarMode, ProgressStyle};
 /// Timeout for polling all assemble endpoints.
 pub const ASSEMBLE_POLL_INTERVAL: Duration = Duration::from_millis(1000);
 
+/// Maximum number of files per assemble request.
+pub const ASSEMBLE_BATCH_SIZE: usize = 1000;
+
 /// A trait required by `BatchedSliceExt` to determine the logical size of a
 /// batch. Semantics and unit of the size depend on the batching use case,
 /// likely a number of bytes. See `BatchedSliceExt` for more information.

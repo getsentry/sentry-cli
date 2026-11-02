@@ -7,12 +7,16 @@ use anyhow::Result;
 use indicatif::ProgressStyle;
 
 use crate::{
-    api::{Api, AssembleDifsRequest, ChunkServerOptions, ChunkedFileState, DebugInfoFile},
+    api::{
+        Api, AssembleDifsRequest, AssembleDifsResponse, ChunkServerOptions, ChunkedFileState,
+        DebugInfoFile,
+    },
     utils::progress::ProgressBar,
 };
 
 use super::{
-    Assemblable, Chunk, ChunkOptions, Chunked, MissingObjectsInfo, ASSEMBLE_POLL_INTERVAL,
+    Assemblable, Chunk, ChunkOptions, Chunked, MissingObjectsInfo, ASSEMBLE_BATCH_SIZE,
+    ASSEMBLE_POLL_INTERVAL,
 };
 
 pub fn upload_chunked_objects<T>(
@@ -53,11 +57,15 @@ where
     T: AsRef<[u8]> + Assemblable,
 {
     let api = Api::current();
-    let request: AssembleDifsRequest<'_> = objects.iter().collect();
-
-    let response =
-        api.authenticated()?
-            .assemble_difs(options.org(), options.project(), &request)?;
+    let mut response = AssembleDifsResponse::new();
+    for batch in objects.chunks(ASSEMBLE_BATCH_SIZE) {
+        let request: AssembleDifsRequest<'_> = batch.iter().collect();
+        response.extend(api.authenticated()?.assemble_difs(
+            options.org(),
+            options.project(),
+            &request,
+        )?);
+    }
 
     // We map all objects by their checksum, so we can access them faster when
     // iterating through the server response below. Since the caller will invoke
@@ -184,12 +192,20 @@ where
 
     let assemble_start = Instant::now();
 
-    let request: AssembleDifsRequest<'_> = chunked_objects.iter().copied().collect();
+    let requests: Vec<AssembleDifsRequest<'_>> = chunked_objects
+        .chunks(ASSEMBLE_BATCH_SIZE)
+        .map(|batch| batch.iter().copied().collect())
+        .collect();
 
     let response = loop {
-        let response =
-            api.authenticated()?
-                .assemble_difs(options.org(), options.project(), &request)?;
+        let mut response = AssembleDifsResponse::new();
+        for request in &requests {
+            response.extend(api.authenticated()?.assemble_difs(
+                options.org(),
+                options.project(),
+                request,
+            )?);
+        }
 
         let chunks_missing = response
             .values()
