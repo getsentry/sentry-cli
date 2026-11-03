@@ -5,3 +5,8 @@ updates:
     directory: '/'
     schedule:
       interval: 'monthly'
+    groups:
+      # All codeql-action steps in a workflow must use the same version
+      codeql-action:
+        patterns:
+          - 'github/codeql-action*'
