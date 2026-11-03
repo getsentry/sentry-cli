@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+### Internal Changes
+
+- (docker) Bump the Docker image base from Alpine 3.22.0 to 3.22.7, whose `ca-certificates` already drops the distrusted eMudhra/emSign roots, and remove the `ca-certificates` version pin.
+
 ## 3.8.2
 
 ### Internal Changes

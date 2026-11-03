@@ -20,10 +20,9 @@ RUN touch src/main.rs && cargo build --release --features managed
 # Copy the compiled binary to a target-independent location so it can be picked up later
 RUN cp target/release/sentry-cli /usr/local/bin/sentry-cli
 
-FROM alpine:3.22.0@sha256:8a1f59ffb675680d47db6337b49d22281a139e9d709335b492be023728e11715
+FROM alpine:3.22.7@sha256:2e0b81d60597f449baa56dc25d355367869d2dca4cd57e866f1e2b52af3eb55f
 WORKDIR /work
-# 20261020-r0 removes distrusted eMudhra/emSign root certificates.
-RUN apk add --no-cache 'ca-certificates>=20261020-r0'
+RUN apk add --no-cache ca-certificates
 COPY ./docker-entrypoint.sh /
 COPY --from=sentry-build /usr/local/bin/sentry-cli /bin
 ENTRYPOINT ["/docker-entrypoint.sh"]
