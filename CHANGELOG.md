@@ -4,7 +4,7 @@
 
 ### Fixes
 
-- (releases) `releases set-commits --auto` now matches repositories from the Gitea integration (`integrations:gitea`) instead of skipping them.
+- (releases) `releases set-commits --auto` now matches repositories from the Gitea integration (`integrations:gitea`) instead of skipping them ([#3487](https://github.com/getsentry/sentry-cli/pull/3487)).
 
 ### Internal Changes
 
