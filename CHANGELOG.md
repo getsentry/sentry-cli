@@ -4,11 +4,7 @@
 
 ### Features
 
-- Add `dxil` debug file type to `debug-files upload` for GPU crash shader symbolication
-
-### Improvements
-
-- Send `debug-files upload` assemble requests in batches of 1000 files
+- (debug-files) Add the `dxil` debug file type for uploading compiled shaders used to symbolicate GPU crashes ([#3489](https://github.com/getsentry/sentry-cli/pull/3489))
 
 ### Internal Changes
 
