@@ -57,7 +57,7 @@ jobs:
       - name: Rename Binary
         run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Linux-${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: artifact-bin-linux-${{ matrix.arch }}
           path: sentry-cli-Linux-${{ matrix.arch }}
@@ -93,7 +93,7 @@ jobs:
       - name: Rename Binary
         run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Darwin-${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: unsigned-bin-macos-${{ matrix.arch }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
@@ -113,7 +113,7 @@ jobs:
       - name: Link universal binary
         run: lipo -create -output sentry-cli-Darwin-universal sentry-cli-Darwin-x86_64 sentry-cli-Darwin-arm64
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: unsigned-bin-macos-universal
           path: sentry-cli-Darwin-universal
@@ -185,7 +185,7 @@ jobs:
             sentry-cli-Darwin-${{ matrix.arch }}.zip
 
       - name: Upload signed binary
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: artifact-bin-macos-${{ matrix.arch }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
@@ -226,7 +226,7 @@ jobs:
       - name: Rename Binary
         run: mv target/${{ env.TARGET }}/release/sentry-cli.exe sentry-cli-Windows-${{ matrix.arch }}.exe
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: artifact-bin-windows-${{ matrix.arch }}
           path: sentry-cli-Windows-${{ matrix.arch }}.exe
@@ -263,7 +263,7 @@ jobs:
 
       - run: npm pack
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: artifact-pkg-node
           path: '*.tgz'
@@ -283,7 +283,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: python3 -m pip install build && python3 -m build
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: python-base
           path: dist/*
@@ -312,7 +312,7 @@ jobs:
           merge-multiple: true
           path: python-base
       - run: scripts/wheels --binaries binaries --base python-base --dest dist
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: artifact-pkg-python
           path: dist/*
@@ -357,7 +357,7 @@ jobs:
           done
 
       - name: Upload packaged npm binary distributions
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: artifact-npm-binary-distributions
           path: npm-binary-distributions/*/*.tgz
