@@ -415,7 +415,8 @@ fn find_reference_url(repo: &str, repos: &[Repo]) -> Result<Option<String>> {
             | "integrations:gitlab"
             | "integrations:bitbucket"
             | "integrations:bitbucket_server"
-            | "integrations:vsts" => {
+            | "integrations:vsts"
+            | "integrations:gitea" => {
                 if let Some(ref url) = configured_repo.url {
                     debug!("  Got reference URL for repo {repo}: {url}");
                     return Ok(Some(url.clone()));
@@ -844,6 +845,26 @@ mod tests {
     };
 
     use super::*;
+
+    #[test]
+    fn test_find_reference_url_accepts_gitea_repository() {
+        let repos = [Repo {
+            id: String::from("1"),
+            name: String::from("owner/repo"),
+            url: Some(String::from("https://gitea.example.com/owner/repo")),
+            provider: RepoProvider {
+                id: String::from("integrations:gitea"),
+                name: String::from("Gitea"),
+            },
+            status: String::from("active"),
+            date_created: chrono::Utc::now(),
+        }];
+
+        assert_eq!(
+            find_reference_url("owner/repo", &repos).unwrap(),
+            Some(String::from("https://gitea.example.com/owner/repo"))
+        );
+    }
 
     #[test]
     fn test_find_matching_rev_with_lightweight_tag() {
