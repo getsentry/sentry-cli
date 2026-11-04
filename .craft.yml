@@ -1,6 +1,9 @@
-minVersion: 0.23.1
-changelogPolicy: auto
-postReleaseCommand: bash scripts/post-release.sh
+minVersion: 3.9.0
+changelog:
+  policy: auto
+versioning:
+  policy: manual
+preReleaseCommand: bash scripts/bump-version.sh
 targets:
   - name: gcs
     bucket: sentry-sdk-assets

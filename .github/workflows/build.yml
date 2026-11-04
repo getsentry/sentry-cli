@@ -39,7 +39,7 @@ jobs:
       image: messense/rust-musl-cross:${{ matrix.container }}
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # 7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
 
@@ -49,7 +49,7 @@ jobs:
           rustup target add ${{ matrix.target }}
 
       - name: Cache Dependencies
-        uses: swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # 2.9.1
+        uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # 2.9.3
 
       - name: Build
         run: cargo build --release --target=${{ matrix.target }} --locked
@@ -57,7 +57,7 @@ jobs:
       - name: Rename Binary
         run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Linux-${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: artifact-bin-linux-${{ matrix.arch }}
           path: sentry-cli-Linux-${{ matrix.arch }}
@@ -77,7 +77,7 @@ jobs:
     runs-on: macos-26
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # 7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
 
@@ -85,7 +85,7 @@ jobs:
         run: rustup target add ${{ matrix.target }}
 
       - name: Cache Dependencies
-        uses: swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # 2.9.1
+        uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # 2.9.3
 
       - name: Run Cargo Build
         run: cargo build --target=${{ matrix.target }} --release --locked
@@ -93,7 +93,7 @@ jobs:
       - name: Rename Binary
         run: mv target/${{ matrix.target }}/release/sentry-cli sentry-cli-Darwin-${{ matrix.arch }}
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: unsigned-bin-macos-${{ matrix.arch }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
@@ -113,7 +113,7 @@ jobs:
       - name: Link universal binary
         run: lipo -create -output sentry-cli-Darwin-universal sentry-cli-Darwin-x86_64 sentry-cli-Darwin-arm64
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: unsigned-bin-macos-universal
           path: sentry-cli-Darwin-universal
@@ -138,7 +138,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # 7.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
 
@@ -185,7 +185,7 @@ jobs:
             sentry-cli-Darwin-${{ matrix.arch }}.zip
 
       - name: Upload signed binary
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: artifact-bin-macos-${{ matrix.arch }}
           path: sentry-cli-Darwin-${{ matrix.arch }}
@@ -204,7 +204,7 @@ jobs:
     runs-on: windows-2025
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # 7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
 
@@ -218,7 +218,7 @@ jobs:
         run: rustup target add ${{ env.TARGET }}
 
       - name: Cache Dependencies
-        uses: swatinem/rust-cache@c19371144df3bb44fab255c43d04cbc2ab54d1c4 # 2.9.1
+        uses: swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # 2.9.3
 
       - name: Run Cargo Build
         run: cargo build --target=${{ env.TARGET }} --release --locked
@@ -226,7 +226,7 @@ jobs:
       - name: Rename Binary
         run: mv target/${{ env.TARGET }}/release/sentry-cli.exe sentry-cli-Windows-${{ matrix.arch }}.exe
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: artifact-bin-windows-${{ matrix.arch }}
           path: sentry-cli-Windows-${{ matrix.arch }}.exe
@@ -238,11 +238,11 @@ jobs:
     needs: [linux, sign-macos-binaries, windows]
 
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # 7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
 
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # 7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # 7.1.0
         with:
           node-version: '24.22.1'
 
@@ -263,7 +263,7 @@ jobs:
 
       - run: npm pack
 
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: artifact-pkg-node
           path: '*.tgz'
@@ -274,16 +274,16 @@ jobs:
     name: python (base)
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # 7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
       - name: Add Rustup Target
         run: rustup target add x86_64-unknown-linux-musl
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # 7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # 7.1.0
         with:
           python-version: '3.11'
       - run: python3 -m pip install build && python3 -m build
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: python-base
           path: dist/*
@@ -295,10 +295,10 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows, python-base]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # 7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
-      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # 7.0.0
+      - uses: actions/setup-python@6d4fd22b20465ccc0f7354476588e8df7c9ca0e0 # 7.1.0
         with:
           python-version: '3.11'
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
@@ -312,7 +312,7 @@ jobs:
           merge-multiple: true
           path: python-base
       - run: scripts/wheels --binaries binaries --base python-base --dest dist
-      - uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: artifact-pkg-python
           path: dist/*
@@ -323,10 +323,10 @@ jobs:
     runs-on: ubuntu-24.04
     needs: [linux, sign-macos-binaries, windows]
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # 7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
-      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # 7.0.0
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # 7.1.0
         with:
           node-version: '24.22.1'
       - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
@@ -357,7 +357,7 @@ jobs:
           done
 
       - name: Upload packaged npm binary distributions
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
         with:
           name: artifact-npm-binary-distributions
           path: npm-binary-distributions/*/*.tgz
@@ -378,12 +378,12 @@ jobs:
       contents: read
       packages: write
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # 7.0.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
         with:
           ref: ${{ inputs.checkout-ref }}
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5 # 4.1.0
+        uses: docker/setup-buildx-action@f87e5991a6d7451dcb8d9637bfbc97413f497069 # 4.4.1
 
       - name: Login to GitHub Container Registry
         uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # 4.6.0
@@ -393,7 +393,7 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
-        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # 7.3.0
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # 7.4.0
         with:
           context: .
           push: true
