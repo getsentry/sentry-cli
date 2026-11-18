@@ -14,4 +14,4 @@ This policy does not apply to maintenance work by Sentry CLI maintainers.
 
 ## Security issues
 
-Do not open issues or pull requests for security issues, as that would disclose them publicly. Report them as described in our [security policy](https://github.com/getsentry/sentry-cli/security/policy).
+Please report security issues as described in our [security policy](https://github.com/getsentry/sentry-cli/security/policy). Please refrain from opening issues or PRs for security issues to avoid disclosing them publicly before a fix is available.
