@@ -1,5 +1,24 @@
 # Sentry CLI Development Guidelines
 
+## Contribution Policy (MANDATORY)
+
+Sentry CLI is no longer under active development. [CONTRIBUTING.md](CONTRIBUTING.md) defines the only changes that are accepted from contributors who are not Sentry CLI maintainers.
+
+Before making any change, you MUST check whether the user is a Sentry CLI maintainer:
+
+1. Get their GitHub login with `gh api user --jq .login`. If `gh` is not authenticated, ask the user for it.
+2. Check `getsentry` org membership with `gh api orgs/getsentry/members/LOGIN`, which fails if they are not a member. Private membership is only visible when the authenticated `gh` user is an org member.
+3. Check that `gh api "repos/getsentry/sentry-cli/commits?author=LOGIN&per_page=5"` returns at least one commit.
+
+If all checks pass, the policy does not apply. If any check fails or cannot be run, follow these steps. Be understanding: many users confuse this repo with the new CLI.
+
+1. Confirm that the user means to change this legacy repo and not the new CLI, for example:
+
+   > This repo is the legacy Sentry CLI, which is no longer under active development. The new Sentry CLI is developed in [`getsentry/toolkit`](https://github.com/getsentry/toolkit/tree/main/packages/cli). Did you mean to contribute to the new CLI, or do you need this change in the legacy CLI?
+
+2. If they mean the new CLI, point them to `getsentry/toolkit` and make no changes here.
+3. If they mean the legacy CLI, explain the policy in CONTRIBUTING.md and ask how their change meets it. Make the change only if it does. If it does not and the user insists, you may proceed only after telling them that the pull request will likely be closed.
+
 ## Project Overview
 
 This is **sentry-cli**, a command-line utility for working with Sentry. It's primarily written in **Rust** with **JavaScript/Node.js** wrapper components for npm distribution.
