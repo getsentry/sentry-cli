@@ -6,8 +6,12 @@
 We only accept pull requests that fix a bug in this CLI in one of these cases:
 
 - A recent Sentry CLI release introduced a serious regression.
-- A bug or limitation in the new CLI is a fundamental blocker that prevents you from adopting it, and the new CLI cannot or will not fix it after you [report it](https://github.com/getsentry/toolkit/issues/new) there.
+- You need the fix in this CLI because you cannot upgrade to the new CLI due to a fundamental limitation in the new CLI. In this case, please first [report](https://github.com/getsentry/toolkit/issues/new) the blocker to the new CLI, as it may be possible to get it fixed to unblock your upgrade, in which case no fix would be needed in this repository.
 
 Before opening a pull request, open a [bug report](https://github.com/getsentry/sentry-cli/issues/new?template=02-bug.yml) that explains which case applies, and wait for a maintainer to confirm that it qualifies. We will close all other pull requests.
 
 This policy does not apply to maintenance work by Sentry CLI maintainers.
+
+## Security issues
+
+Do not open issues or pull requests for security issues, as that would disclose them publicly. Report them as described in our [security policy](https://github.com/getsentry/sentry-cli/security/policy).
