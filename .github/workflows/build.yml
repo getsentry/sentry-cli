@@ -232,6 +232,53 @@ jobs:
           path: sentry-cli-Windows-${{ matrix.arch }}.exe
           if-no-files-found: 'error'
 
+  sbom:
+    name: SBOMs
+    runs-on: ubuntu-24.04
+    needs: [linux, sign-macos-binaries, windows]
+
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # 7.0.1
+        with:
+          ref: ${{ inputs.checkout-ref }}
+
+      - name: Install sbom-attest
+        run: cargo install sbom-attest --version 0.2.0 --locked
+
+      - name: Download compiled binaries
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # 8.0.1
+        with:
+          pattern: artifact-bin-*
+          merge-multiple: true
+          path: binaries
+
+      # One CycloneDX SBOM per shipped binary: dependencies resolved for its target,
+      # crate hashes from Cargo.lock, and the SHA-256 of the binary as released
+      # (after macOS signing). The universal macOS binary is the lipo of the two
+      # thin ones, so its contents are covered by their SBOMs.
+      - name: Generate SBOMs
+        run: |
+          while read -r binary target; do
+            sbom-attest generate --locked --target "$target" --binary "binaries/$binary" \
+              --author Sentry --producer Sentry --cdx "${binary%.exe}.cdx.json"
+          done <<'EOF'
+          sentry-cli-Linux-i686 i686-unknown-linux-musl
+          sentry-cli-Linux-x86_64 x86_64-unknown-linux-musl
+          sentry-cli-Linux-armv7 armv7-unknown-linux-musleabi
+          sentry-cli-Linux-aarch64 aarch64-unknown-linux-musl
+          sentry-cli-Darwin-x86_64 x86_64-apple-darwin
+          sentry-cli-Darwin-arm64 aarch64-apple-darwin
+          sentry-cli-Windows-i686.exe i686-pc-windows-msvc
+          sentry-cli-Windows-x86_64.exe x86_64-pc-windows-msvc
+          sentry-cli-Windows-aarch64.exe aarch64-pc-windows-msvc
+          EOF
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # 7.0.2
+        with:
+          name: artifact-sbom
+          path: sentry-cli-*.cdx.json
+          if-no-files-found: 'error'
+
   node:
     name: NPM Package
     runs-on: ubuntu-24.04
@@ -427,7 +474,7 @@ jobs:
     if: ${{ !inputs.is-snapshot }}
     name: Create Release Artifact
     runs-on: ubuntu-24.04
-    needs: [linux, sign-macos-binaries, windows, npm-distributions, node, python]
+    needs: [linux, sign-macos-binaries, windows, sbom, npm-distributions, node, python]
     steps:
       - uses: actions/upload-artifact/merge@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # 7.0.1
         with:
