@@ -144,32 +144,35 @@ fn command_snapshots_upload_uses_server_usecase(
     let image = std::fs::read("tests/integration/_fixtures/snapshots/snapshot.png").unwrap();
     let hash = format!("{:x}", Sha256::digest(image));
     let batch_path = format!("/proxy/v1/objects:batch/{expected_usecase}/org=1;project=2/");
-    let objectstore_mocks: Vec<_> = [("head", 404), ("insert", 200)]
-        .into_iter()
-        .map(|(operation, status)| {
-            objectstore
-                .mock("POST", batch_path.as_str())
-                .match_header("x-os-auth", "Bearer objectstore-token")
-                .match_body(mockito::Matcher::AllOf(vec![
-                    mockito::Matcher::Regex(format!(
-                        "x-sn-batch-operation-kind: {operation}\\r\\n"
-                    )),
-                    mockito::Matcher::Regex(format!(
-                        "x-sn-batch-operation-key: 1%2F2%2F{hash}\\r\\n"
-                    )),
-                ]))
-                .with_header("content-type", "multipart/form-data; boundary=response")
-                .with_body(format!(
-                    "--response\r\n\
-                     Content-Disposition: form-data; name=\"part\"\r\n\
-                     x-sn-batch-operation-index: 0\r\n\
-                     x-sn-batch-operation-status: {status}\r\n\
-                     \r\n\r\n--response--\r\n"
-                ))
-                .expect(1)
-                .create()
-        })
-        .collect();
+    let key = format!("1/2/{hash}");
+    let objectstore_mocks: Vec<_> = [
+        (404, format!(r#"\{{"kind":"head","key":"{key}"\}}"#)),
+        // Images are sent uncompressed with their content type.
+        (
+            201,
+            format!(
+                r#"\{{"kind":"insert","key":"{key}","metadata":\{{"content_type":"image/png","expiration":"#
+            ),
+        ),
+    ]
+    .into_iter()
+    .map(|(status, descriptor)| {
+        objectstore
+            .mock("POST", batch_path.as_str())
+            .match_header("x-os-auth", "Bearer objectstore-token")
+            .match_body(mockito::Matcher::Regex(descriptor))
+            .with_header("content-type", "multipart/form-data; boundary=response")
+            .with_body(format!(
+                "--response\r\n\
+                 Content-Disposition: form-data; name=\"0\"\r\n\
+                 \r\n\
+                 {{\"status\":{status},\"key\":\"{key}\"}}\r\n\
+                 --response--\r\n"
+            ))
+            .expect(1)
+            .create()
+    })
+    .collect();
     let mut upload_options = json!({
         "objectstore": {
             "url": format!("{}/proxy", objectstore.url()),

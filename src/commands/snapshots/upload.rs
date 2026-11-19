@@ -385,6 +385,18 @@ fn is_image_file(path: &Path) -> bool {
         .unwrap_or(false)
 }
 
+/// Returns the MIME type of an image based on its file extension.
+fn image_content_type(path: &Path) -> Option<&'static str> {
+    let ext = path.extension()?.to_str()?;
+    if ext.eq_ignore_ascii_case("png") {
+        Some("image/png")
+    } else if ext.eq_ignore_ascii_case("jpg") || ext.eq_ignore_ascii_case("jpeg") {
+        Some("image/jpeg")
+    } else {
+        None
+    }
+}
+
 /// Reads the companion JSON sidecar for an image, if it exists.
 ///
 /// For an image at `path/to/button.png`, looks for `path/to/button.json`.
@@ -425,11 +437,9 @@ fn upload_images(
     let expiration = ExpirationPolicy::from_str(&options.objectstore.expiration_policy)
         .context("Failed to parse expiration policy from upload options")?;
 
-    let mut builder = ClientBuilder::new(options.objectstore.url);
-    if let Some(token) = options.objectstore.auth_token {
-        builder = builder.token(token.expose_secret().to_owned());
-    }
-    let client = builder
+    let auth_token = options.objectstore.auth_token.as_ref();
+    let client = ClientBuilder::new(options.objectstore.url)
+        .token(auth_token.map(|token| token.expose_secret().as_str()))
         .configure_reqwest(|r| r.connect_timeout(Duration::from_secs(10)))
         .build()?;
 
@@ -445,7 +455,9 @@ fn upload_images(
     let project_id = find_scope("project").context("Missing project in UploadOptions scope")?;
 
     debug!("Using objectstore usecase {}", options.objectstore.usecase);
-    let mut scope = Usecase::new(&options.objectstore.usecase).scope();
+    let mut scope = Usecase::new(&options.objectstore.usecase)
+        .context("Invalid objectstore usecase in upload options")?
+        .scope();
     for (key, value) in scopes {
         scope = scope.push(&key, value);
     }
@@ -538,12 +550,16 @@ fn upload_images(
     if upload_count > 0 {
         let mut many_builder = session.many();
         for prepared in missing_uploads {
-            many_builder = many_builder.push(
-                session
-                    .put_path(prepared.path.clone())
-                    .key(&prepared.key)
-                    .expiration_policy(expiration),
-            );
+            // Images are already compressed, so skip client-side compression.
+            let mut put = session
+                .put_path(prepared.path.clone())
+                .key(&prepared.key)
+                .expiration_policy(expiration)
+                .compress(None);
+            if let Some(content_type) = image_content_type(&prepared.path) {
+                put = put.content_type(content_type);
+            }
+            many_builder = many_builder.push(put);
         }
 
         let result =
