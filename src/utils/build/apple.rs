@@ -10,6 +10,7 @@ use crate::utils::fs::TempDir;
 use apple_catalog_parsing;
 use std::io::Cursor;
 use walkdir::WalkDir;
+use zip::result::ZipResult;
 use zip::ZipArchive;
 
 pub fn handle_asset_catalogs(archive_path: &Path, output_path: &Path) {
@@ -94,7 +95,7 @@ pub fn ipa_to_xcarchive(
     let cursor = Cursor::new(ipa_bytes);
     let mut ipa_archive = ZipArchive::new(cursor)?;
 
-    let app_name = extract_app_name_from_ipa(&ipa_archive)?.to_owned();
+    let app_name = extract_app_name_from_ipa(&ipa_archive)?;
 
     // Extract all files from the archive
     for i in 0..ipa_archive.len() {
@@ -266,15 +267,13 @@ fn extract_dsym_zip(path: &Path) -> Result<TempDir> {
     let temp_dir = TempDir::create()?;
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index)?;
+        let entry_name = entry.name()?.into_owned();
         let entry_path = entry
             .enclosed_name()
-            .ok_or_else(|| anyhow!("dSYM ZIP contains an unsafe path: {}", entry.name()))?;
+            .ok_or_else(|| anyhow!("dSYM ZIP contains an unsafe path: {entry_name}"))?;
 
         if entry.is_symlink() {
-            bail!(
-                "Symlinks are not supported in dSYM ZIP archives: {}",
-                entry.name()
-            );
+            bail!("Symlinks are not supported in dSYM ZIP archives: {entry_name}");
         }
 
         // Ignore common archive metadata so it does not affect dSYM layout discovery.
@@ -339,16 +338,17 @@ fn has_dsym_extension(path: &Path) -> bool {
 static PATTERN: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"^Payload/([^/]+)\.app/Info\.plist$").expect("regex is valid"));
 
-fn extract_app_name_from_ipa<'a>(archive: &'a ZipArchive<Cursor<&[u8]>>) -> Result<&'a str> {
-    let matches = archive
-        .file_names()
+fn extract_app_name_from_ipa(archive: &ZipArchive<Cursor<&[u8]>>) -> Result<String> {
+    let names = archive.file_names().collect::<ZipResult<Vec<_>>>()?;
+    let matches = names
+        .iter()
         .filter_map(|name| PATTERN.captures(name))
         .map(|c| c.get(1).expect("group 1 must be present").as_str())
         .take(2) // If there are ≥2 matches, we already know the IPA is invalid
         .collect::<Vec<_>>();
 
     if let &[app_name] = matches.as_slice() {
-        Ok(app_name)
+        Ok(app_name.to_owned())
     } else {
         Err(anyhow!("IPA did not contain exactly one .app."))
     }
