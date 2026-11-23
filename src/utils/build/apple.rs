@@ -268,8 +268,10 @@ fn extract_dsym_zip(path: &Path) -> Result<TempDir> {
     for index in 0..archive.len() {
         let mut entry = archive.by_index(index)?;
         let entry_name = entry.name()?.into_owned();
+        // `enclosed_name` turns absolute paths into relative ones, so reject them explicitly.
         let entry_path = entry
             .enclosed_name()
+            .filter(|_| !Path::new(&entry_name).has_root())
             .ok_or_else(|| anyhow!("dSYM ZIP contains an unsafe path: {entry_name}"))?;
 
         if entry.is_symlink() {
@@ -516,6 +518,15 @@ mod tests {
         archive.finish()?;
         let output = create_output_dir(temp_dir.path(), "traversal-output")?;
         let error = copy_dsym_input(&traversal_zip, &output).unwrap_err();
+        assert!(format!("{error:#}").contains("dSYM ZIP contains an unsafe path"));
+
+        let absolute_zip = temp_dir.path().join("absolute.zip");
+        let mut archive = ZipWriter::new(std::fs::File::create(&absolute_zip)?);
+        archive.start_file("/DemoApp.app.dSYM/symbols", SimpleFileOptions::default())?;
+        archive.write_all(b"symbols")?;
+        archive.finish()?;
+        let output = create_output_dir(temp_dir.path(), "absolute-output")?;
+        let error = copy_dsym_input(&absolute_zip, &output).unwrap_err();
         assert!(format!("{error:#}").contains("dSYM ZIP contains an unsafe path"));
 
         let symlink_zip = temp_dir.path().join("symlink.zip");
