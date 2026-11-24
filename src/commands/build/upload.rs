@@ -547,7 +547,7 @@ mod tests {
         let zip_file = fs::File::open(result_zip.path())?;
         let mut archive = ZipArchive::new(zip_file)?;
         let file = archive.by_index(0)?;
-        let file_path = file.name();
+        let file_path = file.name()?;
         assert_eq!(file_path, "MyApp.xcarchive/Products/app.txt");
         Ok(())
     }
@@ -697,7 +697,7 @@ mod tests {
 
         for i in 0..archive.len() {
             let file = archive.by_index(i)?;
-            let file_name = file.name();
+            let file_name = file.name()?;
 
             if file_name == "TestApp.xcarchive/Products/app.txt" {
                 has_regular_file = true;

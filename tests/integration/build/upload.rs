@@ -233,7 +233,7 @@ fn command_build_upload_ipa_chunked() {
                     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(chunk))
                         .expect("chunk should be a valid zip");
                     let entry_names: std::collections::HashSet<String> = (0..archive.len())
-                        .map(|i| archive.by_index(i).unwrap().name().to_owned())
+                        .map(|i| archive.by_index(i).unwrap().name().unwrap().into_owned())
                         .collect();
                     let expected_entries: std::collections::HashSet<String> = [
                         "archive.xcarchive/Info.plist",

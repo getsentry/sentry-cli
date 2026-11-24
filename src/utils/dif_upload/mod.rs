@@ -422,7 +422,7 @@ where
     for index in 0..zip.len() {
         let (name, buffer) = {
             let mut zip_file = zip.by_index(index)?;
-            let name = zip_file.name().to_owned();
+            let name = zip_file.name()?.into_owned();
 
             if !options.valid_extension(Path::new(&name).extension()) {
                 continue;

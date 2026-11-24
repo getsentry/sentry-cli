@@ -47,9 +47,11 @@ pub fn is_ipa_file(bytes: &[u8]) -> Result<bool> {
     let archive = zip::ZipArchive::new(cursor)?;
 
     let is_ipa = archive.file_names().any(|name| {
-        name.starts_with("Payload/")
-            && name.ends_with(".app/Info.plist")
-            && name.matches('/').count() == 2
+        name.is_ok_and(|name| {
+            name.starts_with("Payload/")
+                && name.ends_with(".app/Info.plist")
+                && name.matches('/').count() == 2
+        })
     });
 
     Ok(is_ipa)
