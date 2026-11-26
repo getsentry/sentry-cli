@@ -42,15 +42,20 @@ targets:
     id: '@sentry/cli-win32-arm64'
     includeNames: /^sentry-cli-win32-arm64-\d.*\.tgz$/
 
-  # Main Sentry CLI package
+  # Main Sentry CLI package. getsentry/toolkit publishes v4 under this name, so
+  # a 3.x release must not take the `latest` tag (Craft tags it `old`).
   - name: npm
     id: '@sentry/cli'
     includeNames: /^sentry-cli-\d.*\.tgz$/
+    checkPackageName: '@sentry/cli'
 
+  # getsentry/toolkit publishes v4 as the `sentry-cli` formula, so 3.x
+  # releases go to a versioned formula.
   - name: brew
     tap: getsentry/tools
+    formula: sentry-cli@3
     template: >
-      class SentryCli < Formula
+      class SentryCliAT3 < Formula
         desc "Sentry command-line client for some generic tasks"
         homepage "https://github.com/getsentry/sentry-cli"
         version "{{version}}"
