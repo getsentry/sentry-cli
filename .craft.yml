@@ -42,15 +42,20 @@ targets:
     id: '@sentry/cli-win32-arm64'
     includeNames: /^sentry-cli-win32-arm64-\d.*\.tgz$/
 
-  # Main Sentry CLI package
+  # Main Sentry CLI package. getsentry/toolkit publishes v4 under this name, so
+  # a 3.x release must not take the `latest` tag (Craft tags it `old`).
   - name: npm
     id: '@sentry/cli'
     includeNames: /^sentry-cli-\d.*\.tgz$/
+    checkPackageName: '@sentry/cli'
 
+  # getsentry/toolkit publishes v4 as the `sentry-cli` formula, so 3.x
+  # releases go to a versioned formula.
   - name: brew
     tap: getsentry/tools
+    formula: sentry-cli@3
     template: >
-      class SentryCli < Formula
+      class SentryCliAT3 < Formula
         desc "Sentry command-line client for some generic tasks"
         homepage "https://github.com/getsentry/sentry-cli"
         version "{{version}}"
@@ -105,11 +110,12 @@ targets:
     id: Docker Hub (release)
     source: ghcr.io/getsentry/sentry-cli
     target: getsentry/sentry-cli
+  # getsentry/toolkit pushes v4 as `latest`, so 3.x releases move `3` instead.
   - name: docker
-    id: Docker Hub (latest)
+    id: Docker Hub (3)
     source: ghcr.io/getsentry/sentry-cli
     target: getsentry/sentry-cli
-    targetFormat: '{{{target}}}:latest'
+    targetFormat: '{{{target}}}:3'
 requireNames:
   - /^sentry-cli-Darwin-x86_64$/
   - /^sentry-cli-Darwin-arm64$/
