@@ -110,11 +110,12 @@ targets:
     id: Docker Hub (release)
     source: ghcr.io/getsentry/sentry-cli
     target: getsentry/sentry-cli
+  # getsentry/toolkit pushes v4 as `latest`, so 3.x releases move `3` instead.
   - name: docker
-    id: Docker Hub (latest)
+    id: Docker Hub (3)
     source: ghcr.io/getsentry/sentry-cli
     target: getsentry/sentry-cli
-    targetFormat: '{{{target}}}:latest'
+    targetFormat: '{{{target}}}:3'
 requireNames:
   - /^sentry-cli-Darwin-x86_64$/
   - /^sentry-cli-Darwin-arm64$/
